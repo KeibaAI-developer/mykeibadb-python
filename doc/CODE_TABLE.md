@@ -10,7 +10,7 @@
 | 2002 | 曜日コード | [YOBI_CODE](#YOBI_CODE) |
 | 2003 | グレードコード | [GRADE_CODE](#GRADE_CODE) |
 | 2005 | 競走種別コード | [KYOSO_SHUBETSU_CODE](#KYOSO_SHUBETSU_CODE) |
-| 2006 | 競走記号コード | [KYOSO_KIGO＿CODE](#KYOSO_KIGO＿CODE) |
+| 2006 | 競走記号コード | [KYOSO_KIGO_CODE](#KYOSO_KIGO_CODE) |
 | 2007 | 競走条件コード | [KYOSO_JOKEN_CODE](#KYOSO_JOKEN_CODE) |
 | 2008 | 重量種別コード | [JURYO_SHUBETSU_CODE](#JURYO_SHUBETSU_CODE) |
 | 2009 | トラックコード | [TRACK_CODE](#TRACK_CODE) |
@@ -246,7 +246,7 @@
 | D01 | (抽)(指定) | (S) DSN |
 | D03 | (抽)[指定] | (S) DES |
 | E00 | [抽] |   |
-| E01 | [抽](指定) | DSN |
+| E01 | [抽] (指定) | DSN |
 | E03 | [抽][指定] | DES |
 | F00 | (市)(抽) | (A)(S) |
 | F01 | (市)(抽)(指定) | (A)(S) DSN |
