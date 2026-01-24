@@ -1,0 +1,3 @@
+# mykeibadb-python
+
+mykeibadbを使用してPostgreSQLからPythonで競馬データを取得するためのライブラリです。
