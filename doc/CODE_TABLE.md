@@ -1,4 +1,4 @@
-# mykeibadb コード仕様一覧
+# mykeibadb コード仕様
 
 本ドキュメントは、mykeibadbのコード仕様をまとめたものです。
 
