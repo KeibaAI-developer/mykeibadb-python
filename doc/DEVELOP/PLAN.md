@@ -31,7 +31,7 @@
 
 **ファイル構成**:
 
-[DIRECTORY.md](/doc/DIRECTORY.md)を参照。
+[DIRECTORY.md](../DIRECTORY.md)を参照。
 
 **Docker構成**:
 - `Dockerfile`: Python 3.12.4 ベース

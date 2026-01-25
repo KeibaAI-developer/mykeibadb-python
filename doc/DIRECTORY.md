@@ -16,14 +16,12 @@ mykeibadb-python/
 ├── doc/                     # ドキュメント
 ├── .github/                 # GitHub関連設定
 │   └── workflows/           # GitHub Actionsワークフロー
-│       └── mykeibadb-ci.yml # CI/CD設定
+│       └── ci.yml           # CI/CD設定
 ├── .env.example             # 環境変数サンプル
 ├── .gitignore               # Git無視ファイル
 ├── .dockerignore            # Docker除外ファイル
 ├── Dockerfile               # Python環境
-├── docker-compose.yml
-├── pyproject.toml
-├── README.md
-├── pytest.ini
-└── mypy.ini
+├── docker-compose.yml       # Docker Compose設定
+├── pyproject.toml           # プロジェクト設定
+└── README.md
 ```

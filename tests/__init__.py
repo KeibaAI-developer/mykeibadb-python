@@ -1,0 +1,1 @@
+"""mykeibadb-python テストスイート"""

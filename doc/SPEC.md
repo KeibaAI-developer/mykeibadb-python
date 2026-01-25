@@ -23,7 +23,7 @@ mykeibadb-pythonは、JRA-VANのJVLinkを使用して競馬データをPostgreSQ
 
 ### 2.1 全体構成
 
-ディレクトリ構成は[DIRECTORY.md](/doc/DIRECTORY.md)を参照。
+ディレクトリ構成は[DIRECTORY.md](./DIRECTORY.md)を参照。
 
 ### 2.2 コンテナ構成図
 
