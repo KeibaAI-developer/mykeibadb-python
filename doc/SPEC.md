@@ -76,9 +76,19 @@ class MykeibaDBClient:
         port: int = 5432,
         database: str = "mykeibadb",
         user: str = "postgres",
-        password: str = "postgres"
+        password: str = "postgres",
+        config: DBConfig | None = None
     ) -> None:
-        """クライアントを初期化"""
+        """クライアントを初期化
+
+        Args:
+            host: PostgreSQLホスト名
+            port: PostgreSQLポート番号
+            database: データベース名
+            user: ユーザー名
+            password: パスワード
+            config: DBConfig設定（指定時は他のパラメータを上書き）
+        """
 
     def get_table(
         self,
@@ -108,8 +118,8 @@ class MykeibaDBClient:
         - Linux/macOS上: SSH経由でリモート実行
 
         Args:
-            mykeibadb_path: mykeibadb.exeのパス（Windowsローカル実行時）
-            ssh_config: SSH接続設定（Linux/macOSからのリモート実行時、Noneの場合は環境変数から取得）
+            mykeibadb_path: mykeibadb.exeのパス（Noneの場合は環境変数MYKEIBADB_EXE_PATHから取得）
+            ssh_config: SSH接続設定（Linux/macOSからのリモート実行時のみ必要、Noneの場合は環境変数から取得）
             timeout: タイムアウト秒数（デフォルト300秒）
 
         Returns:
@@ -117,10 +127,37 @@ class MykeibaDBClient:
 
         Raises:
             UpdateError: 更新失敗時
-            ConnectionError: SSH接続失敗時（リモート実行時）
+            MykeibaDBConnectionError: SSH接続失敗時（リモート実行時）
             PlatformNotSupportedError: SSH設定が必要なのに未設定時
+        """
+
     def close(self) -> None:
         """DB接続をクローズ"""
+
+    def __enter__(self) -> "MykeibaDBClient":
+        """コンテキストマネージャーのエントリーポイント
+
+        Returns:
+            自身のインスタンス
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None
+    ) -> None:
+        """コンテキストマネージャーの終了処理
+
+        例外の有無に関わらず、DB接続を確実にクローズします。
+
+        Args:
+            exc_type: 例外の型
+            exc_val: 例外のインスタンス
+            exc_tb: トレースバック
+        """
+        self.close()
 ```
 
 #### 2.3.2 ConnectionManager（connection.py）
@@ -211,8 +248,8 @@ class DatabaseUpdater:
         """アップデーターを初期化
 
         Args:
-            mykeibadb_path: mykeibadb.exeのパス（Windowsローカル実行時）
-            ssh_config: SSH接続設定（Linux/macOSからのリモート実行時）
+            mykeibadb_path: mykeibadb.exeのパス（Windows側のパス）
+            ssh_config: SSH接続設定（Linux/macOSからのリモート実行時のみ必要）
         """
 
     def update(self, timeout: int = 300) -> bool:
@@ -230,7 +267,7 @@ class DatabaseUpdater:
 
         Raises:
             UpdateError: 更新失敗時
-            ConnectionError: SSH接続失敗時（リモート実行時）
+            MykeibaDBConnectionError: SSH接続失敗時（リモート実行時）
         """
 
     def _execute_local(self, timeout: int) -> bool:
@@ -266,13 +303,12 @@ class DBConfig:
 
 @dataclass
 class SSHConfig:
-    """SSH接続設定（DB更新用）"""
+    """SSH接続設定（DB更新用、Linux/macOSからのリモート実行時のみ使用）"""
     host: str = "host.docker.internal"
     port: int = 22
     username: str | None = None
     password: str | None = None
     key_path: str | None = None
-    mykeibadb_path: str = r"C:\mykeibadb_v3.61\mykeibadb.exe"
 
 class ConfigManager:
     def __init__(self, config_path: str | None = None) -> None:
@@ -296,7 +332,7 @@ class ConfigManager:
 class MykeibaDBError(Exception):
     """mykeibadb-python基底例外"""
 
-class ConnectionError(MykeibaDBError):
+class MykeibaDBConnectionError(MykeibaDBError):
     """DB接続エラー"""
 
 class TableNotFoundError(MykeibaDBError):
@@ -343,7 +379,7 @@ class PlatformNotSupportedError(MykeibaDBError):
 - `SHUSSOBETSU_BABA`, `SHUSSOBETSU_KYORI`, `SHUSSOBETSU_KEIBAJO`
 - `SHUSSOBETSU_KISHU`, `SHUSSOBETSU_CHOKYOSHI`, `SHUSSOBETSU_BANUSHI`, `SHUSSOBETSU_SEISANSHA2`
 
-**調教データ(2テーブル)**:
+**調教データ（2テーブル）**:
 - `HANRO_CHOKYO`, `WOODCHIP_CHOKYO`
 
 **開催情報（1テーブル）**:
@@ -429,17 +465,17 @@ PostgreSQL型からPandas型へのマッピング:
 
 | 例外クラス | 発生条件 | 対応方法 |
 |----------|---------|---------|
-| `ConnectionError` | DB接続失敗 | 接続情報を確認、PostgreSQLの起動確認 |
+| `MykeibaDBConnectionError` | DB接続失敗 | 接続情報を確認、PostgreSQLの起動確認 |
 | `TableNotFoundError` | 存在しないテーブル名 | テーブル名を確認、[DATA_TABLE.md](./DATA_TABLE.md)参照 |
 | `InvalidFilterError` | 無効なフィルタ条件 | フィルタのキー・値を確認 |
 | `UpdateError` | DB更新失敗 | mykeibadb.exeのパス確認、実行権限確認 |
-| `PlatformNotSupportedError` | 非Windowsでupdate実行 | Windows環境で実行 |
+| `PlatformNotSupportedError` | SSH設定が必要なのに未設定時 | Windows環境で実行 |
 
 ### 4.2 エラーメッセージ
 
 ```python
 # 接続エラーの例
-raise ConnectionError(
+raise MykeibaDBConnectionError(
     f"Failed to connect to PostgreSQL: host={host}, port={port}, database={database}"
 )
 
@@ -480,13 +516,15 @@ raise InvalidFilterError(
 - `MYKEIBADB_USER`: PostgreSQLユーザー名（デフォルト: postgres）
 - `MYKEIBADB_PASSWORD`: PostgreSQLパスワード（デフォルト: postgres）
 
-**SSH接続（DB更新用）**:
+**mykeibadb.exe実行パス**:
+- `MYKEIBADB_EXE_PATH`: mykeibadb.exeのWindowsパス（デフォルト: C:\mykeibadb_v3.61\mykeibadb.exe）
+
+**SSH接続（Linux/macOSからのDB更新用）**:
 - `MYKEIBADB_SSH_HOST`: WindowsホストのSSH接続先（デフォルト: host.docker.internal）
 - `MYKEIBADB_SSH_PORT`: SSHポート番号（デフォルト: 22）
 - `MYKEIBADB_SSH_USER`: Windowsユーザー名
 - `MYKEIBADB_SSH_PASSWORD`: SSHパスワード（鍵認証を使わない場合）
 - `MYKEIBADB_SSH_KEY`: SSH秘密鍵のパス（パスワード認証を使わない場合、推奨）
-- `MYKEIBADB_EXE_PATH`: mykeibadb.exeのWindowsパス（デフォルト: C:\mykeibadb_v3.61\mykeibadb.exe）
 
 - 設定ファイル（`.env`）からの読み込みをサポート
 
@@ -606,12 +644,14 @@ MYKEIBADB_DATABASE=mykeibadb
 MYKEIBADB_USER=postgres
 MYKEIBADB_PASSWORD=postgres
 
-# SSH接続設定（DB更新用）
+# mykeibadb.exe実行パス
+MYKEIBADB_EXE_PATH=C:\mykeibadb_v3.61\mykeibadb.exe
+
+# SSH接続設定（Linux/macOSからのDB更新用）
 MYKEIBADB_SSH_HOST=host.docker.internal
 MYKEIBADB_SSH_PORT=22
 MYKEIBADB_SSH_USER=your_windows_user
 MYKEIBADB_SSH_KEY=/root/.ssh/mykeibadb_key
-MYKEIBADB_EXE_PATH=C:\mykeibadb_v3.61\mykeibadb.exe
 ```
 
 ## 9. 使用例
@@ -652,12 +692,17 @@ client.close()
 ### 9.2 環境変数を使用した接続
 
 ```python
-import os
+import dataclasses
 from mykeibadb import MykeibaDBClient, ConfigManager
 
 # 環境変数から設定を読み込み
 config = ConfigManager.from_env()
-client = MykeibaDBClient(**config.__dict__)
+
+# 方法1: DBConfigオブジェクトを直接渡す（推奨）
+client = MykeibaDBClient(config=config)
+
+# 方法2: dataclasses.asdict()でアンパック
+# client = MykeibaDBClient(**dataclasses.asdict(config))
 
 race_df = client.get_table("RACE_SHOSAI")
 client.close()
@@ -668,11 +713,12 @@ client.close()
 ```python
 from mykeibadb import MykeibaDBClient
 
-# Windows上で実行する場合は自動的にローカル実行
+# Windows上で実行する場合は自動的にローカル実行（ssh_configは不要）
 client = MykeibaDBClient()
 
 try:
     # プラットフォームを自動検知して実行
+    # ssh_config=Noneの場合、Windowsではローカル実行される
     success = client.update_database(
         mykeibadb_path=r"C:\mykeibadb_v3.61\mykeibadb.exe"
     )
@@ -698,12 +744,16 @@ ssh_config = SSHConfig(
     port=22,
     username="your_windows_user",
     key_path="/path/to/ssh_key",  # または password="your_password"
-    mykeibadb_path=r"C:\mykeibadb_v3.61\mykeibadb.exe"
 )
 
 try:
     # データベースを更新（タイムアウト5分）
-    success = client.update_database(ssh_config=ssh_config, timeout=300)
+    # mykeibadb_pathは別パラメータで指定
+    success = client.update_database(
+        mykeibadb_path=r"C:\mykeibadb_v3.61\mykeibadb.exe",
+        ssh_config=ssh_config,
+        timeout=300
+    )
 
     if success:
         print("データベース更新成功")
@@ -718,11 +768,13 @@ finally:
 ```python
 from mykeibadb import MykeibaDBClient
 
-# 環境変数からSSH設定を自動取得
+# 環境変数から設定を自動取得
 client = MykeibaDBClient()
 
 try:
-    # ssh_config=Noneで環境変数から設定を読み込み
+    # パラメータを省略すると環境変数から設定を読み込み
+    # - mykeibadb_path: MYKEIBADB_EXE_PATHから取得
+    # - ssh_config: MYKEIBADB_SSH_*から取得（Linux/macOSの場合のみ）
     success = client.update_database()
 
     if success:
