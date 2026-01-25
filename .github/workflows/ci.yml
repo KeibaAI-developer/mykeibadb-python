@@ -104,15 +104,16 @@ jobs:
       run: |
         pytest tests/unit -v --cov=mykeibadb --cov-report=xml --cov-report=term-missing
 
-    - name: Run integration tests
-      run: |
-        pytest tests/integration -v --cov=mykeibadb --cov-append --cov-report=xml --cov-report=term-missing
-      env:
-        DB_HOST: localhost
-        DB_PORT: 5432
-        DB_NAME: mykeibadb_test
-        DB_USER: postgres
-        DB_PASSWORD: postgres
+    # 統合テスト実装後に有効化
+    # - name: Run integration tests
+    #   run: |
+    #     pytest tests/integration -v --cov=mykeibadb --cov-append --cov-report=xml --cov-report=term-missing
+    #   env:
+    #     DB_HOST: localhost
+    #     DB_PORT: 5432
+    #     DB_NAME: mykeibadb_test
+    #     DB_USER: postgres
+    #     DB_PASSWORD: postgres
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
