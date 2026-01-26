@@ -83,17 +83,7 @@ class ConfigManager:
         Raises:
             ValueError: ポート番号が範囲外の場合
         """
-        port = int(os.getenv("MYKEIBADB_PORT", "5432"))
-        if port < 1 or port > 65535:
-            raise ValueError(f"ポート番号は1～65535の範囲で指定してください: {port}")
-
-        return DBConfig(
-            host=os.getenv("MYKEIBADB_HOST", "localhost"),
-            port=port,
-            database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
-            user=os.getenv("MYKEIBADB_USER", "postgres"),
-            password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
-        )
+        return self._create_db_config_from_env()
 
     @staticmethod
     def from_env() -> DBConfig:
@@ -108,20 +98,8 @@ class ConfigManager:
         Raises:
             ValueError: ポート番号が範囲外の場合
         """
-        # .envファイルを自動探索して読み込み
         load_dotenv()
-
-        port = int(os.getenv("MYKEIBADB_PORT", "5432"))
-        if port < 1 or port > 65535:
-            raise ValueError(f"ポート番号は1～65535の範囲で指定してください: {port}")
-
-        return DBConfig(
-            host=os.getenv("MYKEIBADB_HOST", "localhost"),
-            port=port,
-            database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
-            user=os.getenv("MYKEIBADB_USER", "postgres"),
-            password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
-        )
+        return ConfigManager._create_db_config_from_env()
 
     @staticmethod
     def ssh_from_env() -> SSHConfig:
@@ -136,12 +114,42 @@ class ConfigManager:
         Raises:
             ValueError: ポート番号が範囲外の場合
         """
-        # .envファイルを自動探索して読み込み
         load_dotenv()
+        return ConfigManager._create_ssh_config_from_env()
 
+    @staticmethod
+    def _create_db_config_from_env() -> DBConfig:
+        """環境変数からDBConfigを生成する内部ヘルパーメソッド.
+
+        Returns:
+            DBConfig: データベース接続設定
+
+        Raises:
+            ValueError: ポート番号が範囲外の場合
+        """
+        port = int(os.getenv("MYKEIBADB_PORT", "5432"))
+        ConfigManager._validate_port(port)
+
+        return DBConfig(
+            host=os.getenv("MYKEIBADB_HOST", "localhost"),
+            port=port,
+            database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
+            user=os.getenv("MYKEIBADB_USER", "postgres"),
+            password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
+        )
+
+    @staticmethod
+    def _create_ssh_config_from_env() -> SSHConfig:
+        """環境変数からSSHConfigを生成する内部ヘルパーメソッド.
+
+        Returns:
+            SSHConfig: SSH接続設定
+
+        Raises:
+            ValueError: ポート番号が範囲外の場合
+        """
         port = int(os.getenv("MYKEIBADB_SSH_PORT", "22"))
-        if port < 1 or port > 65535:
-            raise ValueError(f"ポート番号は1～65535の範囲で指定してください: {port}")
+        ConfigManager._validate_port(port, "SSHポート番号")
 
         return SSHConfig(
             host=os.getenv("MYKEIBADB_SSH_HOST", "host.docker.internal"),
@@ -150,3 +158,17 @@ class ConfigManager:
             password=os.getenv("MYKEIBADB_SSH_PASSWORD"),
             key_path=os.getenv("MYKEIBADB_SSH_KEY"),
         )
+
+    @staticmethod
+    def _validate_port(port: int, port_name: str = "ポート番号") -> None:
+        """ポート番号のバリデーションを行う内部ヘルパーメソッド.
+
+        Args:
+            port: 検証するポート番号
+            port_name: エラーメッセージに使用するポート名
+
+        Raises:
+            ValueError: ポート番号が1～65535の範囲外の場合
+        """
+        if port < 1 or port > 65535:
+            raise ValueError(f"{port_name}は1～65535の範囲で指定してください: {port}")
