@@ -47,7 +47,7 @@ jobs:
           mykeibadb/ \
           tests/ \
           --max-line-length=100 \
-          --ignore=E203,W503,ANN101,ANN204,ANN401,D105,D107,D403,D415,DAR101,DAR201 \
+          --ignore=E203,W503,ANN101,ANN204,ANN401,D105,D107,D403,D415,DAR101,DAR201,DAR402 \
           --select=E,W,F,N,D \
           --docstring-convention=google \
           --statistics
