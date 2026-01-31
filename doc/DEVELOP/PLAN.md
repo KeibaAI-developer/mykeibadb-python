@@ -195,24 +195,42 @@
 
 ---
 
-### PR#5: 主要テーブル対応（レース系）
+### PR#5: レース・票数関連テーブル対応
 
-**目的**: レース関連テーブルへのアクセスを実装
+**目的**: レース関連と票数関連テーブルへのアクセスを実装（19テーブル）
 
 **実装内容**:
-- レース系テーブルの定義追加
+- レース系・票数系テーブルの定義追加
 - テーブル固有のバリデーション
 - 使用例の追加
 
 **対象テーブル**:
-- RACE_SHOSAI（レース詳細）
-- UMAGOTO_RACE_JOHO（馬毎レース情報）
-- HARAIMODOSHI（払戻）
-- ODDS1_TANSHO, ODDS1_FUKUSHO（オッズ）
+
+**レース関連（5テーブル）**:
+- TOKUBETSU_TOROKUBA, TOKUBETSU_TOROKUBAGOTO_JOHO
+- RACE_SHOSAI（レース詳細）, UMAGOTO_RACE_JOHO（馬毎レース情報）, HARAIMODOSHI（払戻）
+
+**票数関連（10テーブル）**:
+- HYOSU1, HYOSU1_TANSHO, HYOSU1_FUKUSHO, HYOSU1_WAKUREN
+- HYOSU1_UMAREN, HYOSU1_WIDE, HYOSU1_UMATAN, HYOSU1_SANRENPUKU
+- HYOSU6, HYOSU6_SANRENTAN
+
+**開催情報（1テーブル）**:
+- KAISAI_SCHEDULE
+
+**コース情報（1テーブル）**:
+- COURSE_JOHO
+
+**調教データ（2テーブル）**:
+- HANRO_CHOKYO, WOODCHIP_CHOKYO
 
 **実装ファイル**:
 - `mykeibadb/tables.py`（更新）
 - `tests/integration/test_race_tables.py`
+- `tests/integration/test_hyosu_tables.py`
+- `tests/integration/test_kaisai_schedule.py`
+- `tests/integration/test_course_joho.py`
+- `tests/integration/test_chokyo_tables.py`
 
 **テスト項目**:
 
@@ -220,14 +238,16 @@
 - レースコードでのレース詳細取得
 - 複数レースの一括取得
 - 馬番でのフィルタ
-- オッズデータの取得
+- 票数データの取得
+- 調教データの取得
+- 開催スケジュールの取得
 
 **準正常系**:
 - 存在しないレースコード
 - 未来のレース（データなし）
 
 **成果物**:
-- レース系テーブル定義
+- レース・票数系テーブル定義
 - 結合テスト
 
 **レビューポイント**:
@@ -236,36 +256,47 @@
 
 ---
 
-### PR#6: マスタテーブル対応
+### PR#6: オッズ・マスタテーブル対応
 
-**目的**: マスタデータテーブルへのアクセスを実装
+**目的**: オッズ関連とマスタデータテーブルへのアクセスを実装（22テーブル）
 
 **実装内容**:
-- マスタ系テーブルの定義追加
+- オッズ系・マスタ系テーブルの定義追加
 - 大量データ取得への対応
 
 **対象テーブル**:
-- KYOSOBA_MASTER2（競走馬マスタ）
-- KISHU_MASTER（騎手マスタ）
-- CHOKYOSHI_MASTER（調教師マスタ）
-- BANUSHI_MASTER（馬主マスタ）
+
+**オッズ関連（14テーブル）**:
+- ODDS1, ODDS1_TANSHO, ODDS1_FUKUSHO, ODDS1_WAKUREN
+- ODDS1_JIKEIRETSU, ODDS1_TANSHO_JIKEIRETSU, ODDS1_FUKUSHO_JIKEIRETSU, ODDS1_WAKUREN_JIKEIRETSU
+- ODDS2_UMAREN, ODDS2_UMAREN_JIKEIRETSU
+- ODDS3_WIDE, ODDS4_UMATAN, ODDS5_SANRENPUKU, ODDS6_SANRENTAN
+
+**マスタデータ（8テーブル）**:
+- KYOSOBA_MASTER2（競走馬マスタ）, KISHU_MASTER（騎手マスタ）, CHOKYOSHI_MASTER（調教師マスタ）
+- SEISANSHA_MASTER2（生産者マスタ）, BANUSHI_MASTER（馬主マスタ）, HANSHOKUBA_MASTER2（繁殖馬マスタ）
+- SANKU_MASTER2（産駒マスタ）, RECORD_MASTER（レコードマスタ）
 
 **実装ファイル**:
 - `mykeibadb/tables.py`（更新）
+- `tests/integration/test_odds_tables.py`
 - `tests/integration/test_master_tables.py`
 
 **テスト項目**:
 
 **正常系**:
-- 全件取得
+- オッズデータの取得（単勝、複勝、馬連、ワイド、馬単、三連複、三連単）
+- 時系列オッズの取得
+- マスタ全件取得
 - 血統登録番号でのフィルタ
 - 名前での検索（部分一致）
 
 **準正常系**:
 - 存在しないコード
+- オッズ未発売のレース
 
 **成果物**:
-- マスタテーブル定義
+- オッズ・マスタテーブル定義
 - 結合テスト
 
 **レビューポイント**:
@@ -274,23 +305,47 @@
 
 ---
 
-### PR#7: その他テーブル対応
+### PR#7: 出走別・詳細情報・その他テーブル対応
 
-**目的**: 残りの全テーブルへの対応を完了
+**目的**: 残りの全テーブルへの対応を完了（22テーブル、合計63テーブル）
 
 **実装内容**:
-- 統計・分析系テーブルの定義
-- WIN5・速報系テーブルの定義
+- 出走別・競走馬詳細・データマイニング・WIN5・速報系テーブルの定義
 - 全63テーブルのサポート完了
 
 **対象テーブル**:
-- SHUSSOBETSU_*（出走別着度数）
-- DATA_MINING_*（データマイニング）
+
+**出走別データ（7テーブル）**:
+- SHUSSOBETSU_BABA, SHUSSOBETSU_KYORI, SHUSSOBETSU_KEIBAJO
+- SHUSSOBETSU_KISHU, SHUSSOBETSU_CHOKYOSHI, SHUSSOBETSU_BANUSHI, SHUSSOBETSU_SEISANSHA2
+
+**競走馬詳細情報（3テーブル）**:
+- KYOSOBA_TORIHIKI_KAKAKU2（取引価格）
+- BAMEI_IMI_YURAI（馬名意味由来）
+- KEITO_JOHO2（系統情報）
+
+**データマイニング予想（2テーブル）**:
+- DATA_MINING_TIME, DATA_MINING_TAISEN
+
+**WIN5（2テーブル）**:
 - WIN5, WIN5_HARAIMODOSHI
-- 速報系テーブル（BATAIJU等）
+
+**速報（7テーブル）**:
+- KYOSOBA_JOGAI_JOHO（競走馬除外情報）
+- BATAIJU（馬体重）, TENKO_BABA_JOTAI（天候馬場状態）
+- SHUSSOTORIKESHI_KYOSOJOGAI（出走取消・競走除外）, KISHU_HENKO（騎手変更）
+- HASSOJIKOKU_HENKO（発走時刻変更）, COURSE_HENKO（コース変更）
+
+**その他（1テーブル）**:
+- SHOBUFUKU（勝負服）
 
 **実装ファイル**:
 - `mykeibadb/tables.py`（更新）
+- `tests/integration/test_shussobetsu_tables.py`
+- `tests/integration/test_kyosoba_detail_tables.py`
+- `tests/integration/test_data_mining_tables.py`
+- `tests/integration/test_win5_tables.py`
+- `tests/integration/test_sokuhou_tables.py`
 - `tests/integration/test_other_tables.py`
 
 **テスト項目**:
@@ -298,9 +353,12 @@
 **正常系**:
 - 各テーブルの基本取得
 - 代表的なフィルタパターン
+- 出走別データの集計
+- 速報データの取得
+- WIN5データの取得
 
 **成果物**:
-- 全テーブル定義
+- 全テーブル定義（合計63テーブル）
 - 結合テスト
 
 **レビューポイント**:
