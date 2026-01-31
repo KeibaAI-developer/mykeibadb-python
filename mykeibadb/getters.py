@@ -3,6 +3,7 @@
 このモジュールは、各テーブルに対してキーや期間を指定してデータを取得する関数を提供する。
 各関数は指定されたフィルタ条件に従ってテーブルからデータを取得し、DataFrameとして返す。
 """
+
 from datetime import date
 from typing import Any
 
@@ -10,8 +11,10 @@ import pandas as pd
 
 from mykeibadb.config import ConfigManager
 from mykeibadb.connection import ConnectionManager
+from mykeibadb.exceptions import InvalidFilterError
 from mykeibadb.tables import TableAccessor
 from mykeibadb.utils import (
+    is_valid_identifier,
     validate_banushi_code,
     validate_chokyoshi_code,
     validate_hanshoku_toroku_bango,
@@ -35,6 +38,7 @@ class TableGetters:
         connection_manager (ConnectionManager): データベース接続マネージャー
         table_accessor (TableAccessor): テーブルアクセサー
     """
+
     def __init__(self) -> None:
         """テーブルデータ取得クラスを初期化.
 
@@ -1686,7 +1690,23 @@ class TableGetters:
 
         Returns:
             pd.DataFrame: 取得したデータのDataFrame
+
+        Raises:
+            InvalidFilterError: テーブル名、カラム名が無効な場合
         """
+        # SQLインジェクション対策: 識別子を検証
+        if not is_valid_identifier(table_name):
+            raise InvalidFilterError(
+                f"無効なテーブル名です: '{table_name}'. "
+                f"テーブル名は英数字とアンダースコアのみ使用できます。"
+            )
+
+        if not is_valid_identifier(date_column):
+            raise InvalidFilterError(
+                f"無効な日付カラム名です: '{date_column}'. "
+                f"カラム名は英数字とアンダースコアのみ使用できます。"
+            )
+
         # 期間フィルタ用のカスタムクエリを構築
         base_query = f"SELECT * FROM {table_name}"  # noqa: S608
 
@@ -1695,6 +1715,13 @@ class TableGetters:
 
         # 既存フィルタを追加
         for column, value in filters.items():
+            # SQLインジェクション対策: カラム名を検証
+            if not is_valid_identifier(column):
+                raise InvalidFilterError(
+                    f"無効なカラム名です: '{column}'. "
+                    f"カラム名は英数字とアンダースコアのみ使用できます。"
+                )
+
             if isinstance(value, list):
                 placeholders = ", ".join(["%s"] * len(value))
                 where_clauses.append(f"{column} IN ({placeholders})")

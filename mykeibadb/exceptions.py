@@ -49,7 +49,7 @@ class QueryExecutionError(MykeibaDBError):
     pass
 
 
-class ValidationError(Exception):
+class ValidationError(MykeibaDBError):
     """引数検証エラー."""
 
     pass
