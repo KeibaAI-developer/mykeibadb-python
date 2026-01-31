@@ -407,3 +407,37 @@ def test_get_connection_raises_error_on_pool_error(db_config: DBConfig) -> None:
             manager._get_connection()
 
         assert "接続プールからの接続取得に失敗しました" in str(exc_info.value)
+
+
+def test_execute_query_handles_connection_failure(db_config: DBConfig) -> None:
+    """execute_queryで_get_connection()が失敗した場合の動作を確認."""
+    with patch("mykeibadb.connection.pool.SimpleConnectionPool") as mock_pool_class:
+        mock_pool = MagicMock()
+        mock_pool.getconn.side_effect = psycopg2.Error("接続取得エラー")
+        mock_pool_class.return_value = mock_pool
+
+        manager = ConnectionManager(db_config)
+
+        with pytest.raises(MykeibaDBConnectionError) as exc_info:
+            manager.execute_query("SELECT * FROM test_table")
+
+        assert "接続プールからの接続取得に失敗しました" in str(exc_info.value)
+        # connがNoneのため、putconnは呼ばれない
+        mock_pool.putconn.assert_not_called()
+
+
+def test_fetch_dataframe_handles_connection_failure(db_config: DBConfig) -> None:
+    """fetch_dataframeで_get_connection()が失敗した場合の動作を確認."""
+    with patch("mykeibadb.connection.pool.SimpleConnectionPool") as mock_pool_class:
+        mock_pool = MagicMock()
+        mock_pool.getconn.side_effect = psycopg2.Error("接続取得エラー")
+        mock_pool_class.return_value = mock_pool
+
+        manager = ConnectionManager(db_config)
+
+        with pytest.raises(MykeibaDBConnectionError) as exc_info:
+            manager.fetch_dataframe("SELECT * FROM test_table")
+
+        assert "接続プールからの接続取得に失敗しました" in str(exc_info.value)
+        # connがNoneのため、putconnは呼ばれない
+        mock_pool.putconn.assert_not_called()

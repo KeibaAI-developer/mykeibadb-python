@@ -17,11 +17,11 @@ class DBConfig:
     PostgreSQLへの接続に必要な設定情報を保持する。
 
     Attributes:
-        host: PostgreSQLホスト名（デフォルト: localhost）
-        port: PostgreSQLポート番号（デフォルト: 5432）
-        database: データベース名（デフォルト: mykeibadb）
-        user: ユーザー名（デフォルト: postgres）
-        password: パスワード（デフォルト: postgres）
+        host (str): PostgreSQLホスト名（デフォルト: localhost）
+        port (int): PostgreSQLポート番号（デフォルト: 5432）
+        database (str): データベース名（デフォルト: mykeibadb）
+        user (str): ユーザー名（デフォルト: postgres）
+        password (str): パスワード（デフォルト: postgres）
     """
 
     host: str = "localhost"
@@ -41,7 +41,7 @@ class ConfigManager:
         """設定マネージャーを初期化.
 
         Args:
-            config_path: .envファイルのパス（デフォルト: None）
+            config_path (str | None): .envファイルのパス（デフォルト: None）
                 Noneの場合は、カレントディレクトリから親ディレクトリに向かって.envを探索する
         """
         self.config_path = config_path

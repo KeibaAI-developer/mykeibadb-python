@@ -4,6 +4,8 @@
 接続プールの管理、クエリ実行、DataFrameへの変換機能を含む。
 """
 
+from typing import Any
+
 import pandas as pd
 import psycopg2
 from pandas.errors import DatabaseError
@@ -43,40 +45,42 @@ class ConnectionManager:
     def execute_query(
         self,
         query: str,
-        params: tuple[str | int, ...] | None = None,
-    ) -> list[tuple[str | int | float | None, ...]]:
+        params: tuple[Any, ...] | None = None,
+    ) -> list[tuple[Any, ...]]:
         """SQLクエリを実行.
 
         SELECT文などの結果を返すクエリを実行し、結果をタプルのリストとして返す。
 
         Args:
             query (str): 実行するSQLクエリ
-            params (tuple[str | int, ...] | None): クエリパラメータ（プリペアドステートメント用）
+            params (tuple[Any, ...] | None): クエリパラメータ（プリペアドステートメント用）
 
         Returns:
-            list[tuple[str | int | float | None, ...]]: クエリ結果のタプルのリスト
+            list[tuple[Any, ...]]: クエリ結果のタプルのリスト
 
         Raises:
             QueryExecutionError: クエリ実行に失敗した場合
             MykeibaDBConnectionError: 接続に失敗した場合
         """
-        conn = self._get_connection()
+        conn = None
         try:
+            conn = self._get_connection()
             with conn.cursor() as cursor:
                 cursor.execute(query, params)
-                result: list[tuple[str | int | float | None, ...]] = cursor.fetchall()
+                result: list[tuple[Any, ...]] = cursor.fetchall()
                 return result
         except psycopg2.ProgrammingError as e:
             raise QueryExecutionError(f"SQLクエリの実行に失敗しました: {e}. クエリ: {query}") from e
         except psycopg2.Error as e:
             raise QueryExecutionError(f"クエリ実行中にエラーが発生しました: {e}") from e
         finally:
-            self._put_connection(conn)
+            if conn is not None:
+                self._put_connection(conn)
 
     def fetch_dataframe(
         self,
         query: str,
-        params: tuple[str | int, ...] | None = None,
+        params: tuple[Any, ...] | None = None,
     ) -> pd.DataFrame:
         """クエリ結果をDataFrameとして取得.
 
@@ -84,7 +88,7 @@ class ConnectionManager:
 
         Args:
             query (str): 実行するSQLクエリ
-            params (tuple[str | int, ...] | None): クエリパラメータ（プリペアドステートメント用）
+            params (QueryParams | None): クエリパラメータ（プリペアドステートメント用）
 
         Returns:
             pd.DataFrame: クエリ結果のDataFrame
@@ -93,8 +97,9 @@ class ConnectionManager:
             QueryExecutionError: クエリ実行に失敗した場合
             MykeibaDBConnectionError: 接続に失敗した場合
         """
-        conn = self._get_connection()
+        conn = None
         try:
+            conn = self._get_connection()
             df = pd.read_sql_query(query, conn, params=params)
             return df
         except (psycopg2.ProgrammingError, DatabaseError) as e:
@@ -102,7 +107,8 @@ class ConnectionManager:
         except psycopg2.Error as e:
             raise QueryExecutionError(f"クエリ実行中にエラーが発生しました: {e}") from e
         finally:
-            self._put_connection(conn)
+            if conn is not None:
+                self._put_connection(conn)
 
     def close(self) -> None:
         """接続プールをクローズ.
