@@ -31,27 +31,6 @@ class DBConfig:
     password: str = "postgres"
 
 
-@dataclass
-class SSHConfig:
-    """SSH接続設定.
-
-    DB更新用のSSH接続に必要な設定情報を保持する（Linux/macOSからのリモート実行時のみ使用）。
-
-    Attributes:
-        host: SSH接続先ホスト名（デフォルト: host.docker.internal）
-        port: SSHポート番号（デフォルト: 22）
-        username: SSHユーザー名（デフォルト: None）
-        password: SSHパスワード（デフォルト: None）
-        key_path: SSH秘密鍵のパス（デフォルト: None）
-    """
-
-    host: str = "host.docker.internal"
-    port: int = 22
-    username: str | None = None
-    password: str | None = None
-    key_path: str | None = None
-
-
 class ConfigManager:
     """設定マネージャー.
 
@@ -102,22 +81,6 @@ class ConfigManager:
         return ConfigManager._create_db_config_from_env()
 
     @staticmethod
-    def ssh_from_env() -> SSHConfig:
-        """環境変数からSSH設定を生成.
-
-        環境変数からSSH接続設定を読み込み、SSHConfigインスタンスを生成する。
-        .envファイルが存在する場合は、それも読み込む。
-
-        Returns:
-            SSHConfig: SSH接続設定
-
-        Raises:
-            ValueError: ポート番号が範囲外の場合
-        """
-        load_dotenv()
-        return ConfigManager._create_ssh_config_from_env()
-
-    @staticmethod
     def _create_db_config_from_env() -> DBConfig:
         """環境変数からDBConfigを生成する内部ヘルパーメソッド.
 
@@ -128,7 +91,8 @@ class ConfigManager:
             ValueError: ポート番号が範囲外の場合
         """
         port = int(os.getenv("MYKEIBADB_PORT", "5432"))
-        ConfigManager._validate_port(port)
+        if port < 1 or port > 65535:
+            raise ValueError(f"ポート番号は1～65535の範囲で指定してください: {port}")
 
         return DBConfig(
             host=os.getenv("MYKEIBADB_HOST", "localhost"),
@@ -137,38 +101,3 @@ class ConfigManager:
             user=os.getenv("MYKEIBADB_USER", "postgres"),
             password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
         )
-
-    @staticmethod
-    def _create_ssh_config_from_env() -> SSHConfig:
-        """環境変数からSSHConfigを生成する内部ヘルパーメソッド.
-
-        Returns:
-            SSHConfig: SSH接続設定
-
-        Raises:
-            ValueError: ポート番号が範囲外の場合
-        """
-        port = int(os.getenv("MYKEIBADB_SSH_PORT", "22"))
-        ConfigManager._validate_port(port, "SSHポート番号")
-
-        return SSHConfig(
-            host=os.getenv("MYKEIBADB_SSH_HOST", "host.docker.internal"),
-            port=port,
-            username=os.getenv("MYKEIBADB_SSH_USER"),
-            password=os.getenv("MYKEIBADB_SSH_PASSWORD"),
-            key_path=os.getenv("MYKEIBADB_SSH_KEY"),
-        )
-
-    @staticmethod
-    def _validate_port(port: int, port_name: str = "ポート番号") -> None:
-        """ポート番号のバリデーションを行う内部ヘルパーメソッド.
-
-        Args:
-            port: 検証するポート番号
-            port_name: エラーメッセージに使用するポート名
-
-        Raises:
-            ValueError: ポート番号が1～65535の範囲外の場合
-        """
-        if port < 1 or port > 65535:
-            raise ValueError(f"{port_name}は1～65535の範囲で指定してください: {port}")

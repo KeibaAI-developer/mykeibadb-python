@@ -107,63 +107,7 @@
 
 ---
 
-### PR#3: DB更新機能の実装
-
-**目的**: mykeibadb.exeを実行するDB更新機能を実装（ローカル/SSH両対応）
-
-**前提条件**: PR#2で実装された`SSHConfig`データクラスを利用
-
-**実装内容**:
-- `DatabaseUpdater`クラスの実装
-- プラットフォーム検知機能（Windows/Linux/macOS）
-- Windowsローカル実行機能（subprocess）
-- SSH接続機能（paramiko使用）
-- 例外クラスの定義（exceptions.py）
-
-**実装ファイル**:
-- `mykeibadb/updater.py`
-- `mykeibadb/exceptions.py`
-- `tests/unit/updater/test_database_updater.py`
-- `tests/integration/test_update.py`
-
-**テスト項目**:
-
-**正常系**:
-- プラットフォーム検知の正確性
-- Windowsローカル実行（subprocess）
-- SSH接続の確立（Linux/macOS）
-- mykeibadb.exeの正常実行
-- 実行完了待機
-- 更新成功の確認
-
-**準正常系**:
-- SSH認証失敗（ユーザー名・パスワード誤り）
-- SSH接続先が見つからない
-- mykeibadb.exeが存在しない
-
-**異常系**:
-- SSH接続タイムアウト
-- mykeibadb.exe実行エラー
-- ネットワーク障害
-- SSH設定が必要なのに未設定
-
-**成果物**:
-- DatabaseUpdaterクラス（ローカル/SSH両対応）
-- 例外クラス群
-- Windows側セットアップ手順書
-- 単体テスト・結合テスト
-
-**レビューポイント**:
-- プラットフォーム依存の処理分岐
-- SSH接続のセキュリティ
-- エラーハンドリングの適切性
-- タイムアウト処理
-- Docker環境での動作確認
-- テストカバレッジ（目標80%以上）
-
----
-
-### PR#4: DB接続機能の実装
+### PR#3: DB接続機能の実装
 
 **目的**: PostgreSQLへの接続・切断機能を実装
 
@@ -208,7 +152,7 @@
 
 ---
 
-### PR#5: テーブルアクセス基盤の実装
+### PR#4: テーブルアクセス基盤の実装
 
 **目的**: テーブルデータ取得の基本機能を実装
 
@@ -251,7 +195,7 @@
 
 ---
 
-### PR#6: 主要テーブル対応（レース系）
+### PR#5: 主要テーブル対応（レース系）
 
 **目的**: レース関連テーブルへのアクセスを実装
 
@@ -292,7 +236,7 @@
 
 ---
 
-### PR#7: マスタテーブル対応
+### PR#6: マスタテーブル対応
 
 **目的**: マスタデータテーブルへのアクセスを実装
 
@@ -330,7 +274,7 @@
 
 ---
 
-### PR#8: その他テーブル対応
+### PR#7: その他テーブル対応
 
 **目的**: 残りの全テーブルへの対応を完了
 
@@ -365,7 +309,7 @@
 
 ---
 
-### PR#9: 結合テストの整備
+### PR#8: 結合テストの整備
 
 **目的**: エンドツーエンドのテストを整備
 
@@ -403,7 +347,7 @@
 
 ---
 
-### PR#10: ドキュメント・サンプルコードの整備
+### PR#9: ドキュメント・サンプルコードの整備
 
 **目的**: ユーザー向けドキュメントを完成
 
@@ -436,7 +380,7 @@
 
 ---
 
-### PR#11: パフォーマンス最適化
+### PR#10: パフォーマンス最適化
 
 **目的**: クエリ実行速度とメモリ使用量を最適化
 
@@ -467,7 +411,7 @@
 
 ---
 
-### PR#12: エラーハンドリング強化
+### PR#11: エラーハンドリング強化
 
 **目的**: エラーメッセージとロギングを改善
 
@@ -492,7 +436,7 @@
 
 ---
 
-### PR#13: v1.0.0リリース準備
+### PR#12: v1.0.0リリース準備
 
 **目的**: 初版リリースに向けた最終調整
 
@@ -548,40 +492,6 @@
 - UMAGOTO_RACE_JOHO: 100件（10レース × 平均10頭）
 - KISHU_MASTER: 100騎手
 - その他テーブル: 各10-100件
-
-### 3.4 CI/CD設定
-
-**GitHub Actions**:
-```yaml
-name: Test
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mykeibadb_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - run: pip install -e .[dev]
-      - run: pytest --cov=mykeibadb --cov-report=xml
-      - uses: codecov/codecov-action@v3
-```
 
 **注意**:
 - ローカル開発環境: Windows側のPostgreSQLを使用
