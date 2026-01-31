@@ -4,6 +4,7 @@
 接続プールの管理、クエリ実行、DataFrameへの変換機能を含む。
 """
 
+import warnings
 from typing import Any
 
 import pandas as pd
@@ -100,7 +101,10 @@ class ConnectionManager:
         conn = None
         try:
             conn = self._get_connection()
-            df = pd.read_sql_query(query, conn, params=params)
+            # pandasはpsycopg2接続でも動作するが、UserWarningを抑制
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy")
+                df = pd.read_sql_query(query, conn, params=params)
             return df
         except (psycopg2.ProgrammingError, DatabaseError) as e:
             raise QueryExecutionError(f"SQLクエリの実行に失敗しました: {e}. クエリ: {query}") from e
