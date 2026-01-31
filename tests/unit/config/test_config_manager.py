@@ -63,27 +63,28 @@ def test_config_manager_partial_env() -> None:
         "MYKEIBADB_DATABASE": "partialdb",
     }
     with patch.dict(os.environ, env_vars, clear=True):
-        config = ConfigManager.from_env()
-        assert config.host == "partialhost"
-        assert config.port == 5432  # デフォルト値
-        assert config.database == "partialdb"
-        assert config.user == "postgres"  # デフォルト値
-        assert config.password == "postgres"  # デフォルト値
+        with patch("mykeibadb.config.load_dotenv"):
+            config = ConfigManager.from_env()
+            assert config.host == "partialhost"
+            assert config.port == 5432  # デフォルト値
+            assert config.database == "partialdb"
+            assert config.user == "postgres"  # デフォルト値
+            assert config.password == "postgres"  # デフォルト値
 
 
-# 準正常系
 def test_config_manager_from_env_no_env_vars() -> None:
     """環境変数が設定されていない場合、デフォルト値を使用することを確認する."""
     with patch.dict(os.environ, {}, clear=True):
-        config = ConfigManager.from_env()
-        assert config.host == "host.docker.internal"
-        assert config.port == 5432
-        assert config.database == "mykeibadb"
-        assert config.user == "postgres"
-        assert config.password == "postgres"
+        with patch("mykeibadb.config.load_dotenv"):
+            config = ConfigManager.from_env()
+            assert config.host == "localhost"
+            assert config.port == 5432
+            assert config.database == "mykeibadb"
+            assert config.user == "postgres"
+            assert config.password == "postgres"
 
 
-# 異常系
+# 準正常系
 def test_config_manager_from_env_invalid_port_too_low() -> None:
     """ポート番号が範囲外（下限未満）の場合、ValueErrorが発生することを確認する."""
     env_vars = {
