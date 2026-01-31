@@ -4,10 +4,13 @@
 SQLクエリの生成、テーブル名のバリデーション、フィルタ処理などを行う。
 """
 
+from typing import Any
+
 import pandas as pd
 
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import InvalidFilterError, TableNotFoundError
+from mykeibadb.utils import is_valid_identifier
 
 # サポートする全63テーブルのリスト
 SUPPORTED_TABLES: frozenset[str] = frozenset(
@@ -91,9 +94,6 @@ SUPPORTED_TABLES: frozenset[str] = frozenset(
     ]
 )
 
-# フィルタ値として許可される型
-FilterValueType = str | int | list[str | int]
-
 
 class TableAccessor:
     """テーブルアクセサー.
@@ -116,7 +116,7 @@ class TableAccessor:
     def get_table_data(
         self,
         table_name: str,
-        filters: dict[str, FilterValueType] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """テーブルデータを取得.
 
@@ -125,7 +125,7 @@ class TableAccessor:
 
         Args:
             table_name (str): テーブル名（例: "RACE_SHOSAI"）
-            filters (dict[str, FilterValueType] | None): フィルタ条件
+            filters (dict[str, Any] | None): フィルタ条件
                 キーはカラム名、値はフィルタ値。
                 値がリストの場合はIN句として処理される。
 
@@ -136,126 +136,104 @@ class TableAccessor:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件の場合
         """
-        self._validate_table_name(table_name)
-        self._validate_filters(filters)
+        _validate_table_name(table_name)
+        _validate_filters(filters)
 
-        query, params = self._build_query(table_name, filters)
+        query, params = _build_query(table_name, filters)
         return self.connection_manager.fetch_dataframe(query, params)
 
-    def _validate_table_name(self, table_name: str) -> None:
-        """テーブル名の妥当性を検証.
 
-        Args:
-            table_name (str): 検証するテーブル名
+def _validate_table_name(table_name: str) -> None:
+    """テーブル名の妥当性を検証.
 
-        Raises:
-            TableNotFoundError: テーブルがサポートされていない場合
-        """
-        if table_name not in SUPPORTED_TABLES:
-            raise TableNotFoundError(
-                f"テーブル '{table_name}' はサポートされていません。 "
-                f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
+    Args:
+        table_name (str): 検証するテーブル名
+
+    Raises:
+        TableNotFoundError: テーブルがサポートされていない場合
+    """
+    if table_name not in SUPPORTED_TABLES:
+        raise TableNotFoundError(
+            f"テーブル '{table_name}' はサポートされていません。 "
+            f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
+        )
+
+
+def _validate_filters(filters: dict[str, Any] | None) -> None:
+    """フィルタ条件の妥当性を検証.
+
+    Args:
+        filters (dict[str, Any] | None): 検証するフィルタ条件
+
+    Raises:
+        InvalidFilterError: フィルタ条件が不正な場合
+    """
+    if filters is None:
+        return
+
+    for key, value in filters.items():
+        # カラム名のバリデーション（SQLインジェクション対策）
+        if not is_valid_identifier(key):
+            raise InvalidFilterError(
+                f"無効なカラム名です: '{key}'. "
+                f"カラム名は英数字とアンダースコアのみ使用できます。"
             )
 
-    def _validate_filters(
-        self,
-        filters: dict[str, FilterValueType] | None,
-    ) -> None:
-        """フィルタ条件の妥当性を検証.
+        # 値の型チェック
+        if isinstance(value, list):
+            if len(value) == 0:
+                raise InvalidFilterError(f"フィルタ値のリストが空です: キー='{key}'")
+            for item in value:
+                if not isinstance(item, (str, int)):
+                    raise InvalidFilterError(
+                        f"無効なフィルタ値の型です: キー='{key}', "
+                        f"値='{item}', 型={type(item).__name__}. "
+                        f"strまたはintを指定してください。"
+                    )
+        elif not isinstance(value, (str, int)):
+            raise InvalidFilterError(
+                f"無効なフィルタ値の型です: キー='{key}', "
+                f"値='{value}', 型={type(value).__name__}. "
+                f"str, int, またはそれらのリストを指定してください。"
+            )
 
-        Args:
-            filters (dict[str, FilterValueType] | None): 検証するフィルタ条件
 
-        Raises:
-            InvalidFilterError: フィルタ条件が不正な場合
-        """
-        if filters is None:
-            return
+def _build_query(
+    table_name: str,
+    filters: dict[str, Any] | None = None,
+) -> tuple[str, tuple[str | int, ...] | None]:
+    """SQLクエリを構築.
 
-        for key, value in filters.items():
-            # カラム名のバリデーション（SQLインジェクション対策）
-            if not self._is_valid_identifier(key):
-                raise InvalidFilterError(
-                    f"無効なカラム名です: '{key}'. "
-                    f"カラム名は英数字とアンダースコアのみ使用できます。"
-                )
+    フィルタ条件に基づいてSELECTクエリを生成する。
+    プリペアドステートメントを使用してSQLインジェクションを防ぐ。
 
-            # 値の型チェック
-            if isinstance(value, list):
-                if len(value) == 0:
-                    raise InvalidFilterError(f"フィルタ値のリストが空です: キー='{key}'")
-                for item in value:
-                    if not isinstance(item, (str, int)):
-                        raise InvalidFilterError(
-                            f"無効なフィルタ値の型です: キー='{key}', "
-                            f"値='{item}', 型={type(item).__name__}. "
-                            f"strまたはintを指定してください。"
-                        )
-            elif not isinstance(value, (str, int)):
-                raise InvalidFilterError(
-                    f"無効なフィルタ値の型です: キー='{key}', "
-                    f"値='{value}', 型={type(value).__name__}. "
-                    f"str, int, またはそれらのリストを指定してください。"
-                )
+    Args:
+        table_name (str): テーブル名
+        filters (dict[str, Any] | None): フィルタ条件
 
-    def _is_valid_identifier(self, name: str) -> bool:
-        """識別子（カラム名、テーブル名）の妥当性を確認.
+    Returns:
+        tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
+    """
+    # ベースクエリ（テーブル名は_validate_table_nameで検証済み）
+    base_query = f"SELECT * FROM {table_name}"  # noqa: S608
 
-        SQLインジェクション対策として、識別子が安全な形式かを検証する。
+    if not filters:
+        return base_query, None
 
-        Args:
-            name (str): 検証する識別子
+    where_clauses: list[str] = []
+    params: list[str | int] = []
 
-        Returns:
-            bool: 識別子が妥当な場合True
-        """
-        if not name:
-            return False
+    for column, value in filters.items():
+        if isinstance(value, list):
+            # IN句を生成
+            placeholders = ", ".join(["%s"] * len(value))
+            # カラム名は_validate_filtersで検証済み
+            where_clauses.append(f"{column} IN ({placeholders})")  # noqa: S608
+            params.extend(value)
+        else:
+            # 単一値の等価条件（カラム名は_validate_filtersで検証済み）
+            where_clauses.append(f"{column} = %s")  # noqa: S608
+            params.append(value)
 
-        # 英数字とアンダースコアのみを許可
-        # 先頭は英字またはアンダースコア
-        if not (name[0].isalpha() or name[0] == "_"):
-            return False
-
-        return all(char.isalnum() or char == "_" for char in name)
-
-    def _build_query(
-        self,
-        table_name: str,
-        filters: dict[str, FilterValueType] | None = None,
-    ) -> tuple[str, tuple[str | int, ...] | None]:
-        """SQLクエリを構築.
-
-        フィルタ条件に基づいてSELECTクエリを生成する。
-        プリペアドステートメントを使用してSQLインジェクションを防ぐ。
-
-        Args:
-            table_name (str): テーブル名
-            filters (dict[str, FilterValueType] | None): フィルタ条件
-
-        Returns:
-            tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
-        """
-        # ベースクエリ（テーブル名は_validate_table_nameで検証済み）
-        base_query = f"SELECT * FROM {table_name}"  # noqa: S608
-
-        if not filters:
-            return base_query, None
-
-        where_clauses: list[str] = []
-        params: list[str | int] = []
-
-        for column, value in filters.items():
-            if isinstance(value, list):
-                # IN句を生成
-                placeholders = ", ".join(["%s"] * len(value))
-                # カラム名は_validate_filtersで検証済み
-                where_clauses.append(f"{column} IN ({placeholders})")  # noqa: S608
-                params.extend(value)
-            else:
-                # 単一値の等価条件（カラム名は_validate_filtersで検証済み）
-                where_clauses.append(f"{column} = %s")  # noqa: S608
-                params.append(value)
-
-        query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
-        return query, tuple(params)
+    query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
+    return query, tuple(params)
