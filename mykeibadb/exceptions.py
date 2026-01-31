@@ -47,3 +47,9 @@ class QueryExecutionError(MykeibaDBError):
     """
 
     pass
+
+
+class ValidationError(Exception):
+    """引数検証エラー."""
+
+    pass

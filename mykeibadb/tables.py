@@ -4,6 +4,8 @@
 SQLクエリの生成、テーブル名のバリデーション、フィルタ処理などを行う。
 """
 
+from typing import Any
+
 import pandas as pd
 
 from mykeibadb.connection import ConnectionManager
@@ -91,9 +93,6 @@ SUPPORTED_TABLES: frozenset[str] = frozenset(
     ]
 )
 
-# フィルタ値として許可される型
-FilterValueType = str | int | list[str | int]
-
 
 class TableAccessor:
     """テーブルアクセサー.
@@ -116,7 +115,7 @@ class TableAccessor:
     def get_table_data(
         self,
         table_name: str,
-        filters: dict[str, FilterValueType] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """テーブルデータを取得.
 
@@ -125,7 +124,7 @@ class TableAccessor:
 
         Args:
             table_name (str): テーブル名（例: "RACE_SHOSAI"）
-            filters (dict[str, FilterValueType] | None): フィルタ条件
+            filters (dict[str, Any] | None): フィルタ条件
                 キーはカラム名、値はフィルタ値。
                 値がリストの場合はIN句として処理される。
 
@@ -159,12 +158,12 @@ class TableAccessor:
 
     def _validate_filters(
         self,
-        filters: dict[str, FilterValueType] | None,
+        filters: dict[str, Any] | None,
     ) -> None:
         """フィルタ条件の妥当性を検証.
 
         Args:
-            filters (dict[str, FilterValueType] | None): 検証するフィルタ条件
+            filters (dict[str, Any] | None): 検証するフィルタ条件
 
         Raises:
             InvalidFilterError: フィルタ条件が不正な場合
@@ -222,7 +221,7 @@ class TableAccessor:
     def _build_query(
         self,
         table_name: str,
-        filters: dict[str, FilterValueType] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> tuple[str, tuple[str | int, ...] | None]:
         """SQLクエリを構築.
 
@@ -231,7 +230,7 @@ class TableAccessor:
 
         Args:
             table_name (str): テーブル名
-            filters (dict[str, FilterValueType] | None): フィルタ条件
+            filters (dict[str, Any] | None): フィルタ条件
 
         Returns:
             tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
