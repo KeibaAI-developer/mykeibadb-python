@@ -103,7 +103,11 @@ class ConnectionManager:
             conn = self._get_connection()
             # pandasはpsycopg2接続でも動作するが、UserWarningを抑制
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", message="pandas only supports SQLAlchemy")
+                warnings.filterwarnings(
+                    "ignore",
+                    category=UserWarning,
+                    message="^pandas only supports SQLAlchemy",
+                )
                 df = pd.read_sql_query(query, conn, params=params)
             return df
         except (psycopg2.ProgrammingError, DatabaseError) as e:

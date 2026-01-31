@@ -12,7 +12,7 @@ import pytest
 from mykeibadb.config import DBConfig
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBConnectionError
-from mykeibadb.tables import TableAccessor
+from mykeibadb.tables import SUPPORTED_TABLES, TableAccessor
 
 
 def _is_postgres_available() -> bool:
@@ -93,6 +93,16 @@ def get_sample_data(
 
     Returns:
         pd.DataFrame: サンプルデータ
+
+    Raises:
+        ValueError: テーブル名がサポートされていない場合
     """
+    # セキュリティ対策: SUPPORTED_TABLESに対してテーブル名を検証
+    if table_name not in SUPPORTED_TABLES:
+        raise ValueError(
+            f"テーブル '{table_name}' はサポートされていません。 "
+            f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
+        )
+
     query = f"SELECT * FROM {table_name} LIMIT {limit}"  # noqa: S608
     return connection_manager.fetch_dataframe(query)
