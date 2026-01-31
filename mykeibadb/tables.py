@@ -183,9 +183,7 @@ class TableAccessor:
             # 値の型チェック
             if isinstance(value, list):
                 if len(value) == 0:
-                    raise InvalidFilterError(
-                        f"フィルタ値のリストが空です: キー='{key}'"
-                    )
+                    raise InvalidFilterError(f"フィルタ値のリストが空です: キー='{key}'")
                 for item in value:
                     if not isinstance(item, (str, int)):
                         raise InvalidFilterError(
@@ -238,7 +236,7 @@ class TableAccessor:
         Returns:
             tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
         """
-        # ベースクエリ（テーブル名は検証済みなので直接埋め込み可能）
+        # ベースクエリ（テーブル名は_validate_table_nameで検証済み）
         base_query = f"SELECT * FROM {table_name}"  # noqa: S608
 
         if not filters:
@@ -251,11 +249,12 @@ class TableAccessor:
             if isinstance(value, list):
                 # IN句を生成
                 placeholders = ", ".join(["%s"] * len(value))
-                where_clauses.append(f"{column} IN ({placeholders})")
+                # カラム名は_validate_filtersで検証済み
+                where_clauses.append(f"{column} IN ({placeholders})")  # noqa: S608
                 params.extend(value)
             else:
-                # 単一値の等価条件
-                where_clauses.append(f"{column} = %s")
+                # 単一値の等価条件（カラム名は_validate_filtersで検証済み）
+                where_clauses.append(f"{column} = %s")  # noqa: S608
                 params.append(value)
 
         query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
