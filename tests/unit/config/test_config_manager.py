@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mykeibadb.config import ConfigManager, DBConfig, SSHConfig
+from mykeibadb.config import ConfigManager, DBConfig
 
 
 # 正常系
@@ -17,16 +17,6 @@ def test_dbconfig_default_values() -> None:
     assert config.database == "mykeibadb"
     assert config.user == "postgres"
     assert config.password == "postgres"
-
-
-def test_sshconfig_default_values() -> None:
-    """SSHConfigのデフォルト値が正しいことを確認する."""
-    config = SSHConfig()
-    assert config.host == "host.docker.internal"
-    assert config.port == 22
-    assert config.username is None
-    assert config.password is None
-    assert config.key_path is None
 
 
 def test_config_manager_from_env() -> None:
@@ -45,24 +35,6 @@ def test_config_manager_from_env() -> None:
         assert config.database == "testdb"
         assert config.user == "testuser"
         assert config.password == "testpass"
-
-
-def test_config_manager_ssh_from_env() -> None:
-    """環境変数からSSH設定を読み込むことができることを確認する."""
-    env_vars = {
-        "MYKEIBADB_SSH_HOST": "sshhost",
-        "MYKEIBADB_SSH_PORT": "2222",
-        "MYKEIBADB_SSH_USER": "sshuser",
-        "MYKEIBADB_SSH_PASSWORD": "sshpass",
-        "MYKEIBADB_SSH_KEY": "/path/to/key",
-    }
-    with patch.dict(os.environ, env_vars, clear=False):
-        config = ConfigManager.ssh_from_env()
-        assert config.host == "sshhost"
-        assert config.port == 2222
-        assert config.username == "sshuser"
-        assert config.password == "sshpass"
-        assert config.key_path == "/path/to/key"
 
 
 def test_config_manager_load_config() -> None:
@@ -104,22 +76,11 @@ def test_config_manager_from_env_no_env_vars() -> None:
     """環境変数が設定されていない場合、デフォルト値を使用することを確認する."""
     with patch.dict(os.environ, {}, clear=True):
         config = ConfigManager.from_env()
-        assert config.host == "localhost"
+        assert config.host == "host.docker.internal"
         assert config.port == 5432
         assert config.database == "mykeibadb"
         assert config.user == "postgres"
         assert config.password == "postgres"
-
-
-def test_config_manager_ssh_from_env_no_env_vars() -> None:
-    """環境変数が設定されていない場合、SSH設定にはデフォルト値を使用することを確認する."""
-    with patch.dict(os.environ, {}, clear=True):
-        config = ConfigManager.ssh_from_env()
-        assert config.host == "host.docker.internal"
-        assert config.port == 22
-        assert config.username is None
-        assert config.password is None
-        assert config.key_path is None
 
 
 # 異常系
@@ -151,26 +112,6 @@ def test_config_manager_from_env_invalid_port_non_numeric() -> None:
     with patch.dict(os.environ, env_vars, clear=False):
         with pytest.raises(ValueError):
             ConfigManager.from_env()
-
-
-def test_config_manager_ssh_from_env_invalid_port_too_low() -> None:
-    """SSHポート番号が範囲外（下限未満）の場合、ValueErrorが発生することを確認する."""
-    env_vars = {
-        "MYKEIBADB_SSH_PORT": "0",
-    }
-    with patch.dict(os.environ, env_vars, clear=False):
-        with pytest.raises(ValueError, match="ポート番号は1～65535の範囲で指定してください"):
-            ConfigManager.ssh_from_env()
-
-
-def test_config_manager_ssh_from_env_invalid_port_too_high() -> None:
-    """SSHポート番号が範囲外（上限超過）の場合、ValueErrorが発生することを確認する."""
-    env_vars = {
-        "MYKEIBADB_SSH_PORT": "65536",
-    }
-    with patch.dict(os.environ, env_vars, clear=False):
-        with pytest.raises(ValueError, match="ポート番号は1～65535の範囲で指定してください"):
-            ConfigManager.ssh_from_env()
 
 
 def test_config_manager_load_config_invalid_port() -> None:
