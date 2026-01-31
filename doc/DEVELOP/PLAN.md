@@ -366,7 +366,6 @@
 **サンプルコード**:
 - `examples/basic_usage.py`: 基本的な使い方
 - `examples/filtering.py`: フィルタの使い方
-- `examples/update_database.py`: DB更新
 - `examples/with_keibaai.py`: KeibaAIとの連携例
 
 **成果物**:
