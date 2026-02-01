@@ -254,7 +254,8 @@ def validate_kaisai_code(kaisai_code: str | list[str] | None) -> None:
     """開催コードの形式を検証.
 
     Args:
-        kaisai_code (str | list[str] | None): 開催コード（16桁）
+        kaisai_code (str | list[str] | None): 開催コード（14桁）
+            開催年+月日+競馬場コード+回次+日次
 
     Raises:
         TypeError: kaisai_codeの型が不正な場合
@@ -272,9 +273,9 @@ def validate_kaisai_code(kaisai_code: str | list[str] | None) -> None:
     for code in codes:
         if not isinstance(code, str):
             raise ValidationError(f"開催コードは文字列である必要があります: {code}")
-        if len(code) != 16:
+        if len(code) != 14:
             raise ValidationError(
-                f"開催コードは16桁である必要があります: {code} (長さ: {len(code)})"
+                f"開催コードは14桁である必要があります: {code} (長さ: {len(code)})"
             )
         if not code.isdigit():
             raise ValidationError(f"開催コードは数字のみで構成される必要があります: {code}")

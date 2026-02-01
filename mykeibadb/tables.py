@@ -215,7 +215,8 @@ def _build_query(
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
     # ベースクエリ（テーブル名は_validate_table_nameで検証済み）
-    base_query = f"SELECT * FROM {table_name}"  # noqa: S608
+    # PostgreSQLではテーブル名を小文字として扱う
+    base_query = f"SELECT * FROM {table_name.lower()}"  # noqa: S608
 
     if not filters:
         return base_query, None
@@ -224,15 +225,19 @@ def _build_query(
     params: list[str | int] = []
 
     for column, value in filters.items():
+        # PostgreSQLではカラム名を小文字として扱う
+        column_lower = column.lower()
         if isinstance(value, list):
             # IN句を生成
             placeholders = ", ".join(["%s"] * len(value))
             # カラム名は_validate_filtersで検証済み
-            where_clauses.append(f"{column} IN ({placeholders})")  # noqa: S608
+            # 文字列型の場合はTRIM関数を使って空白を除去して比較
+            where_clauses.append(f"TRIM({column_lower}) IN ({placeholders})")  # noqa: S608
             params.extend(value)
         else:
             # 単一値の等価条件（カラム名は_validate_filtersで検証済み）
-            where_clauses.append(f"{column} = %s")  # noqa: S608
+            # 文字列型の場合はTRIM関数を使って空白を除去して比較
+            where_clauses.append(f"TRIM({column_lower}) = %s")  # noqa: S608
             params.append(value)
 
     query = f"{base_query} WHERE {' AND '.join(where_clauses)}"

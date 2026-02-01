@@ -37,7 +37,7 @@ def test_get_table_data_without_filters(
     result = table_accessor.get_table_data("RACE_SHOSAI")
 
     mock_connection_manager.fetch_dataframe.assert_called_once_with(
-        "SELECT * FROM RACE_SHOSAI",
+        "SELECT * FROM race_shosai",
         None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
@@ -57,7 +57,7 @@ def test_get_table_data_with_single_value_filter(
     )
 
     mock_connection_manager.fetch_dataframe.assert_called_once_with(
-        "SELECT * FROM RACE_SHOSAI WHERE RACE_CODE = %s",
+        "SELECT * FROM race_shosai WHERE TRIM(race_code) = %s",
         ("202509030411",),
     )
     pd.testing.assert_frame_equal(result, expected_df)
@@ -77,7 +77,7 @@ def test_get_table_data_with_int_filter(
     )
 
     mock_connection_manager.fetch_dataframe.assert_called_once_with(
-        "SELECT * FROM UMAGOTO_RACE_JOHO WHERE UMABAN = %s",
+        "SELECT * FROM umagoto_race_joho WHERE TRIM(umaban) = %s",
         (1,),
     )
     pd.testing.assert_frame_equal(result, expected_df)
@@ -97,7 +97,7 @@ def test_get_table_data_with_list_filter(
     )
 
     mock_connection_manager.fetch_dataframe.assert_called_once_with(
-        "SELECT * FROM RACE_SHOSAI WHERE RACE_CODE IN (%s, %s)",
+        "SELECT * FROM race_shosai WHERE TRIM(race_code) IN (%s, %s)",
         ("202509030411", "202509030412"),
     )
     pd.testing.assert_frame_equal(result, expected_df)
@@ -121,9 +121,9 @@ def test_get_table_data_with_compound_filters(
     query = call_args[0][0]
     params = call_args[0][1]
 
-    assert "SELECT * FROM UMAGOTO_RACE_JOHO WHERE" in query
-    assert "RACE_CODE = %s" in query
-    assert "UMABAN = %s" in query
+    assert "SELECT * FROM umagoto_race_joho WHERE" in query
+    assert "TRIM(race_code) = %s" in query
+    assert "TRIM(umaban) = %s" in query
     assert " AND " in query
     assert "202509030411" in params
     assert 1 in params
@@ -152,9 +152,9 @@ def test_get_table_data_with_mixed_filter_types(
     query = call_args[0][0]
     params = call_args[0][1]
 
-    assert "SELECT * FROM UMAGOTO_RACE_JOHO WHERE" in query
-    assert "RACE_CODE = %s" in query
-    assert "UMABAN IN (%s, %s)" in query
+    assert "SELECT * FROM umagoto_race_joho WHERE" in query
+    assert "TRIM(race_code) = %s" in query
+    assert "TRIM(umaban) IN (%s, %s)" in query
     assert "202509030411" in params
     assert 1 in params
     assert 2 in params
@@ -262,7 +262,7 @@ def test_get_table_data_raises_error_for_invalid_filter_value_type(
     with pytest.raises(InvalidFilterError) as exc_info:
         table_accessor.get_table_data(
             "RACE_SHOSAI",
-            filters={"RACE_CODE": 3.14},  # type: ignore
+            filters={"RACE_CODE": 3.14},
         )
 
     assert "無効なフィルタ値の型" in str(exc_info.value)
@@ -276,7 +276,7 @@ def test_get_table_data_raises_error_for_invalid_type_in_list(
     with pytest.raises(InvalidFilterError) as exc_info:
         table_accessor.get_table_data(
             "RACE_SHOSAI",
-            filters={"RACE_CODE": ["valid", 3.14]},  # type: ignore
+            filters={"RACE_CODE": ["valid", 3.14]},
         )
 
     assert "無効なフィルタ値の型" in str(exc_info.value)
@@ -302,7 +302,7 @@ def test_get_table_data_raises_error_for_none_filter_value(
     with pytest.raises(InvalidFilterError) as exc_info:
         table_accessor.get_table_data(
             "RACE_SHOSAI",
-            filters={"RACE_CODE": None},  # type: ignore
+            filters={"RACE_CODE": None},
         )
 
     assert "無効なフィルタ値の型" in str(exc_info.value)
@@ -315,7 +315,7 @@ def test_get_table_data_raises_error_for_dict_filter_value(
     with pytest.raises(InvalidFilterError) as exc_info:
         table_accessor.get_table_data(
             "RACE_SHOSAI",
-            filters={"RACE_CODE": {"nested": "value"}},  # type: ignore
+            filters={"RACE_CODE": {"nested": "value"}},
         )
 
     assert "無効なフィルタ値の型" in str(exc_info.value)
