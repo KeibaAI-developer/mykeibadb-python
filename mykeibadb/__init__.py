@@ -14,7 +14,20 @@ from mykeibadb.exceptions import (
     TableNotFoundError,
     ValidationError,
 )
-from mykeibadb.getters import TableGetters
+from mykeibadb.getters import (
+    BaseGetter,
+    ChokyoGetter,
+    HyosuGetter,
+    KyosobaGetter,
+    MasterGetter,
+    MiningGetter,
+    OddsGetter,
+    OthersGetter,
+    RaceGetter,
+    ShussobetsuGetter,
+    SokuhoGetter,
+    Win5Getter,
+)
 from mykeibadb.tables import TableAccessor
 from mykeibadb.utils import (
     is_valid_identifier,
@@ -40,7 +53,20 @@ __all__ = [
     "InvalidFilterError",
     "ValidationError",
     "TableAccessor",
-    "TableGetters",
+    # Getter classes
+    "BaseGetter",
+    "RaceGetter",
+    "HyosuGetter",
+    "OddsGetter",
+    "MasterGetter",
+    "ShussobetsuGetter",
+    "ChokyoGetter",
+    "KyosobaGetter",
+    "MiningGetter",
+    "Win5Getter",
+    "SokuhoGetter",
+    "OthersGetter",
+    # Validators
     "is_valid_identifier",
     "validate_race_code",
     "validate_ketto_toroku_bango",
