@@ -72,26 +72,25 @@ def test_get_tokubetsu_torokuba_with_race_codes_list(
 
 def test_get_tokubetsu_torokuba_with_date_range(
     race_getter: RaceGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_tokubetsu_torokuba: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = race_getter.get_tokubetsu_torokuba(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM TOKUBETSU_TOROKUBA WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "TOKUBETSU_TOROKUBA",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -176,26 +175,25 @@ def test_get_race_shosai_with_race_code(
 
 def test_get_race_shosai_with_date_range(
     race_getter: RaceGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_race_shosai: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = race_getter.get_race_shosai(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM RACE_SHOSAI WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "RACE_SHOSAI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -244,26 +242,25 @@ def test_get_umagoto_race_joho_with_filters(
 
 def test_get_umagoto_race_joho_with_date_range(
     race_getter: RaceGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_umagoto_race_joho: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = race_getter.get_umagoto_race_joho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM UMAGOTO_RACE_JOHO WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "UMAGOTO_RACE_JOHO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -303,26 +300,25 @@ def test_get_haraimodoshi_with_race_code(
 
 def test_get_haraimodoshi_with_date_range(
     race_getter: RaceGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_haraimodoshi: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = race_getter.get_haraimodoshi(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM HARAIMODOSHI WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "HARAIMODOSHI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -362,26 +358,25 @@ def test_get_kaisai_schedule_with_kaisai_code(
 
 def test_get_kaisai_schedule_with_date_range(
     race_getter: RaceGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_kaisai_schedule: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"KAISAI_CODE": [VALID_KAISAI_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = race_getter.get_kaisai_schedule(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM KAISAI_SCHEDULE WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "KAISAI_SCHEDULE",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 

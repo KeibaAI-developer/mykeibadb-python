@@ -57,21 +57,24 @@ def test_get_kyosoba_master2_with_ketto_toroku_bango(
 
 def test_get_kyosoba_master2_with_date_range(
     master_getter: MasterGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_kyosoba_master2: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_period.return_value = expected_df
 
     result = master_getter.get_kyosoba_master2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM KYOSOBA_MASTER2 WHERE" in query
+    mock_table_accessor.get_table_data_with_period.assert_called_once_with(
+        "KYOSOBA_MASTER2",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "SEINENGAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -111,26 +114,24 @@ def test_get_kishu_master_with_kishu_code(
 
 def test_get_kishu_master_with_date_range(
     master_getter: MasterGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_kishu_master: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"KISHU_CODE": [VALID_KISHU_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_period.return_value = expected_df
 
     result = master_getter.get_kishu_master(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM KISHU_MASTER WHERE" in query
-    assert "MENKYO_KOFU_NENGAPPI >= %s" in query
-    assert "MENKYO_KOFU_NENGAPPI <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_period.assert_called_once_with(
+        "KISHU_MASTER",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "MENKYO_KOFU_NENGAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -170,26 +171,24 @@ def test_get_chokyoshi_master_with_chokyoshi_code(
 
 def test_get_chokyoshi_master_with_date_range(
     master_getter: MasterGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_chokyoshi_master: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"CHOKYOSHI_CODE": [VALID_CHOKYOSHI_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_period.return_value = expected_df
 
     result = master_getter.get_chokyoshi_master(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM CHOKYOSHI_MASTER WHERE" in query
-    assert "MENKYO_KOFU_NENGAPPI >= %s" in query
-    assert "MENKYO_KOFU_NENGAPPI <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_period.assert_called_once_with(
+        "CHOKYOSHI_MASTER",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "MENKYO_KOFU_NENGAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -297,26 +296,24 @@ def test_get_hanshokuba_master2_with_hanshoku_toroku_bango(
 
 def test_get_hanshokuba_master2_with_date_range(
     master_getter: MasterGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_hanshokuba_master2: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"HANSHOKU_TOROKU_BANGO": [VALID_HANSHOKU_TOROKU_BANGO]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_year_only_period.return_value = expected_df
 
     result = master_getter.get_hanshokuba_master2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM HANSHOKUBA_MASTER2 WHERE" in query
-    assert "SEINEN >= %s" in query
-    assert "SEINEN <= %s" in query
-    assert "2025" in params
-    assert "2025" in params
+    mock_table_accessor.get_table_data_with_year_only_period.assert_called_once_with(
+        "HANSHOKUBA_MASTER2",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "SEINEN",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 

@@ -46,21 +46,25 @@ def test_get_kyosoba_jogai_joho_with_race_code(
 
 def test_get_kyosoba_jogai_joho_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_kyosoba_jogai_joho: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_kyosoba_jogai_joho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM KYOSOBA_JOGAI_JOHO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "KYOSOBA_JOGAI_JOHO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -100,21 +104,25 @@ def test_get_bataiju_with_race_code(
 
 def test_get_bataiju_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_bataiju: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_bataiju(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM BATAIJU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "BATAIJU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -154,21 +162,25 @@ def test_get_tenko_baba_jotai_with_race_code(
 
 def test_get_tenko_baba_jotai_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_tenko_baba_jotai: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_tenko_baba_jotai(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM TENKO_BABA_JOTAI WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "TENKO_BABA_JOTAI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -208,21 +220,25 @@ def test_get_shussotorikeshi_kyosojogai_with_race_code(
 
 def test_get_shussotorikeshi_kyosojogai_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussotorikeshi_kyosojogai: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_shussotorikeshi_kyosojogai(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM SHUSSOTORIKESHI_KYOSOJOGAI WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOTORIKESHI_KYOSOJOGAI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -262,21 +278,25 @@ def test_get_kishu_henko_with_race_code(
 
 def test_get_kishu_henko_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_kishu_henko: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_kishu_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM KISHU_HENKO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "KISHU_HENKO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -316,21 +336,25 @@ def test_get_hassojikoku_henko_with_race_code(
 
 def test_get_hassojikoku_henko_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_hassojikoku_henko: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_hassojikoku_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM HASSOJIKOKU_HENKO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "HASSOJIKOKU_HENKO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -370,19 +394,23 @@ def test_get_course_henko_with_race_code(
 
 def test_get_course_henko_with_date_range(
     sokuho_getter: SokuhoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_course_henko: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = sokuho_getter.get_course_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM COURSE_HENKO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "COURSE_HENKO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)

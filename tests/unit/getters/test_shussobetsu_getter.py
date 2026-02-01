@@ -55,26 +55,25 @@ def test_get_shussobetsu_baba_with_filters(
 
 def test_get_shussobetsu_baba_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_baba: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_baba(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_BABA WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_BABA",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -131,26 +130,25 @@ def test_get_shussobetsu_kyori_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_kyori_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_kyori: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_kyori(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_KYORI WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_KYORI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -207,26 +205,25 @@ def test_get_shussobetsu_keibajo_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_keibajo_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_keibajo: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_keibajo(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_KEIBAJO WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_KEIBAJO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -283,26 +280,25 @@ def test_get_shussobetsu_kishu_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_kishu_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_kishu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_kishu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_KISHU WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_KISHU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -361,26 +357,25 @@ def test_get_shussobetsu_chokyoshi_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_chokyoshi_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_chokyoshi: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_chokyoshi(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_CHOKYOSHI WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_CHOKYOSHI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -437,26 +432,25 @@ def test_get_shussobetsu_banushi_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_banushi_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_banushi: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_banushi(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_BANUSHI WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_BANUSHI",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -515,24 +509,23 @@ def test_get_shussobetsu_seisansha2_with_ketto_toroku_bango(
 
 def test_get_shussobetsu_seisansha2_with_date_range(
     shussobetsu_getter: ShussobetsuGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_shussobetsu_seisansha2: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_seisansha2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM SHUSSOBETSU_SEISANSHA2 WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "SHUSSOBETSU_SEISANSHA2",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)

@@ -46,26 +46,25 @@ def test_get_odds1_with_race_code(
 
 def test_get_odds1_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS1 WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -105,21 +104,25 @@ def test_get_odds1_tansho_with_race_code(
 
 def test_get_odds1_tansho_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_tansho: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_tansho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_TANSHO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_TANSHO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -159,21 +162,25 @@ def test_get_odds1_fukusho_with_race_code(
 
 def test_get_odds1_fukusho_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_fukusho: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_fukusho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_FUKUSHO WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_FUKUSHO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -213,21 +220,25 @@ def test_get_odds1_wakuren_with_race_code(
 
 def test_get_odds1_wakuren_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_wakuren: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_wakuren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_WAKUREN WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_WAKUREN",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -267,21 +278,25 @@ def test_get_odds1_jikeiretsu_with_race_code(
 
 def test_get_odds1_jikeiretsu_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_jikeiretsu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_JIKEIRETSU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_JIKEIRETSU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -321,21 +336,25 @@ def test_get_odds1_tansho_jikeiretsu_with_race_code(
 
 def test_get_odds1_tansho_jikeiretsu_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_tansho_jikeiretsu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_tansho_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_TANSHO_JIKEIRETSU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_TANSHO_JIKEIRETSU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -375,21 +394,25 @@ def test_get_odds1_fukusho_jikeiretsu_with_race_code(
 
 def test_get_odds1_fukusho_jikeiretsu_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_fukusho_jikeiretsu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_fukusho_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_FUKUSHO_JIKEIRETSU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_FUKUSHO_JIKEIRETSU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -429,21 +452,25 @@ def test_get_odds1_wakuren_jikeiretsu_with_race_code(
 
 def test_get_odds1_wakuren_jikeiretsu_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds1_wakuren_jikeiretsu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds1_wakuren_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS1_WAKUREN_JIKEIRETSU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS1_WAKUREN_JIKEIRETSU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -483,26 +510,25 @@ def test_get_odds2_umaren_with_race_code(
 
 def test_get_odds2_umaren_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds2_umaren: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds2_umaren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS2_UMAREN WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS2_UMAREN",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -542,21 +568,25 @@ def test_get_odds2_umaren_jikeiretsu_with_race_code(
 
 def test_get_odds2_umaren_jikeiretsu_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds2_umaren_jikeiretsu: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds2_umaren_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM ODDS2_UMAREN_JIKEIRETSU WHERE" in query
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS2_UMAREN_JIKEIRETSU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -596,26 +626,25 @@ def test_get_odds3_wide_with_race_code(
 
 def test_get_odds3_wide_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds3_wide: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds3_wide(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS3_WIDE WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS3_WIDE",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -655,26 +684,25 @@ def test_get_odds4_umatan_with_race_code(
 
 def test_get_odds4_umatan_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds4_umatan: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds4_umatan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS4_UMATAN WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS4_UMATAN",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -714,26 +742,25 @@ def test_get_odds5_sanrenpuku_with_race_code(
 
 def test_get_odds5_sanrenpuku_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds5_sanrenpuku: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds5_sanrenpuku(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS5_SANRENPUKU WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS5_SANRENPUKU",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -773,24 +800,23 @@ def test_get_odds6_sanrentan_with_race_codes_list(
 
 def test_get_odds6_sanrentan_with_date_range(
     odds_getter: OddsGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_odds6_sanrentan: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_composite_date_period.return_value = expected_df
 
     result = odds_getter.get_odds6_sanrentan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-    params = call_args[0][1]
-
-    assert "SELECT * FROM ODDS6_SANRENTAN WHERE" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) >= %s" in query
-    assert "CONCAT(KAISAI_NEN, KAISAI_GAPPI) <= %s" in query
-    assert "20250101" in params
-    assert "20250131" in params
+    mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
+        "ODDS6_SANRENTAN",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "KAISAI_NEN",
+        "KAISAI_GAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)

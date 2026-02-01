@@ -63,21 +63,24 @@ def test_get_hanro_chokyo_with_tracen_kubun(
 
 def test_get_hanro_chokyo_with_date_range(
     chokyo_getter: ChokyoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_hanro_chokyo: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_period.return_value = expected_df
 
     result = chokyo_getter.get_hanro_chokyo(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM HANRO_CHOKYO WHERE" in query
+    mock_table_accessor.get_table_data_with_period.assert_called_once_with(
+        "HANRO_CHOKYO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "CHOKYO_NENGAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -134,19 +137,22 @@ def test_get_woodchip_chokyo_with_tracen_kubun(
 
 def test_get_woodchip_chokyo_with_date_range(
     chokyo_getter: ChokyoGetter,
-    mock_connection_manager: MagicMock,
+    mock_table_accessor: MagicMock,
 ) -> None:
     """get_woodchip_chokyo: 期間フィルタでデータを取得できることを確認."""
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
-    mock_connection_manager.fetch_dataframe.return_value = expected_df
+    mock_table_accessor.get_table_data_with_period.return_value = expected_df
 
     result = chokyo_getter.get_woodchip_chokyo(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
     )
 
-    call_args = mock_connection_manager.fetch_dataframe.call_args
-    query = call_args[0][0]
-
-    assert "SELECT * FROM WOODCHIP_CHOKYO WHERE" in query
+    mock_table_accessor.get_table_data_with_period.assert_called_once_with(
+        "WOODCHIP_CHOKYO",
+        None,
+        VALID_START_DATE,
+        VALID_END_DATE,
+        "CHOKYO_NENGAPPI",
+    )
     pd.testing.assert_frame_equal(result, expected_df)
