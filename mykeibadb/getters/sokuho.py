@@ -145,7 +145,10 @@ class SokuhoGetter(BaseGetter):
         if kaisai_code:
             filters["RACE_CODE"] = kaisai_code  # mykeibadb側のミスと思われる
         if umaban:
-            filters["UMABAN"] = f"{umaban:02}"
+            if isinstance(umaban, list):
+                filters["UMABAN"] = [f"{u:02}" for u in umaban]
+            else:
+                filters["UMABAN"] = f"{umaban:02}"
         return self._get_table_with_period_composite_date(
             "SHUSSOTORIKESHI_KYOSOJOGAI",
             filters or None,
@@ -177,7 +180,10 @@ class SokuhoGetter(BaseGetter):
         if race_code:
             filters["RACE_CODE"] = race_code
         if umaban:
-            filters["UMABAN"] = f"{umaban:02}"
+            if isinstance(umaban, list):
+                filters["UMABAN"] = [f"{u:02}" for u in umaban]
+            else:
+                filters["UMABAN"] = f"{umaban:02}"
         return self._get_table_with_period_composite_date(
             "KISHU_HENKO",
             filters or None,

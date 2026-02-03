@@ -214,7 +214,10 @@ class MasterGetter(BaseGetter):
         if keibajo_code:
             filters["KEIBAJO_CODE"] = keibajo_code
         if kyori:
-            filters["KYORI"] = str(kyori)
+            if isinstance(kyori, list):
+                filters["KYORI"] = [str(k) for k in kyori]
+            else:
+                filters["KYORI"] = str(kyori)
         if track_code:
             filters["TRACK_CODE"] = track_code
         return self.table_accessor.get_table_data("RECORD_MASTER", filters or None)
