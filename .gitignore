@@ -127,3 +127,6 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# data
+*.csv
