@@ -45,6 +45,6 @@
 | CHUO_GOKEI_1CHAKU_RUIKEI |   | 着回数 | 6.0 | 1着～5着及び着外(6着以下)の回数（中央のみ) | 002996 |
 | CHUO_GOKEI_2CHAKU_RUIKEI |   |   | 6.0 |   | 002550 |
 | CHUO_GOKEI_3CHAKU_RUIKEI |   |   | 6.0 |   | 002217 |
-| CHUO_GOKEI_4CHAKU_RUIKEI |   |   |   |   | 002072 |
+| CHUO_GOKEI_4CHAKU_RUIKEI |   |   | 6.0 |   | 002072 |
 | CHUO_GOKEI_5CHAKU_RUIKEI |   |   | 6.0 |   | 001972 |
 | CHUO_GOKEI_CHAKUGAI_RUIKEI |   |   | 6.0 |   | 013193 |
