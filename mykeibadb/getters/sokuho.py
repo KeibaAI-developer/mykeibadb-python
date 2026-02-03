@@ -18,7 +18,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_ketto_toroku_bango, validate_race_code
+from mykeibadb.utils import validate_kaisai_code, validate_ketto_toroku_bango, validate_race_code
 
 
 class SokuhoGetter(BaseGetter):
@@ -115,7 +115,7 @@ class SokuhoGetter(BaseGetter):
 
     def get_shussotorikeshi_kyosojogai(
         self,
-        race_code: str | list[str] | None = None,
+        kaisai_code: str | list[str] | None = None,
         umaban: int | list[int] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -123,7 +123,7 @@ class SokuhoGetter(BaseGetter):
         """SHUSSOTORIKESHI_KYOSOJOGAIテーブルから出走取消・競走除外情報を取得.
 
         Args:
-            race_code (str | list[str] | None): レースコード（16桁）
+            kaisai_code (str | list[str] | None): レースコード（14桁）
             umaban (int | list[int] | None): 馬番（1～18）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
@@ -131,12 +131,12 @@ class SokuhoGetter(BaseGetter):
         Returns:
             pd.DataFrame: 出走取消・競走除外情報のDataFrame
         """
-        validate_race_code(race_code)
+        validate_kaisai_code(kaisai_code)
         filters: dict[str, Any] = {}
-        if race_code:
-            filters["RACE_CODE"] = race_code
+        if kaisai_code:
+            filters["RACE_CODE"] = kaisai_code  # mykeibadb側のミスと思われる
         if umaban:
-            filters["UMABAN"] = umaban
+            filters["UMABAN"] = f"{umaban:02}"
         return self._get_table_with_period_composite_date(
             "SHUSSOTORIKESHI_KYOSOJOGAI",
             filters or None,
