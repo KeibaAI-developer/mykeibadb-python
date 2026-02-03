@@ -281,9 +281,10 @@ class InvalidFilterError(MykeibaDBError):
 
 #### テーブル分類
 
-**レース関連（5テーブル）**:
+**レース関連（7テーブル）**:
 - `TOKUBETSU_TOROKUBA`, `TOKUBETSU_TOROKUBAGOTO_JOHO`
 - `RACE_SHOSAI`, `UMAGOTO_RACE_JOHO`, `HARAIMODOSHI`
+- `KAISAI_SCHEDULE`, `COURSE_JOHO`
 
 **票数関連（10テーブル）**:
 - `HYOSU1`, `HYOSU1_TANSHO`, `HYOSU1_FUKUSHO`, `HYOSU1_WAKUREN`, `HYOSU1_UMAREN`, `HYOSU1_WIDE`, `HYOSU1_UMATAN`, `HYOSU1_SANRENPUKU`
@@ -306,12 +307,6 @@ class InvalidFilterError(MykeibaDBError):
 
 **調教データ（2テーブル）**:
 - `HANRO_CHOKYO`, `WOODCHIP_CHOKYO`
-
-**開催情報（1テーブル）**:
-- `KAISAI_SCHEDULE`
-
-**コース情報（1テーブル）**:
-- `COURSE_JOHO`
 
 **競走馬詳細情報（3テーブル）**:
 - `KYOSOBA_TORIHIKI_KAKAKU2`
