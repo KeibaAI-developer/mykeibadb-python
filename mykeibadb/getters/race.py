@@ -223,7 +223,7 @@ class RaceGetter(BaseGetter):
         if keibajo_code:
             filters["KEIBAJO_CODE"] = keibajo_code
         if kyori:
-            filters["KYORI"] = kyori
+            filters["KYORI"] = str(kyori)
         if track_code:
             filters["TRACK_CODE"] = track_code
         return self.table_accessor.get_table_data("COURSE_JOHO", filters or None)

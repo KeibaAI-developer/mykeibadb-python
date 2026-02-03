@@ -167,7 +167,7 @@ class SokuhoGetter(BaseGetter):
         if race_code:
             filters["RACE_CODE"] = race_code
         if umaban:
-            filters["UMABAN"] = umaban
+            filters["UMABAN"] = f"{umaban:02}"
         return self._get_table_with_period_composite_date(
             "KISHU_HENKO",
             filters or None,

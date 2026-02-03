@@ -397,7 +397,7 @@ def test_get_record_master_with_kyori(
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "RECORD_MASTER",
-        {"KYORI": 2000},
+        {"KYORI": "2000"},
     )
     pd.testing.assert_frame_equal(result, expected_df)
 

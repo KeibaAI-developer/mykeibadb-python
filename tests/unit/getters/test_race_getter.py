@@ -423,6 +423,6 @@ def test_get_course_joho_with_compound_filters(
 
     assert table_name == "COURSE_JOHO"
     assert filters["KEIBAJO_CODE"] == VALID_KEIBAJO_CODE
-    assert filters["KYORI"] == 2000
+    assert filters["KYORI"] == "2000"
     assert filters["TRACK_CODE"] == VALID_TRACK_CODE
     pd.testing.assert_frame_equal(result, expected_df)
