@@ -18,7 +18,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_ketto_toroku_bango, validate_race_code
+from mykeibadb.utils import validate_date_range, validate_ketto_toroku_bango, validate_race_code
 
 
 class ShussobetsuGetter(BaseGetter):
@@ -47,6 +47,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -79,6 +80,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -111,6 +113,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -143,6 +146,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -175,6 +179,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -207,6 +212,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -239,6 +245,7 @@ class ShussobetsuGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code

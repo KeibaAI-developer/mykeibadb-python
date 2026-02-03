@@ -19,6 +19,7 @@ import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
 from mykeibadb.utils import (
+    validate_date_range,
     validate_kaisai_code,
     validate_keibajo_code,
     validate_ketto_toroku_bango,
@@ -50,6 +51,7 @@ class RaceGetter(BaseGetter):
             pd.DataFrame: 特別登録馬ベース情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -77,6 +79,7 @@ class RaceGetter(BaseGetter):
             pd.DataFrame: 特別登録馬毎情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -104,6 +107,7 @@ class RaceGetter(BaseGetter):
             pd.DataFrame: レース詳細情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -134,6 +138,7 @@ class RaceGetter(BaseGetter):
         """
         validate_race_code(race_code)
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -163,6 +168,7 @@ class RaceGetter(BaseGetter):
             pd.DataFrame: 払戻情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -191,6 +197,7 @@ class RaceGetter(BaseGetter):
             pd.DataFrame: 開催スケジュールのDataFrame
         """
         validate_kaisai_code(kaisai_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if kaisai_code:
             filters["KAISAI_CODE"] = kaisai_code

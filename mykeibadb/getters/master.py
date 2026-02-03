@@ -22,6 +22,7 @@ from mykeibadb.getters.base import BaseGetter
 from mykeibadb.utils import (
     validate_banushi_code,
     validate_chokyoshi_code,
+    validate_date_range,
     validate_hanshoku_toroku_bango,
     validate_keibajo_code,
     validate_ketto_toroku_bango,
@@ -54,6 +55,7 @@ class MasterGetter(BaseGetter):
             pd.DataFrame: 競走馬マスタのDataFrame
         """
         validate_ketto_toroku_bango(ketto_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if ketto_toroku_bango:
             filters["KETTO_TOROKU_BANGO"] = ketto_toroku_bango
@@ -78,6 +80,7 @@ class MasterGetter(BaseGetter):
             pd.DataFrame: 騎手マスタのDataFrame
         """
         validate_kishu_code(kishu_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if kishu_code:
             filters["KISHU_CODE"] = kishu_code
@@ -102,6 +105,7 @@ class MasterGetter(BaseGetter):
             pd.DataFrame: 調教師マスタのDataFrame
         """
         validate_chokyoshi_code(chokyoshi_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if chokyoshi_code:
             filters["CHOKYOSHI_CODE"] = chokyoshi_code
@@ -162,6 +166,7 @@ class MasterGetter(BaseGetter):
             pd.DataFrame: 繁殖馬マスタのDataFrame
         """
         validate_hanshoku_toroku_bango(hanshoku_toroku_bango)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if hanshoku_toroku_bango:
             filters["HANSHOKU_TOROKU_BANGO"] = hanshoku_toroku_bango
