@@ -6,7 +6,7 @@ import pandas as pd
 
 from mykeibadb.getters import SokuhoGetter
 
-from .conftest import VALID_END_DATE, VALID_RACE_CODE, VALID_START_DATE
+from .conftest import VALID_END_DATE, VALID_KAISAI_CODE, VALID_RACE_CODE, VALID_START_DATE
 
 # 正常系
 
@@ -201,19 +201,19 @@ def test_get_shussotorikeshi_kyosojogai_without_filters(
     pd.testing.assert_frame_equal(result, expected_df)
 
 
-def test_get_shussotorikeshi_kyosojogai_with_race_code(
+def test_get_shussotorikeshi_kyosojogai_with_kaisai_code(
     sokuho_getter: SokuhoGetter,
     mock_table_accessor: MagicMock,
 ) -> None:
-    """get_shussotorikeshi_kyosojogai: race_codeフィルタでデータを取得できることを確認."""
-    expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
+    """get_shussotorikeshi_kyosojogai: kaisai_codeフィルタでデータを取得できることを確認."""
+    expected_df = pd.DataFrame({"RACE_CODE": [VALID_KAISAI_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_shussotorikeshi_kyosojogai(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_shussotorikeshi_kyosojogai(kaisai_code=VALID_KAISAI_CODE)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOTORIKESHI_KYOSOJOGAI",
-        {"RACE_CODE": VALID_RACE_CODE},
+        {"RACE_CODE": VALID_KAISAI_CODE},
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
