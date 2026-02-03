@@ -25,7 +25,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_race_code
+from mykeibadb.utils import validate_date_range, validate_race_code
 
 
 class OddsGetter(BaseGetter):
@@ -51,6 +51,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1ベース情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -78,6 +79,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1単勝情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -105,6 +107,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1複勝情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -132,6 +135,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1枠連情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -159,6 +163,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1時系列ベース情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -186,6 +191,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1単勝時系列情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -213,6 +219,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1複勝時系列情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -240,6 +247,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ1枠連時系列情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -267,6 +275,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ2馬連情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -294,6 +303,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ2馬連時系列情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -321,6 +331,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ3ワイド情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -348,6 +359,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ4馬単情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -375,6 +387,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ5三連複情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -402,6 +415,7 @@ class OddsGetter(BaseGetter):
             pd.DataFrame: オッズ6三連単情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code

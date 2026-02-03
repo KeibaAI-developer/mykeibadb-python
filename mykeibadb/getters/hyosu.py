@@ -21,7 +21,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_race_code
+from mykeibadb.utils import validate_date_range, validate_race_code
 
 
 class HyosuGetter(BaseGetter):
@@ -47,6 +47,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1ベース情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -74,6 +75,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1単勝情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -101,6 +103,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1複勝情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -128,6 +131,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1枠連情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -155,6 +159,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1馬連情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -182,6 +187,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1ワイド情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -209,6 +215,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1馬単情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -236,6 +243,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数1三連複情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -263,6 +271,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数6ベース情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -290,6 +299,7 @@ class HyosuGetter(BaseGetter):
             pd.DataFrame: 票数6三連単情報のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code

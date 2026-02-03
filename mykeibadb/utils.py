@@ -3,6 +3,8 @@
 このモジュールは、引数の検証などの共通処理を提供する。
 """
 
+from datetime import date
+
 from mykeibadb.exceptions import ValidationError
 
 
@@ -394,3 +396,22 @@ def validate_tracen_kubun(tracen_kubun: str | list[str] | None) -> None:
     for code in codes:
         if not isinstance(code, str):
             raise ValidationError(f"トレセン区分は文字列である必要があります: {code}")
+
+
+def validate_date_range(start_date: date | None, end_date: date | None) -> None:
+    """日付範囲の妥当性を検証.
+
+    両方の日付が指定されている場合、start_dateがend_date以前であることを確認する。
+
+    Args:
+        start_date (date | None): 開始日
+        end_date (date | None): 終了日
+
+    Raises:
+        ValidationError: start_dateがend_dateより後の場合
+    """
+    if start_date is not None and end_date is not None:
+        if start_date > end_date:
+            raise ValidationError(
+                f"start_date ({start_date}) はend_date ({end_date}) 以前である必要があります"
+            )

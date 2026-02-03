@@ -13,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_ketto_toroku_bango, validate_tracen_kubun
+from mykeibadb.utils import validate_date_range, validate_ketto_toroku_bango, validate_tracen_kubun
 
 
 class ChokyoGetter(BaseGetter):
@@ -71,6 +71,7 @@ class ChokyoGetter(BaseGetter):
         """
         validate_ketto_toroku_bango(ketto_toroku_bango)
         validate_tracen_kubun(tracen_kubun)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if ketto_toroku_bango:
             filters["KETTO_TOROKU_BANGO"] = ketto_toroku_bango

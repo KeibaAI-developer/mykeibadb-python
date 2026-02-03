@@ -12,6 +12,7 @@ from datetime import date
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
+from mykeibadb.utils import validate_date_range
 
 
 class Win5Getter(BaseGetter):
@@ -34,6 +35,7 @@ class Win5Getter(BaseGetter):
         Returns:
             pd.DataFrame: 重勝式ベース情報のDataFrame
         """
+        validate_date_range(start_date, end_date)
         return self._get_table_with_period_composite_date(
             "WIN5",
             None,
@@ -55,6 +57,7 @@ class Win5Getter(BaseGetter):
         Returns:
             pd.DataFrame: 重勝式払戻情報のDataFrame
         """
+        validate_date_range(start_date, end_date)
         return self._get_table_with_period_composite_date(
             "WIN5_HARAIMODOSHI",
             None,

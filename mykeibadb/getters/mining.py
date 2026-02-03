@@ -13,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.getters.base import BaseGetter
-from mykeibadb.utils import validate_race_code
+from mykeibadb.utils import validate_date_range, validate_race_code
 
 
 class MiningGetter(BaseGetter):
@@ -39,6 +39,7 @@ class MiningGetter(BaseGetter):
             pd.DataFrame: タイム型データマイニング予想のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
@@ -66,6 +67,7 @@ class MiningGetter(BaseGetter):
             pd.DataFrame: 対戦型データマイニング予想のDataFrame
         """
         validate_race_code(race_code)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
