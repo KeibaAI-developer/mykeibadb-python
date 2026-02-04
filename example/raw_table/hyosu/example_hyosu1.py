@@ -1,6 +1,5 @@
 """HYOSU1テーブル取得のサンプルスクリプト."""
 
-
 import os
 from datetime import date
 from pathlib import Path

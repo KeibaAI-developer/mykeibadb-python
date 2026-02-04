@@ -19,12 +19,6 @@ def main() -> None:
     path = os.path.join(output_dir, f"tokubetsu_torokubagoto_joho_{race_code}.csv")
     df.to_csv(path, index=False)
 
-    # 馬指定
-    ketto_toroku_bango = "2022105081"
-    df = getter.get_tokubetsu_torokubagoto_joho(ketto_toroku_bango=ketto_toroku_bango)
-    path = os.path.join(output_dir, f"tokubetsu_torokubagoto_joho_{ketto_toroku_bango}.csv")
-    df.to_csv(path, index=False)
-
     # 期間指定
     start_date = date(2026, 1, 1)
     end_date = date(2026, 1, 31)
