@@ -3,6 +3,7 @@
 mykeibadbのコードテーブルに基づいてコード値を人間が読める形式に変換する関数を提供する。
 """
 
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -65,7 +66,7 @@ def convert_kyoso_kigo_code(code: str) -> str:
     """競走記号コードを名称に変換する.
 
     Args:
-        code: 競走記号コード（例: "0", "1", "20"）
+        code: 競走記号コード（例: "000", "001", "020"）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
@@ -78,7 +79,7 @@ def convert_kyoso_joken_code(code: str) -> str:
     """競走条件コードを名称に変換する.
 
     Args:
-        code: 競走条件コード（例: "5", "10", "701"）
+        code: 競走条件コード（例: "005", "010", "701"）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
@@ -169,7 +170,7 @@ def convert_hinshu_code(code: str) -> str:
     """品種コードを名称に変換する.
 
     Args:
-        code: 品種コード（例: "1", "5", "7"）
+        code: 品種コード（例: "01", "05", "07"）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
@@ -208,7 +209,7 @@ def convert_uma_kigo_code(code: str) -> str:
     """馬記号コードを名称に変換する.
 
     Args:
-        code: 馬記号コード（例: "1", "3", "15"）
+        code: 馬記号コード（例: "01", "03", "15"）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
@@ -256,8 +257,11 @@ def convert_kishu_minarai_code(code: str) -> str:
     return kishu_minarai_code_to_name.get(code, "")
 
 
+@lru_cache(maxsize=None)
 def _load_yaml(filename: str) -> dict[str, str]:
     """YAMLファイルを読み込んで辞書として返す.
+
+    同じファイル名に対する結果はキャッシュされ、ファイルI/Oは初回のみ実行される。
 
     Args:
         filename: 読み込むYAMLファイル名
