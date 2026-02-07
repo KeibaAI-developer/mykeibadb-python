@@ -26,25 +26,25 @@ def test_connection() -> None:
         print(f"接続先: {config.host}:{config.port}/{config.database}")
         print(f"ユーザー: {config.user}")
 
-        # 接続マネージャーを初期化
-        conn_manager = ConnectionManager(config)
-        print("✓ 接続プール作成成功")
+        # 接続マネージャーをwithステートメントで使用し、自動的にクローズする
+        with ConnectionManager(config) as conn_manager:
+            print("✓ 接続プール作成成功")
 
-        # 簡単なクエリを実行してバージョンを取得
-        result = conn_manager.execute_query("SELECT version();")
-        version = result[0][0]
-        print("✓ クエリ実行成功")
-        print(f"PostgreSQLバージョン: {version}")
+            # 簡単なクエリを実行してバージョンを取得
+            result = conn_manager.execute_query("SELECT version();")
+            version = result[0][0]
+            print("✓ クエリ実行成功")
+            print(f"PostgreSQLバージョン: {version}")
 
-        # テーブル数を取得
-        table_count_query = """
-            SELECT COUNT(*)
-            FROM information_schema.tables
-            WHERE table_schema = 'public';
-        """
-        result = conn_manager.execute_query(table_count_query)
-        table_count = result[0][0]
-        print(f"✓ publicスキーマのテーブル数: {table_count}")
+            # テーブル数を取得
+            table_count_query = """
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_schema = 'public';
+            """
+            result = conn_manager.execute_query(table_count_query)
+            table_count = result[0][0]
+            print(f"✓ publicスキーマのテーブル数: {table_count}")
 
         print("\n接続テスト成功！")
 
