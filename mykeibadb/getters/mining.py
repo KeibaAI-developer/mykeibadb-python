@@ -54,8 +54,7 @@ class MiningGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_data_mining_taisen(
         self,
@@ -88,5 +87,4 @@ class MiningGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])

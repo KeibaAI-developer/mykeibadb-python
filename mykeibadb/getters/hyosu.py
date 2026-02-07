@@ -63,8 +63,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_tansho(
         self,
@@ -98,8 +97,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_fukusho(
         self,
@@ -133,8 +131,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_wakuren(
         self,
@@ -168,8 +165,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_umaren(
         self,
@@ -203,8 +199,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_wide(
         self,
@@ -238,8 +233,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_umatan(
         self,
@@ -273,8 +267,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu1_sanrenpuku(
         self,
@@ -308,8 +301,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu6(
         self,
@@ -343,8 +335,7 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_hyosu6_sanrentan(
         self,
@@ -378,5 +369,4 @@ class HyosuGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])

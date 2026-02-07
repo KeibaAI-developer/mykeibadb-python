@@ -7,6 +7,7 @@ Tables:
     - WIN5_HARAIMODOSHI: 重勝式払戻情報
 """
 
+from collections.abc import Callable
 from datetime import date
 
 import pandas as pd
@@ -47,9 +48,10 @@ class Win5Getter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        for i in range(1, 6):
-            df[f"keibajo{i}"] = df[f"keibajo_code{i}"].map(convert_keibajo_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            (f"keibajo_code{i}", f"keibajo{i}", convert_keibajo_code) for i in range(1, 6)
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_win5_haraimodoshi(
         self,

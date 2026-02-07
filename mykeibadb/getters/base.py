@@ -4,6 +4,7 @@
 共通の初期化処理とヘルパーメソッドを含む。
 """
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -141,3 +142,24 @@ class BaseGetter:
         return self.table_accessor.get_table_data_with_composite_date_period(
             table_name, filters, start_date, end_date, year_column, date_column
         )
+
+    def _apply_code_conversions(
+        self,
+        df: pd.DataFrame,
+        conversions: list[tuple[str, str, Callable[[str], str]]],
+    ) -> pd.DataFrame:
+        """コード変換定義に基づいてDataFrameのカラムを変換.
+
+        変換定義リストに従い、入力カラムの値を変換関数でマッピングして出力カラムに格納する。
+
+        Args:
+            df (pd.DataFrame): 変換対象のDataFrame
+            conversions (list[tuple[str, str, Callable[[str], str]]]): 変換定義のリスト。
+                各要素は(入力カラム名, 出力カラム名, 変換関数)のタプル。
+
+        Returns:
+            pd.DataFrame: 変換後のDataFrame
+        """
+        for source_col, target_col, converter in conversions:
+            df[target_col] = df[source_col].map(converter)
+        return df

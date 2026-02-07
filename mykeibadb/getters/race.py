@@ -12,6 +12,7 @@ Tables:
     - COURSE_JOHO: コース情報
 """
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -86,21 +87,21 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["yobi"] = df["yobi_code"].map(convert_yobi_code)
-        df["grade"] = df["grade_code"].map(convert_grade_code)
-        df["kyoso_shubetsu"] = df["kyoso_shubetsu_code"].map(convert_kyoso_shubetsu_code)
-        df["kyoso_kigo"] = df["kyoso_kigo_code"].map(convert_kyoso_kigo_code)
-        df["juryo_shubetsu"] = df["juryo_shubetsu_code"].map(convert_juryo_shubetsu_code)
-        df["kyoso_joken_2sai"] = df["kyoso_joken_code_2sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_3sai"] = df["kyoso_joken_code_3sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_4sai"] = df["kyoso_joken_code_4sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_5sai_ijo"] = df["kyoso_joken_code_5sai_ijo"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_saijakunen"] = df["kyoso_joken_code_saijakunen"].map(
-            convert_kyoso_joken_code
-        )
-        df["track"] = df["track_code"].map(convert_track_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("yobi_code", "yobi", convert_yobi_code),
+            ("grade_code", "grade", convert_grade_code),
+            ("kyoso_shubetsu_code", "kyoso_shubetsu", convert_kyoso_shubetsu_code),
+            ("kyoso_kigo_code", "kyoso_kigo", convert_kyoso_kigo_code),
+            ("juryo_shubetsu_code", "juryo_shubetsu", convert_juryo_shubetsu_code),
+            ("kyoso_joken_code_2sai", "kyoso_joken_2sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_3sai", "kyoso_joken_3sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_4sai", "kyoso_joken_4sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_5sai_ijo", "kyoso_joken_5sai_ijo", convert_kyoso_joken_code),
+            ("kyoso_joken_code_saijakunen", "kyoso_joken_saijakunen", convert_kyoso_joken_code),
+            ("track_code", "track", convert_track_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_tokubetsu_torokubagoto_joho(
         self,
@@ -134,11 +135,13 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["umakigo"] = df["umakigo_code"].map(convert_uma_kigo_code)
-        df["seibetsu"] = df["seibetsu_code"].map(convert_seibetsu_code)
-        df["tozai_shozoku"] = df["tozai_shozoku_code"].map(convert_tozai_shozoku_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("umakigo_code", "umakigo", convert_uma_kigo_code),
+            ("seibetsu_code", "seibetsu", convert_seibetsu_code),
+            ("tozai_shozoku_code", "tozai_shozoku", convert_tozai_shozoku_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_race_shosai(
         self,
@@ -172,24 +175,24 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["yobi"] = df["yobi_code"].map(convert_yobi_code)
-        df["grade"] = df["grade_code"].map(convert_grade_code)
-        df["kyoso_shubetsu"] = df["kyoso_shubetsu_code"].map(convert_kyoso_shubetsu_code)
-        df["kyoso_kigo"] = df["kyoso_kigo_code"].map(convert_kyoso_kigo_code)
-        df["juryo_shubetsu"] = df["juryo_shubetsu_code"].map(convert_juryo_shubetsu_code)
-        df["kyoso_joken_2sai"] = df["kyoso_joken_code_2sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_3sai"] = df["kyoso_joken_code_3sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_4sai"] = df["kyoso_joken_code_4sai"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_5sai_ijo"] = df["kyoso_joken_code_5sai_ijo"].map(convert_kyoso_joken_code)
-        df["kyoso_joken_saijakunen"] = df["kyoso_joken_code_saijakunen"].map(
-            convert_kyoso_joken_code
-        )
-        df["track"] = df["track_code"].map(convert_track_code)
-        df["tenko"] = df["tenko_code"].map(convert_tenko_code)
-        df["shiba_babajotai"] = df["shiba_babajotai_code"].map(convert_babajotai_code)
-        df["dirt_babajotai"] = df["dirt_babajotai_code"].map(convert_babajotai_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("yobi_code", "yobi", convert_yobi_code),
+            ("grade_code", "grade", convert_grade_code),
+            ("kyoso_shubetsu_code", "kyoso_shubetsu", convert_kyoso_shubetsu_code),
+            ("kyoso_kigo_code", "kyoso_kigo", convert_kyoso_kigo_code),
+            ("juryo_shubetsu_code", "juryo_shubetsu", convert_juryo_shubetsu_code),
+            ("kyoso_joken_code_2sai", "kyoso_joken_2sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_3sai", "kyoso_joken_3sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_4sai", "kyoso_joken_4sai", convert_kyoso_joken_code),
+            ("kyoso_joken_code_5sai_ijo", "kyoso_joken_5sai_ijo", convert_kyoso_joken_code),
+            ("kyoso_joken_code_saijakunen", "kyoso_joken_saijakunen", convert_kyoso_joken_code),
+            ("track_code", "track", convert_track_code),
+            ("tenko_code", "tenko", convert_tenko_code),
+            ("shiba_babajotai_code", "shiba_babajotai", convert_babajotai_code),
+            ("dirt_babajotai_code", "dirt_babajotai", convert_babajotai_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_umagoto_race_joho(
         self,
@@ -228,18 +231,20 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["umakigo"] = df["umakigo_code"].map(convert_uma_kigo_code)
-        df["seibetsu"] = df["seibetsu_code"].map(convert_seibetsu_code)
-        df["hinshu"] = df["hinshu_code"].map(convert_hinshu_code)
-        df["moshoku"] = df["moshoku_code"].map(convert_moshoku_code)
-        df["tozai_shozoku"] = df["tozai_shozoku_code"].map(convert_tozai_shozoku_code)
-        df["kishu_minarai"] = df["kishu_minarai_code"].map(convert_kishu_minarai_code)
-        df["ijo_kubun"] = df["ijo_kubun_code"].map(convert_ijo_kubun_code)
-        df["chakusa1"] = df["chakusa_code1"].map(convert_chakusa_code)
-        df["chakusa2"] = df["chakusa_code2"].map(convert_chakusa_code)
-        df["chakusa3"] = df["chakusa_code3"].map(convert_chakusa_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("umakigo_code", "umakigo", convert_uma_kigo_code),
+            ("seibetsu_code", "seibetsu", convert_seibetsu_code),
+            ("hinshu_code", "hinshu", convert_hinshu_code),
+            ("moshoku_code", "moshoku", convert_moshoku_code),
+            ("tozai_shozoku_code", "tozai_shozoku", convert_tozai_shozoku_code),
+            ("kishu_minarai_code", "kishu_minarai", convert_kishu_minarai_code),
+            ("ijo_kubun_code", "ijo_kubun", convert_ijo_kubun_code),
+            ("chakusa_code1", "chakusa1", convert_chakusa_code),
+            ("chakusa_code2", "chakusa2", convert_chakusa_code),
+            ("chakusa_code3", "chakusa3", convert_chakusa_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_haraimodoshi(
         self,
@@ -273,8 +278,7 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_kaisai_schedule(
         self,
@@ -309,20 +313,30 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["yobi"] = df["yobi_code"].map(convert_yobi_code)
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("yobi_code", "yobi", convert_yobi_code),
+        ]
         for i in range(1, 4):
             prefix = f"jusho{i}_"
-            df[f"{prefix}grade"] = df[f"{prefix}grade_code"].map(convert_grade_code)
-            df[f"{prefix}kyoso_shubetsu"] = df[f"{prefix}kyoso_shubetsu_code"].map(
-                convert_kyoso_shubetsu_code
+            conversions.extend(
+                [
+                    (f"{prefix}grade_code", f"{prefix}grade", convert_grade_code),
+                    (
+                        f"{prefix}kyoso_shubetsu_code",
+                        f"{prefix}kyoso_shubetsu",
+                        convert_kyoso_shubetsu_code,
+                    ),
+                    (f"{prefix}kyoso_kigo_code", f"{prefix}kyoso_kigo", convert_kyoso_kigo_code),
+                    (
+                        f"{prefix}juryo_shubetsu_code",
+                        f"{prefix}juryo_shubetsu",
+                        convert_juryo_shubetsu_code,
+                    ),
+                    (f"{prefix}track_code", f"{prefix}track", convert_track_code),
+                ]
             )
-            df[f"{prefix}kyoso_kigo"] = df[f"{prefix}kyoso_kigo_code"].map(convert_kyoso_kigo_code)
-            df[f"{prefix}juryo_shubetsu"] = df[f"{prefix}juryo_shubetsu_code"].map(
-                convert_juryo_shubetsu_code
-            )
-            df[f"{prefix}track"] = df[f"{prefix}track_code"].map(convert_track_code)
-        return df
+        return self._apply_code_conversions(df, conversions)
 
     def get_course_joho(
         self,
@@ -358,6 +372,8 @@ class RaceGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["track"] = df["track_code"].map(convert_track_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("track_code", "track", convert_track_code),
+        ]
+        return self._apply_code_conversions(df, conversions)

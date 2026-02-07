@@ -67,8 +67,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_tansho(
         self,
@@ -102,8 +101,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_fukusho(
         self,
@@ -137,8 +135,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_wakuren(
         self,
@@ -172,8 +169,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_jikeiretsu(
         self,
@@ -207,8 +203,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_tansho_jikeiretsu(
         self,
@@ -242,8 +237,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_fukusho_jikeiretsu(
         self,
@@ -277,8 +271,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds1_wakuren_jikeiretsu(
         self,
@@ -312,8 +305,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds2_umaren(
         self,
@@ -347,8 +339,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds2_umaren_jikeiretsu(
         self,
@@ -382,8 +373,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds3_wide(
         self,
@@ -417,8 +407,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds4_umatan(
         self,
@@ -452,8 +441,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds5_sanrenpuku(
         self,
@@ -487,8 +475,7 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_odds6_sanrentan(
         self,
@@ -522,5 +509,4 @@ class OddsGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])

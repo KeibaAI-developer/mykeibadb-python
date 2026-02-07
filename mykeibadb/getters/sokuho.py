@@ -12,6 +12,7 @@ Tables:
     - COURSE_HENKO: コース変更情報
 """
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -75,8 +76,7 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_bataiju(
         self,
@@ -109,8 +109,7 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_tenko_baba_jotai(
         self,
@@ -143,20 +142,16 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["tenko_jotai_genzai_name"] = df["tenko_jotai_genzai"].map(convert_tenko_code)
-        df["baba_jotai_shiba_genzai_name"] = df["baba_jotai_shiba_genzai"].map(
-            convert_babajotai_code
-        )
-        df["baba_jotai_dirt_genzai_name"] = df["baba_jotai_dirt_genzai"].map(convert_babajotai_code)
-        df["tenko_jotai_henkomae_name"] = df["tenko_jotai_henkomae"].map(convert_tenko_code)
-        df["baba_jotai_shiba_henkomae_name"] = df["baba_jotai_shiba_henkomae"].map(
-            convert_babajotai_code
-        )
-        df["baba_jotai_dirt_henkoma_name"] = df["baba_jotai_dirt_henkoma"].map(
-            convert_babajotai_code
-        )
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("tenko_jotai_genzai", "tenko_jotai_genzai_name", convert_tenko_code),
+            ("baba_jotai_shiba_genzai", "baba_jotai_shiba_genzai_name", convert_babajotai_code),
+            ("baba_jotai_dirt_genzai", "baba_jotai_dirt_genzai_name", convert_babajotai_code),
+            ("tenko_jotai_henkomae", "tenko_jotai_henkomae_name", convert_tenko_code),
+            ("baba_jotai_shiba_henkomae", "baba_jotai_shiba_henkomae_name", convert_babajotai_code),
+            ("baba_jotai_dirt_henkoma", "baba_jotai_dirt_henkoma_name", convert_babajotai_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_shussotorikeshi_kyosojogai(
         self,
@@ -196,8 +191,7 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_kishu_henko(
         self,
@@ -237,12 +231,16 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["kishu_minarai"] = df["kishu_minarai_code"].map(convert_kishu_minarai_code)
-        df["kishu_minarai_mark_henkomae"] = df["kishu_minarai_code_henkomae"].map(
-            convert_kishu_minarai_code
-        )
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("kishu_minarai_code", "kishu_minarai", convert_kishu_minarai_code),
+            (
+                "kishu_minarai_code_henkomae",
+                "kishu_minarai_henkomae",
+                convert_kishu_minarai_code,
+            ),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_hassojikoku_henko(
         self,
@@ -275,8 +273,7 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_course_henko(
         self,
@@ -309,7 +306,9 @@ class SokuhoGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["heikogo_track"] = df["heikogo_track_code"].map(convert_track_code)
-        df["heikomae_track"] = df["heikomae_track_code"].map(convert_track_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("heikogo_track_code", "heikogo_track", convert_track_code),
+            ("heikomae_track_code", "heikomae_track", convert_track_code),
+        ]
+        return self._apply_code_conversions(df, conversions)

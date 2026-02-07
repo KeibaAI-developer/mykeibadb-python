@@ -64,8 +64,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_kyori(
         self,
@@ -103,8 +102,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_keibajo(
         self,
@@ -142,8 +140,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_kishu(
         self,
@@ -181,8 +178,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_chokyoshi(
         self,
@@ -220,8 +216,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_banushi(
         self,
@@ -259,8 +254,7 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])
 
     def get_shussobetsu_seisansha2(
         self,
@@ -298,5 +292,4 @@ class ShussobetsuGetter(BaseGetter):
         )
         if df.empty or not convert_codes:
             return df
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        return df
+        return self._apply_code_conversions(df, [("keibajo_code", "keibajo", convert_keibajo_code)])

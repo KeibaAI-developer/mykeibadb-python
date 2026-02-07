@@ -13,6 +13,7 @@ Tables:
     - RECORD_MASTER: レコードマスタ
 """
 
+from collections.abc import Callable
 from datetime import date
 from typing import Any
 
@@ -83,12 +84,14 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["umakigo"] = df["umakigo_code"].map(convert_uma_kigo_code)
-        df["seibetsu"] = df["seibetsu_code"].map(convert_seibetsu_code)
-        df["hinshu"] = df["hinshu_code"].map(convert_hinshu_code)
-        df["moshoku"] = df["moshoku_code"].map(convert_moshoku_code)
-        df["tozai_shozoku"] = df["tozai_shozoku_code"].map(convert_tozai_shozoku_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("umakigo_code", "umakigo", convert_uma_kigo_code),
+            ("seibetsu_code", "seibetsu", convert_seibetsu_code),
+            ("hinshu_code", "hinshu", convert_hinshu_code),
+            ("moshoku_code", "moshoku", convert_moshoku_code),
+            ("tozai_shozoku_code", "tozai_shozoku", convert_tozai_shozoku_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_kishu_master(
         self,
@@ -119,14 +122,16 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["kijo_shikaku"] = df["kijo_shikaku_code"].map(convert_kijo_shikaku_code)
-        df["kishu_minarai"] = df["kishu_minarai_code"].map(convert_kishu_minarai_code)
-        df["tozai_shozoku"] = df["tozai_shozoku_code"].map(convert_tozai_shozoku_code)
-        df["hatsukijo1_ijokubun"] = df["hatsukijo1_ijokubun_code"].map(convert_ijo_kubun_code)
-        df["hatsukijo2_ijokubun"] = df["hatsukijo2_ijokubun_code"].map(convert_ijo_kubun_code)
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("kijo_shikaku_code", "kijo_shikaku", convert_kijo_shikaku_code),
+            ("kishu_minarai_code", "kishu_minarai", convert_kishu_minarai_code),
+            ("tozai_shozoku_code", "tozai_shozoku", convert_tozai_shozoku_code),
+            ("hatsukijo1_ijokubun_code", "hatsukijo1_ijokubun", convert_ijo_kubun_code),
+            ("hatsukijo2_ijokubun_code", "hatsukijo2_ijokubun", convert_ijo_kubun_code),
+        ]
         for i in range(1, 4):
-            df[f"jusho{i}_grade"] = df[f"jusho{i}_grade_code"].map(convert_grade_code)
-        return df
+            conversions.append((f"jusho{i}_grade_code", f"jusho{i}_grade", convert_grade_code))
+        return self._apply_code_conversions(df, conversions)
 
     def get_chokyoshi_master(
         self,
@@ -157,10 +162,12 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["tozai_shozoku"] = df["tozai_shozoku_code"].map(convert_tozai_shozoku_code)
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("tozai_shozoku_code", "tozai_shozoku", convert_tozai_shozoku_code),
+        ]
         for i in range(1, 4):
-            df[f"jusho{i}_grade"] = df[f"jusho{i}_grade_code"].map(convert_grade_code)
-        return df
+            conversions.append((f"jusho{i}_grade_code", f"jusho{i}_grade", convert_grade_code))
+        return self._apply_code_conversions(df, conversions)
 
     def get_seisansha_master2(
         self,
@@ -227,10 +234,12 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["seibetsu"] = df["seibetsu_code"].map(convert_seibetsu_code)
-        df["hinshu"] = df["hinshu_code"].map(convert_hinshu_code)
-        df["moshoku"] = df["moshoku_code"].map(convert_moshoku_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("seibetsu_code", "seibetsu", convert_seibetsu_code),
+            ("hinshu_code", "hinshu", convert_hinshu_code),
+            ("moshoku_code", "moshoku", convert_moshoku_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_sanku_master2(
         self,
@@ -254,10 +263,12 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["seibetsu"] = df["seibetsu_code"].map(convert_seibetsu_code)
-        df["hinshu"] = df["hinshu_code"].map(convert_hinshu_code)
-        df["moshoku"] = df["moshoku_code"].map(convert_moshoku_code)
-        return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("seibetsu_code", "seibetsu", convert_seibetsu_code),
+            ("hinshu_code", "hinshu", convert_hinshu_code),
+            ("moshoku_code", "moshoku", convert_moshoku_code),
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_record_master(
         self,
@@ -293,14 +304,20 @@ class MasterGetter(BaseGetter):
         if df.empty or not convert_codes:
             return df
         # コード変換
-        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
-        df["grade"] = df["grade_code"].map(convert_grade_code)
-        df["kyoso_shubetsu"] = df["kyoso_shubetsu_code"].map(convert_kyoso_shubetsu_code)
-        df["track"] = df["track_code"].map(convert_track_code)
-        df["tenko"] = df["tenko_code"].map(convert_tenko_code)
-        df["shiba_babajotai"] = df["shiba_babajotai_code"].map(convert_babajotai_code)
-        df["dirt_babajotai"] = df["dirt_babajotai_code"].map(convert_babajotai_code)
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            ("keibajo_code", "keibajo", convert_keibajo_code),
+            ("grade_code", "grade", convert_grade_code),
+            ("kyoso_shubetsu_code", "kyoso_shubetsu", convert_kyoso_shubetsu_code),
+            ("track_code", "track", convert_track_code),
+            ("tenko_code", "tenko", convert_tenko_code),
+            ("shiba_babajotai_code", "shiba_babajotai", convert_babajotai_code),
+            ("dirt_babajotai_code", "dirt_babajotai", convert_babajotai_code),
+        ]
         for i in range(1, 4):
-            df[f"hojiuma{i}_umakigo"] = df[f"hojiuma{i}_umakigo_code"].map(convert_uma_kigo_code)
-            df[f"hojiuma{i}_seibetsu"] = df[f"hojiuma{i}_seibetsu_code"].map(convert_seibetsu_code)
-        return df
+            conversions.extend(
+                [
+                    (f"hojiuma{i}_umakigo_code", f"hojiuma{i}_umakigo", convert_uma_kigo_code),
+                    (f"hojiuma{i}_seibetsu_code", f"hojiuma{i}_seibetsu", convert_seibetsu_code),
+                ]
+            )
+        return self._apply_code_conversions(df, conversions)
