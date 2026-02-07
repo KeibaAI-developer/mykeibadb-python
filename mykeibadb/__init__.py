@@ -5,7 +5,7 @@
 """
 
 try:
-    from importlib.metadata import version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError, version
 
     __version__ = version("mykeibadb-python")
 except (PackageNotFoundError, ImportError):
