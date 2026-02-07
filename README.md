@@ -119,7 +119,7 @@ net start postgresql-x64-16
 ### 接続テスト
 
 ```bash
-python example/db_connect_test.py
+python example/db_connect_example.py
 ```
 
 成功すると、PostgreSQLバージョンとテーブル数が表示されます。

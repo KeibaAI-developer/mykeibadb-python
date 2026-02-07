@@ -9,7 +9,7 @@ from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBConnectionError, QueryExecutionError
 
 
-def test_connection() -> None:
+def main() -> None:
     """データベース接続をテストする.
 
     .envファイルから接続情報を読み込み、PostgreSQLへの接続をテストする。
@@ -60,4 +60,4 @@ def test_connection() -> None:
 
 
 if __name__ == "__main__":
-    test_connection()
+    main()
