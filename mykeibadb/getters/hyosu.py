@@ -20,6 +20,7 @@ from typing import Any
 
 import pandas as pd
 
+from mykeibadb.code_converter import convert_keibajo_code
 from mykeibadb.getters.base import BaseGetter
 from mykeibadb.utils import validate_date_range, validate_race_code
 
@@ -35,6 +36,7 @@ class HyosuGetter(BaseGetter):
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1テーブルから票数1ベース情報を取得.
 
@@ -42,6 +44,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1ベース情報のDataFrame
@@ -51,18 +54,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_tansho(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_TANSHOテーブルから票数1単勝情報を取得.
 
@@ -70,6 +79,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1単勝情報のDataFrame
@@ -79,18 +89,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_TANSHO",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_fukusho(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_FUKUSHOテーブルから票数1複勝情報を取得.
 
@@ -98,6 +114,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1複勝情報のDataFrame
@@ -107,18 +124,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_FUKUSHO",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_wakuren(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_WAKURENテーブルから票数1枠連情報を取得.
 
@@ -126,6 +149,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1枠連情報のDataFrame
@@ -135,18 +159,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_WAKUREN",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_umaren(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_UMARENテーブルから票数1馬連情報を取得.
 
@@ -154,6 +184,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1馬連情報のDataFrame
@@ -163,18 +194,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_UMAREN",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_wide(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_WIDEテーブルから票数1ワイド情報を取得.
 
@@ -182,6 +219,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1ワイド情報のDataFrame
@@ -191,18 +229,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_WIDE",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_umatan(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_UMATANテーブルから票数1馬単情報を取得.
 
@@ -210,6 +254,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1馬単情報のDataFrame
@@ -219,18 +264,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_UMATAN",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu1_sanrenpuku(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU1_SANRENPUKUテーブルから票数1三連複情報を取得.
 
@@ -238,6 +289,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数1三連複情報のDataFrame
@@ -247,18 +299,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU1_SANRENPUKU",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu6(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU6テーブルから票数6ベース情報を取得.
 
@@ -266,6 +324,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数6ベース情報のDataFrame
@@ -275,18 +334,24 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU6",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_hyosu6_sanrentan(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """HYOSU6_SANRENTANテーブルから票数6三連単情報を取得.
 
@@ -294,6 +359,7 @@ class HyosuGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): 各種コードを名称に変換するかどうかのフラグ
 
         Returns:
             pd.DataFrame: 票数6三連単情報のDataFrame
@@ -303,9 +369,14 @@ class HyosuGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "HYOSU6_SANRENTAN",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        # コード変換
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df

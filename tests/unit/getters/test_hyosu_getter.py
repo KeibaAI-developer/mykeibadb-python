@@ -21,7 +21,7 @@ def test_get_hyosu1_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1()
+    result = hyosu_getter.get_hyosu1(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -35,7 +35,7 @@ def test_get_hyosu1_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1",
@@ -55,6 +55,7 @@ def test_get_hyosu1_with_date_range(
     result = hyosu_getter.get_hyosu1(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -79,7 +80,7 @@ def test_get_hyosu1_tansho_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_tansho()
+    result = hyosu_getter.get_hyosu1_tansho(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_TANSHO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -93,7 +94,7 @@ def test_get_hyosu1_tansho_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_tansho(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_tansho(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_TANSHO",
@@ -113,6 +114,7 @@ def test_get_hyosu1_tansho_with_date_range(
     result = hyosu_getter.get_hyosu1_tansho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -137,7 +139,7 @@ def test_get_hyosu1_fukusho_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_fukusho()
+    result = hyosu_getter.get_hyosu1_fukusho(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_FUKUSHO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -151,7 +153,7 @@ def test_get_hyosu1_fukusho_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_fukusho(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_fukusho(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_FUKUSHO",
@@ -171,6 +173,7 @@ def test_get_hyosu1_fukusho_with_date_range(
     result = hyosu_getter.get_hyosu1_fukusho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -195,7 +198,7 @@ def test_get_hyosu1_wakuren_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_wakuren()
+    result = hyosu_getter.get_hyosu1_wakuren(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_WAKUREN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -209,7 +212,7 @@ def test_get_hyosu1_wakuren_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_wakuren(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_wakuren(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_WAKUREN",
@@ -229,6 +232,7 @@ def test_get_hyosu1_wakuren_with_date_range(
     result = hyosu_getter.get_hyosu1_wakuren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -253,7 +257,7 @@ def test_get_hyosu1_umaren_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_umaren()
+    result = hyosu_getter.get_hyosu1_umaren(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_UMAREN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -267,7 +271,7 @@ def test_get_hyosu1_umaren_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_umaren(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_umaren(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_UMAREN",
@@ -287,6 +291,7 @@ def test_get_hyosu1_umaren_with_date_range(
     result = hyosu_getter.get_hyosu1_umaren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -311,7 +316,7 @@ def test_get_hyosu1_wide_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_wide()
+    result = hyosu_getter.get_hyosu1_wide(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_WIDE", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -325,7 +330,7 @@ def test_get_hyosu1_wide_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_wide(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_wide(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_WIDE",
@@ -345,6 +350,7 @@ def test_get_hyosu1_wide_with_date_range(
     result = hyosu_getter.get_hyosu1_wide(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -369,7 +375,7 @@ def test_get_hyosu1_umatan_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_umatan()
+    result = hyosu_getter.get_hyosu1_umatan(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_UMATAN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -383,7 +389,7 @@ def test_get_hyosu1_umatan_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_umatan(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_umatan(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_UMATAN",
@@ -403,6 +409,7 @@ def test_get_hyosu1_umatan_with_date_range(
     result = hyosu_getter.get_hyosu1_umatan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -427,7 +434,7 @@ def test_get_hyosu1_sanrenpuku_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_sanrenpuku()
+    result = hyosu_getter.get_hyosu1_sanrenpuku(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU1_SANRENPUKU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -441,7 +448,7 @@ def test_get_hyosu1_sanrenpuku_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu1_sanrenpuku(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu1_sanrenpuku(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU1_SANRENPUKU",
@@ -461,6 +468,7 @@ def test_get_hyosu1_sanrenpuku_with_date_range(
     result = hyosu_getter.get_hyosu1_sanrenpuku(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -485,7 +493,7 @@ def test_get_hyosu6_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu6()
+    result = hyosu_getter.get_hyosu6(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU6", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -499,7 +507,7 @@ def test_get_hyosu6_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu6(race_code=VALID_RACE_CODE)
+    result = hyosu_getter.get_hyosu6(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU6",
@@ -519,6 +527,7 @@ def test_get_hyosu6_with_date_range(
     result = hyosu_getter.get_hyosu6(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -543,7 +552,7 @@ def test_get_hyosu6_sanrentan_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu6_sanrentan()
+    result = hyosu_getter.get_hyosu6_sanrentan(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HYOSU6_SANRENTAN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -557,7 +566,7 @@ def test_get_hyosu6_sanrentan_with_race_codes_list(
     expected_df = pd.DataFrame({"RACE_CODE": VALID_RACE_CODES})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = hyosu_getter.get_hyosu6_sanrentan(race_code=VALID_RACE_CODES)
+    result = hyosu_getter.get_hyosu6_sanrentan(race_code=VALID_RACE_CODES, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HYOSU6_SANRENTAN",
@@ -577,6 +586,7 @@ def test_get_hyosu6_sanrentan_with_date_range(
     result = hyosu_getter.get_hyosu6_sanrentan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(

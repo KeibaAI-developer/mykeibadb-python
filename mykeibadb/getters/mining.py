@@ -12,6 +12,7 @@ from typing import Any
 
 import pandas as pd
 
+from mykeibadb.code_converter import convert_keibajo_code
 from mykeibadb.getters.base import BaseGetter
 from mykeibadb.utils import validate_date_range, validate_race_code
 
@@ -27,6 +28,7 @@ class MiningGetter(BaseGetter):
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """DATA_MINING_TIMEテーブルからタイム型データマイニング予想を取得.
 
@@ -34,6 +36,7 @@ class MiningGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): コード値を名称に変換するかどうか
 
         Returns:
             pd.DataFrame: タイム型データマイニング予想のDataFrame
@@ -43,18 +46,23 @@ class MiningGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "DATA_MINING_TIME",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df
 
     def get_data_mining_taisen(
         self,
         race_code: str | list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """DATA_MINING_TAISENテーブルから対戦型データマイニング予想を取得.
 
@@ -62,6 +70,7 @@ class MiningGetter(BaseGetter):
             race_code (str | list[str] | None): レースコード（16桁）
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): コード値を名称に変換するかどうか
 
         Returns:
             pd.DataFrame: 対戦型データマイニング予想のDataFrame
@@ -71,9 +80,13 @@ class MiningGetter(BaseGetter):
         filters: dict[str, Any] = {}
         if race_code:
             filters["RACE_CODE"] = race_code
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "DATA_MINING_TAISEN",
             filters or None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        df["keibajo"] = df["keibajo_code"].map(convert_keibajo_code)
+        return df

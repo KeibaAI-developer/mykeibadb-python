@@ -32,7 +32,7 @@ def test_get_kyosoba_master2_without_filters(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_kyosoba_master2()
+    result = master_getter.get_kyosoba_master2(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("KYOSOBA_MASTER2", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -46,7 +46,10 @@ def test_get_kyosoba_master2_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_kyosoba_master2(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = master_getter.get_kyosoba_master2(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KYOSOBA_MASTER2",
@@ -66,6 +69,7 @@ def test_get_kyosoba_master2_with_date_range(
     result = master_getter.get_kyosoba_master2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_period.assert_called_once_with(
@@ -89,7 +93,7 @@ def test_get_kishu_master_without_filters(
     expected_df = pd.DataFrame({"KISHU_CODE": [VALID_KISHU_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_kishu_master()
+    result = master_getter.get_kishu_master(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("KISHU_MASTER", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -103,7 +107,7 @@ def test_get_kishu_master_with_kishu_code(
     expected_df = pd.DataFrame({"KISHU_CODE": [VALID_KISHU_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_kishu_master(kishu_code=VALID_KISHU_CODE)
+    result = master_getter.get_kishu_master(kishu_code=VALID_KISHU_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KISHU_MASTER",
@@ -123,6 +127,7 @@ def test_get_kishu_master_with_date_range(
     result = master_getter.get_kishu_master(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_period.assert_called_once_with(
@@ -146,7 +151,7 @@ def test_get_chokyoshi_master_without_filters(
     expected_df = pd.DataFrame({"CHOKYOSHI_CODE": [VALID_CHOKYOSHI_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_chokyoshi_master()
+    result = master_getter.get_chokyoshi_master(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("CHOKYOSHI_MASTER", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -160,7 +165,10 @@ def test_get_chokyoshi_master_with_chokyoshi_code(
     expected_df = pd.DataFrame({"CHOKYOSHI_CODE": [VALID_CHOKYOSHI_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_chokyoshi_master(chokyoshi_code=VALID_CHOKYOSHI_CODE)
+    result = master_getter.get_chokyoshi_master(
+        chokyoshi_code=VALID_CHOKYOSHI_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "CHOKYOSHI_MASTER",
@@ -180,6 +188,7 @@ def test_get_chokyoshi_master_with_date_range(
     result = master_getter.get_chokyoshi_master(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_period.assert_called_once_with(
@@ -271,7 +280,7 @@ def test_get_hanshokuba_master2_without_filters(
     expected_df = pd.DataFrame({"HANSHOKU_TOROKU_BANGO": [VALID_HANSHOKU_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_hanshokuba_master2()
+    result = master_getter.get_hanshokuba_master2(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HANSHOKUBA_MASTER2", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -285,7 +294,10 @@ def test_get_hanshokuba_master2_with_hanshoku_toroku_bango(
     expected_df = pd.DataFrame({"HANSHOKU_TOROKU_BANGO": [VALID_HANSHOKU_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_hanshokuba_master2(hanshoku_toroku_bango=VALID_HANSHOKU_TOROKU_BANGO)
+    result = master_getter.get_hanshokuba_master2(
+        hanshoku_toroku_bango=VALID_HANSHOKU_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HANSHOKUBA_MASTER2",
@@ -305,6 +317,7 @@ def test_get_hanshokuba_master2_with_date_range(
     result = master_getter.get_hanshokuba_master2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_year_only_period.assert_called_once_with(
@@ -328,7 +341,7 @@ def test_get_sanku_master2_without_filters(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_sanku_master2()
+    result = master_getter.get_sanku_master2(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SANKU_MASTER2", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -342,7 +355,10 @@ def test_get_sanku_master2_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_sanku_master2(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = master_getter.get_sanku_master2(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SANKU_MASTER2",
@@ -362,7 +378,7 @@ def test_get_record_master_without_filters(
     expected_df = pd.DataFrame({"KEIBAJO_CODE": [VALID_KEIBAJO_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_record_master()
+    result = master_getter.get_record_master(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("RECORD_MASTER", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -376,7 +392,7 @@ def test_get_record_master_with_keibajo_code(
     expected_df = pd.DataFrame({"KEIBAJO_CODE": [VALID_KEIBAJO_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_record_master(keibajo_code=VALID_KEIBAJO_CODE)
+    result = master_getter.get_record_master(keibajo_code=VALID_KEIBAJO_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "RECORD_MASTER",
@@ -393,7 +409,7 @@ def test_get_record_master_with_kyori(
     expected_df = pd.DataFrame({"KEIBAJO_CODE": [VALID_KEIBAJO_CODE], "KYORI": [2000]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_record_master(kyori=2000)
+    result = master_getter.get_record_master(kyori=2000, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "RECORD_MASTER",
@@ -412,7 +428,7 @@ def test_get_record_master_with_track_code(
     )
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = master_getter.get_record_master(track_code=VALID_TRACK_CODE)
+    result = master_getter.get_record_master(track_code=VALID_TRACK_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "RECORD_MASTER",

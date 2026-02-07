@@ -21,7 +21,7 @@ def test_get_win5_without_filters(
     expected_df = pd.DataFrame({"KAISAI_CODE": [VALID_KAISAI_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = win5_getter.get_win5()
+    result = win5_getter.get_win5(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("WIN5", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -38,6 +38,7 @@ def test_get_win5_with_date_range(
     result = win5_getter.get_win5(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(

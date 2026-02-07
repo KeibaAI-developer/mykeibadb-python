@@ -21,7 +21,7 @@ def test_get_data_mining_time_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = mining_getter.get_data_mining_time()
+    result = mining_getter.get_data_mining_time(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TIME", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -35,7 +35,7 @@ def test_get_data_mining_time_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = mining_getter.get_data_mining_time(race_code=VALID_RACE_CODE)
+    result = mining_getter.get_data_mining_time(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "DATA_MINING_TIME",
@@ -55,6 +55,7 @@ def test_get_data_mining_time_with_date_range(
     result = mining_getter.get_data_mining_time(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -79,7 +80,7 @@ def test_get_data_mining_taisen_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = mining_getter.get_data_mining_taisen()
+    result = mining_getter.get_data_mining_taisen(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TAISEN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -93,7 +94,7 @@ def test_get_data_mining_taisen_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = mining_getter.get_data_mining_taisen(race_code=VALID_RACE_CODE)
+    result = mining_getter.get_data_mining_taisen(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "DATA_MINING_TAISEN",
@@ -113,6 +114,7 @@ def test_get_data_mining_taisen_with_date_range(
     result = mining_getter.get_data_mining_taisen(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(

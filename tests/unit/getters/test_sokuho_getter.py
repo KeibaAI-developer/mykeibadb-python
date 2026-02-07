@@ -21,7 +21,7 @@ def test_get_kyosoba_jogai_joho_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_kyosoba_jogai_joho()
+    result = sokuho_getter.get_kyosoba_jogai_joho(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("KYOSOBA_JOGAI_JOHO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -35,7 +35,7 @@ def test_get_kyosoba_jogai_joho_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_kyosoba_jogai_joho(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_kyosoba_jogai_joho(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KYOSOBA_JOGAI_JOHO",
@@ -55,6 +55,7 @@ def test_get_kyosoba_jogai_joho_with_date_range(
     result = sokuho_getter.get_kyosoba_jogai_joho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -79,7 +80,7 @@ def test_get_bataiju_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_bataiju()
+    result = sokuho_getter.get_bataiju(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("BATAIJU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -93,7 +94,7 @@ def test_get_bataiju_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_bataiju(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_bataiju(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "BATAIJU",
@@ -113,6 +114,7 @@ def test_get_bataiju_with_date_range(
     result = sokuho_getter.get_bataiju(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -137,7 +139,7 @@ def test_get_tenko_baba_jotai_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_tenko_baba_jotai()
+    result = sokuho_getter.get_tenko_baba_jotai(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("TENKO_BABA_JOTAI", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -151,7 +153,7 @@ def test_get_tenko_baba_jotai_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_tenko_baba_jotai(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_tenko_baba_jotai(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "TENKO_BABA_JOTAI",
@@ -171,6 +173,7 @@ def test_get_tenko_baba_jotai_with_date_range(
     result = sokuho_getter.get_tenko_baba_jotai(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -195,7 +198,7 @@ def test_get_shussotorikeshi_kyosojogai_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_shussotorikeshi_kyosojogai()
+    result = sokuho_getter.get_shussotorikeshi_kyosojogai(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOTORIKESHI_KYOSOJOGAI", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -209,7 +212,10 @@ def test_get_shussotorikeshi_kyosojogai_with_kaisai_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_KAISAI_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_shussotorikeshi_kyosojogai(kaisai_code=VALID_KAISAI_CODE)
+    result = sokuho_getter.get_shussotorikeshi_kyosojogai(
+        kaisai_code=VALID_KAISAI_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOTORIKESHI_KYOSOJOGAI",
@@ -229,6 +235,7 @@ def test_get_shussotorikeshi_kyosojogai_with_date_range(
     result = sokuho_getter.get_shussotorikeshi_kyosojogai(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -253,7 +260,7 @@ def test_get_kishu_henko_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_kishu_henko()
+    result = sokuho_getter.get_kishu_henko(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("KISHU_HENKO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -267,7 +274,7 @@ def test_get_kishu_henko_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_kishu_henko(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_kishu_henko(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KISHU_HENKO",
@@ -287,6 +294,7 @@ def test_get_kishu_henko_with_date_range(
     result = sokuho_getter.get_kishu_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -311,7 +319,7 @@ def test_get_hassojikoku_henko_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_hassojikoku_henko()
+    result = sokuho_getter.get_hassojikoku_henko(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("HASSOJIKOKU_HENKO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -325,7 +333,7 @@ def test_get_hassojikoku_henko_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_hassojikoku_henko(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_hassojikoku_henko(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HASSOJIKOKU_HENKO",
@@ -345,6 +353,7 @@ def test_get_hassojikoku_henko_with_date_range(
     result = sokuho_getter.get_hassojikoku_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -369,7 +378,7 @@ def test_get_course_henko_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_course_henko()
+    result = sokuho_getter.get_course_henko(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("COURSE_HENKO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -383,7 +392,7 @@ def test_get_course_henko_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = sokuho_getter.get_course_henko(race_code=VALID_RACE_CODE)
+    result = sokuho_getter.get_course_henko(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "COURSE_HENKO",
@@ -403,6 +412,7 @@ def test_get_course_henko_with_date_range(
     result = sokuho_getter.get_course_henko(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
