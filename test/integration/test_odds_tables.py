@@ -39,7 +39,7 @@ def test_get_odds1_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS1",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -147,7 +147,7 @@ def test_get_odds2_umaren_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS2_UMAREN",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -190,7 +190,7 @@ def test_get_odds3_wide_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS3_WIDE",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -221,7 +221,7 @@ def test_get_odds4_umatan_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS4_UMATAN",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -252,7 +252,7 @@ def test_get_odds5_sanrenpuku_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS5_SANRENPUKU",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -283,7 +283,7 @@ def test_get_odds6_sanrentan_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "ODDS6_SANRENTAN",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -304,7 +304,7 @@ def test_get_odds1_with_multiple_race_codes(
 
     df = table_accessor.get_table_data(
         "ODDS1",
-        filters={"race_code": race_codes},
+        filters={"RACE_CODE": race_codes},
     )
 
     assert len(df) >= 2
@@ -316,7 +316,7 @@ def test_get_odds1_with_nonexistent_race_code(table_accessor: TableAccessor) -> 
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "ODDS1",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -329,7 +329,7 @@ def test_get_odds6_sanrentan_with_nonexistent_race_code(
     """存在しないレースコードでODDS6_SANRENTANをフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "ODDS6_SANRENTAN",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)

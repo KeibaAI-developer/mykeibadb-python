@@ -40,7 +40,7 @@ def test_get_kyosoba_master2_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "KYOSOBA_MASTER2",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -63,7 +63,7 @@ def test_get_kyosoba_master2_with_multiple_ketto_bangos(
 
     df = table_accessor.get_table_data(
         "KYOSOBA_MASTER2",
-        filters={"ketto_toroku_bango": ketto_bangos},
+        filters={"KETTO_TOROKU_BANGO": ketto_bangos},
     )
 
     assert len(df) >= 2
@@ -95,7 +95,7 @@ def test_get_kishu_master_with_kishu_code_filter(
 
     df = table_accessor.get_table_data(
         "KISHU_MASTER",
-        filters={"kishu_code": sample_kishu_code},
+        filters={"KISHU_CODE": sample_kishu_code},
     )
 
     assert len(df) > 0
@@ -126,7 +126,7 @@ def test_get_chokyoshi_master_with_chokyoshi_code_filter(
 
     df = table_accessor.get_table_data(
         "CHOKYOSHI_MASTER",
-        filters={"chokyoshi_code": sample_chokyoshi_code},
+        filters={"CHOKYOSHI_CODE": sample_chokyoshi_code},
     )
 
     assert len(df) > 0
@@ -157,7 +157,7 @@ def test_get_seisansha_master2_with_seisansha_code_filter(
 
     df = table_accessor.get_table_data(
         "SEISANSHA_MASTER2",
-        filters={"seisansha_code": sample_seisansha_code},
+        filters={"SEISANSHA_CODE": sample_seisansha_code},
     )
 
     assert len(df) > 0
@@ -188,7 +188,7 @@ def test_get_banushi_master_with_banushi_code_filter(
 
     df = table_accessor.get_table_data(
         "BANUSHI_MASTER",
-        filters={"banushi_code": sample_banushi_code},
+        filters={"BANUSHI_CODE": sample_banushi_code},
     )
 
     assert len(df) > 0
@@ -219,7 +219,7 @@ def test_get_hanshokuba_master2_with_hanshoku_bango_filter(
 
     df = table_accessor.get_table_data(
         "HANSHOKUBA_MASTER2",
-        filters={"hanshoku_toroku_bango": sample_hanshoku_bango},
+        filters={"HANSHOKU_TOROKU_BANGO": sample_hanshoku_bango},
     )
 
     assert len(df) > 0
@@ -251,7 +251,7 @@ def test_get_sanku_master2_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "SANKU_MASTER2",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -282,7 +282,7 @@ def test_get_record_master_with_keibajo_code_filter(
 
     df = table_accessor.get_table_data(
         "RECORD_MASTER",
-        filters={"keibajo_code": sample_keibajo_code},
+        filters={"KEIBAJO_CODE": sample_keibajo_code},
     )
 
     assert len(df) > 0
@@ -296,7 +296,7 @@ def test_get_kyosoba_master2_with_nonexistent_ketto_bango(
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KYOSOBA_MASTER2",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -309,7 +309,7 @@ def test_get_kishu_master_with_nonexistent_kishu_code(
     """存在しない騎手コードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KISHU_MASTER",
-        filters={"kishu_code": "99999"},
+        filters={"KISHU_CODE": "99999"},
     )
 
     assert isinstance(df, pd.DataFrame)

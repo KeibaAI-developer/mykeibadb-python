@@ -36,7 +36,7 @@ def test_get_kaisai_schedule_with_kaisai_code_filter(
 
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"kaisai_code": sample_kaisai_code},
+        filters={"KAISAI_CODE": sample_kaisai_code},
     )
 
     assert len(df) > 0
@@ -56,7 +56,7 @@ def test_get_kaisai_schedule_with_keibajo_code_filter(
 
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"keibajo_code": sample_keibajo_code},
+        filters={"KEIBAJO_CODE": sample_keibajo_code},
     )
 
     assert len(df) > 0
@@ -76,7 +76,7 @@ def test_get_kaisai_schedule_with_kaisai_nen_filter(
 
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"kaisai_nen": sample_kaisai_nen},
+        filters={"KAISAI_NEN": sample_kaisai_nen},
     )
 
     assert len(df) > 0
@@ -101,7 +101,7 @@ def test_get_kaisai_schedule_with_multiple_keibajo_codes(
 
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"keibajo_code": keibajo_codes},
+        filters={"KEIBAJO_CODE": keibajo_codes},
     )
 
     assert len(df) > 0
@@ -123,8 +123,8 @@ def test_get_kaisai_schedule_with_compound_filters(
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
         filters={
-            "kaisai_nen": sample_kaisai_nen,
-            "keibajo_code": sample_keibajo_code,
+            "KAISAI_NEN": sample_kaisai_nen,
+            "KEIBAJO_CODE": sample_keibajo_code,
         },
     )
 
@@ -138,7 +138,7 @@ def test_get_kaisai_schedule_with_nonexistent_kaisai_code(table_accessor: TableA
     """存在しない開催コードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"kaisai_code": "999999999999"},
+        filters={"KAISAI_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -149,7 +149,7 @@ def test_get_kaisai_schedule_with_future_year(table_accessor: TableAccessor) -> 
     """未来の開催年でフィルタすると空または少数のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KAISAI_SCHEDULE",
-        filters={"kaisai_nen": "2099"},
+        filters={"KAISAI_NEN": "2099"},
     )
 
     assert isinstance(df, pd.DataFrame)

@@ -37,7 +37,7 @@ def test_get_kyosoba_torihiki_kakaku2_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "KYOSOBA_TORIHIKI_KAKAKU2",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -50,7 +50,7 @@ def test_get_kyosoba_torihiki_kakaku2_with_nonexistent_ketto_bango(
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KYOSOBA_TORIHIKI_KAKAKU2",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -81,7 +81,7 @@ def test_get_bamei_imi_yurai_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "BAMEI_IMI_YURAI",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -94,7 +94,7 @@ def test_get_bamei_imi_yurai_with_nonexistent_ketto_bango(
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "BAMEI_IMI_YURAI",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -126,7 +126,7 @@ def test_get_keito_joho2_with_hanshoku_bango_filter(
 
     df = table_accessor.get_table_data(
         "KEITO_JOHO2",
-        filters={"hanshoku_toroku_bango": sample_hanshoku_bango},
+        filters={"HANSHOKU_TOROKU_BANGO": sample_hanshoku_bango},
     )
 
     assert len(df) > 0
@@ -139,7 +139,7 @@ def test_get_keito_joho2_with_nonexistent_hanshoku_bango(
     """存在しない繁殖登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KEITO_JOHO2",
-        filters={"hanshoku_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"HANSHOKU_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)

@@ -36,7 +36,7 @@ def test_get_data_mining_time_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "DATA_MINING_TIME",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -61,7 +61,7 @@ def test_get_data_mining_time_with_nonexistent_race_code(
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "DATA_MINING_TIME",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -92,7 +92,7 @@ def test_get_data_mining_taisen_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "DATA_MINING_TAISEN",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -117,7 +117,7 @@ def test_get_data_mining_taisen_with_nonexistent_race_code(
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "DATA_MINING_TAISEN",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)

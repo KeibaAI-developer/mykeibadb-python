@@ -49,7 +49,7 @@ def test_get_shobufuku_with_banushi_code_filter(
 
         df = table_accessor.get_table_data(
             "SHOBUFUKU",
-            filters={"banushi_code": sample_banushi_code},
+            filters={"BANUSHI_CODE": sample_banushi_code},
         )
 
         assert len(df) > 0

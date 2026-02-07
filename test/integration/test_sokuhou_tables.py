@@ -38,7 +38,7 @@ def test_get_kyosoba_jogai_joho_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "KYOSOBA_JOGAI_JOHO",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -69,7 +69,7 @@ def test_get_bataiju_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "BATAIJU",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -121,7 +121,7 @@ def test_get_shussotorikeshi_kyosojogai_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOTORIKESHI_KYOSOJOGAI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -152,7 +152,7 @@ def test_get_kishu_henko_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "KISHU_HENKO",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -183,7 +183,7 @@ def test_get_hassojikoku_henko_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "HASSOJIKOKU_HENKO",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -214,7 +214,7 @@ def test_get_course_henko_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "COURSE_HENKO",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -228,7 +228,7 @@ def test_get_bataiju_with_nonexistent_race_code(
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "BATAIJU",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -241,7 +241,7 @@ def test_get_kishu_henko_with_nonexistent_race_code(
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "KISHU_HENKO",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)

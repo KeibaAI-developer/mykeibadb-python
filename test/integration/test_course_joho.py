@@ -37,7 +37,7 @@ def test_get_course_joho_with_keibajo_code_filter(
 
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"keibajo_code": sample_keibajo_code},
+        filters={"KEIBAJO_CODE": sample_keibajo_code},
     )
 
     assert len(df) > 0
@@ -57,7 +57,7 @@ def test_get_course_joho_with_kyori_filter(
 
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"kyori": sample_kyori},
+        filters={"KYORI": sample_kyori},
     )
 
     assert len(df) > 0
@@ -76,7 +76,7 @@ def test_get_course_joho_with_track_code_filter(
 
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"track_code": sample_track_code},
+        filters={"TRACK_CODE": sample_track_code},
     )
 
     assert len(df) > 0
@@ -98,8 +98,8 @@ def test_get_course_joho_with_compound_filters(
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
         filters={
-            "keibajo_code": sample_keibajo_code,
-            "kyori": sample_kyori,
+            "KEIBAJO_CODE": sample_keibajo_code,
+            "KYORI": sample_kyori,
         },
     )
 
@@ -124,7 +124,7 @@ def test_get_course_joho_with_multiple_keibajo_codes(
 
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"keibajo_code": keibajo_codes},
+        filters={"KEIBAJO_CODE": keibajo_codes},
     )
 
     assert len(df) > 0
@@ -136,7 +136,7 @@ def test_get_course_joho_with_nonexistent_keibajo_code(table_accessor: TableAcce
     """存在しない競馬場コードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"keibajo_code": "99"},
+        filters={"KEIBAJO_CODE": "99"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -147,7 +147,7 @@ def test_get_course_joho_with_nonexistent_kyori(table_accessor: TableAccessor) -
     """存在しない距離でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "COURSE_JOHO",
-        filters={"kyori": "99999"},
+        filters={"KYORI": "99999"},
     )
 
     assert isinstance(df, pd.DataFrame)

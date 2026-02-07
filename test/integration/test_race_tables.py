@@ -41,7 +41,7 @@ def test_get_race_shosai_with_race_code_filter(
     # レースコードでフィルタして取得
     df = table_accessor.get_table_data(
         "RACE_SHOSAI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) == 1
@@ -61,7 +61,7 @@ def test_get_race_shosai_with_multiple_race_codes(
 
     df = table_accessor.get_table_data(
         "RACE_SHOSAI",
-        filters={"race_code": race_codes},
+        filters={"RACE_CODE": race_codes},
     )
 
     assert len(df) == 2
@@ -81,7 +81,7 @@ def test_get_race_shosai_with_keibajo_code_filter(
 
     df = table_accessor.get_table_data(
         "RACE_SHOSAI",
-        filters={"keibajo_code": sample_keibajo_code},
+        filters={"KEIBAJO_CODE": sample_keibajo_code},
     )
 
     assert len(df) > 0
@@ -112,7 +112,7 @@ def test_get_umagoto_race_joho_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "UMAGOTO_RACE_JOHO",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -135,7 +135,7 @@ def test_get_umagoto_race_joho_with_umaban_filter(
     # 馬番でフィルタ（文字列型）
     df = table_accessor.get_table_data(
         "UMAGOTO_RACE_JOHO",
-        filters={"race_code": sample_race_code, "umaban": sample_umaban},
+        filters={"RACE_CODE": sample_race_code, "UMABAN": sample_umaban},
     )
 
     # すべて同じ馬番であることを確認
@@ -157,8 +157,8 @@ def test_get_umagoto_race_joho_with_compound_filters(
     df = table_accessor.get_table_data(
         "UMAGOTO_RACE_JOHO",
         filters={
-            "race_code": sample_race_code,
-            "umaban": sample_umaban,
+            "RACE_CODE": sample_race_code,
+            "UMABAN": sample_umaban,
         },
     )
 
@@ -187,7 +187,7 @@ def test_get_haraimodoshi_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "HARAIMODOSHI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -217,7 +217,7 @@ def test_get_race_shosai_with_nonexistent_race_code(table_accessor: TableAccesso
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "RACE_SHOSAI",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -228,7 +228,7 @@ def test_get_umagoto_race_joho_with_nonexistent_ketto_bango(table_accessor: Tabl
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "UMAGOTO_RACE_JOHO",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)

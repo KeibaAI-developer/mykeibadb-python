@@ -38,7 +38,7 @@ def test_get_hanro_chokyo_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -58,7 +58,7 @@ def test_get_hanro_chokyo_with_tracen_kubun_filter(
 
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"tracen_kubun": sample_tracen_kubun},
+        filters={"TRACEN_KUBUN": sample_tracen_kubun},
     )
 
     assert len(df) > 0
@@ -78,7 +78,7 @@ def test_get_hanro_chokyo_with_chokyo_nengappi_filter(
 
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"chokyo_nengappi": sample_nengappi},
+        filters={"CHOKYO_NENGAPPI": sample_nengappi},
     )
 
     assert len(df) > 0
@@ -100,8 +100,8 @@ def test_get_hanro_chokyo_with_compound_filters(
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
         filters={
-            "ketto_toroku_bango": sample_ketto_bango,
-            "chokyo_nengappi": sample_nengappi,
+            "KETTO_TOROKU_BANGO": sample_ketto_bango,
+            "CHOKYO_NENGAPPI": sample_nengappi,
         },
     )
 
@@ -131,7 +131,7 @@ def test_get_woodchip_chokyo_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "WOODCHIP_CHOKYO",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -151,7 +151,7 @@ def test_get_woodchip_chokyo_with_tracen_kubun_filter(
 
     df = table_accessor.get_table_data(
         "WOODCHIP_CHOKYO",
-        filters={"tracen_kubun": sample_tracen_kubun},
+        filters={"TRACEN_KUBUN": sample_tracen_kubun},
     )
 
     assert len(df) > 0
@@ -173,8 +173,8 @@ def test_get_woodchip_chokyo_with_compound_filters(
     df = table_accessor.get_table_data(
         "WOODCHIP_CHOKYO",
         filters={
-            "ketto_toroku_bango": sample_ketto_bango,
-            "tracen_kubun": sample_tracen_kubun,
+            "KETTO_TOROKU_BANGO": sample_ketto_bango,
+            "TRACEN_KUBUN": sample_tracen_kubun,
         },
     )
 
@@ -200,7 +200,7 @@ def test_get_hanro_chokyo_with_multiple_ketto_bangos(
 
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"ketto_toroku_bango": ketto_bangos},
+        filters={"KETTO_TOROKU_BANGO": ketto_bangos},
     )
 
     assert len(df) > 0
@@ -212,7 +212,7 @@ def test_get_hanro_chokyo_with_nonexistent_ketto_bango(table_accessor: TableAcce
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -223,7 +223,7 @@ def test_get_woodchip_chokyo_with_nonexistent_ketto_bango(table_accessor: TableA
     """存在しない血統登録番号でWOODCHIP_CHOKYOをフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "WOODCHIP_CHOKYO",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -234,7 +234,7 @@ def test_get_hanro_chokyo_with_future_date(table_accessor: TableAccessor) -> Non
     """未来の調教年月日でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "HANRO_CHOKYO",
-        filters={"chokyo_nengappi": "20991231"},
+        filters={"CHOKYO_NENGAPPI": "20991231"},
     )
 
     assert isinstance(df, pd.DataFrame)

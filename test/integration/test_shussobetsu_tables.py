@@ -40,7 +40,7 @@ def test_get_shussobetsu_baba_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_BABA",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -60,7 +60,7 @@ def test_get_shussobetsu_baba_with_ketto_bango_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_BABA",
-        filters={"ketto_toroku_bango": sample_ketto_bango},
+        filters={"KETTO_TOROKU_BANGO": sample_ketto_bango},
     )
 
     assert len(df) > 0
@@ -92,7 +92,7 @@ def test_get_shussobetsu_kyori_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_KYORI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -124,7 +124,7 @@ def test_get_shussobetsu_keibajo_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_KEIBAJO",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -156,7 +156,7 @@ def test_get_shussobetsu_kishu_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_KISHU",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -188,7 +188,7 @@ def test_get_shussobetsu_chokyoshi_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_CHOKYOSHI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -220,7 +220,7 @@ def test_get_shussobetsu_banushi_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_BANUSHI",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -252,7 +252,7 @@ def test_get_shussobetsu_seisansha2_with_race_code_filter(
 
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_SEISANSHA2",
-        filters={"race_code": sample_race_code},
+        filters={"RACE_CODE": sample_race_code},
     )
 
     assert len(df) > 0
@@ -266,7 +266,7 @@ def test_get_shussobetsu_baba_with_nonexistent_race_code(
     """存在しないレースコードでフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_BABA",
-        filters={"race_code": "999999999999"},
+        filters={"RACE_CODE": "999999999999"},
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -279,7 +279,7 @@ def test_get_shussobetsu_kyori_with_nonexistent_ketto_bango(
     """存在しない血統登録番号でフィルタすると空のDataFrameが返ることを確認."""
     df = table_accessor.get_table_data(
         "SHUSSOBETSU_KYORI",
-        filters={"ketto_toroku_bango": "ZZZZZZZZZZ"},
+        filters={"KETTO_TOROKU_BANGO": "ZZZZZZZZZZ"},
     )
 
     assert isinstance(df, pd.DataFrame)
