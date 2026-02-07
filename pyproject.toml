@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mykeibadb-python"
-version = "0.1.0"
+version = "1.0.1"
 description = "mykeibadbを使用してPostgreSQLからPythonで競馬データを取得するためのライブラリ"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["keiba", "jra", "database", "postgresql", "mykeibadb"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -94,11 +94,11 @@ explicit_package_bases = true
 disable_error_code = ["attr-defined", "import-untyped"]
 
 [[tool.mypy.overrides]]
-module = "tests.*"
+module = "test.*"
 disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -119,7 +119,7 @@ markers = [
 [tool.coverage.run]
 source = ["mykeibadb"]
 omit = [
-    "*/tests/*",
+    "*/test/*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",

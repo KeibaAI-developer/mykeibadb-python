@@ -4,7 +4,12 @@
 競馬データを取得するための統一的なインターフェースを提供します。
 """
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import PackageNotFoundError, version
+
+    __version__ = version("mykeibadb-python")
+except (PackageNotFoundError, ImportError):
+    __version__ = "unknown"
 
 from mykeibadb.config import ConfigManager
 from mykeibadb.connection import ConnectionManager
