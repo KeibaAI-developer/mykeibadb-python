@@ -21,7 +21,7 @@ def test_get_shussobetsu_baba_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_baba()
+    result = shussobetsu_getter.get_shussobetsu_baba(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_BABA", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -43,6 +43,7 @@ def test_get_shussobetsu_baba_with_filters(
     result = shussobetsu_getter.get_shussobetsu_baba(
         race_code=VALID_RACE_CODE,
         ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
     )
 
     call_args = mock_table_accessor.get_table_data.call_args
@@ -64,6 +65,7 @@ def test_get_shussobetsu_baba_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_baba(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -88,7 +90,7 @@ def test_get_shussobetsu_kyori_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kyori()
+    result = shussobetsu_getter.get_shussobetsu_kyori(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_KYORI", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -102,7 +104,10 @@ def test_get_shussobetsu_kyori_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kyori(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_kyori(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KYORI",
@@ -119,7 +124,10 @@ def test_get_shussobetsu_kyori_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kyori(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = shussobetsu_getter.get_shussobetsu_kyori(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KYORI",
@@ -139,6 +147,7 @@ def test_get_shussobetsu_kyori_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_kyori(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -163,7 +172,7 @@ def test_get_shussobetsu_keibajo_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_keibajo()
+    result = shussobetsu_getter.get_shussobetsu_keibajo(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_KEIBAJO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -177,7 +186,10 @@ def test_get_shussobetsu_keibajo_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_keibajo(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_keibajo(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KEIBAJO",
@@ -194,7 +206,10 @@ def test_get_shussobetsu_keibajo_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_keibajo(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = shussobetsu_getter.get_shussobetsu_keibajo(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KEIBAJO",
@@ -214,6 +229,7 @@ def test_get_shussobetsu_keibajo_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_keibajo(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -238,7 +254,7 @@ def test_get_shussobetsu_kishu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kishu()
+    result = shussobetsu_getter.get_shussobetsu_kishu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_KISHU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -252,7 +268,10 @@ def test_get_shussobetsu_kishu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kishu(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_kishu(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KISHU",
@@ -269,7 +288,10 @@ def test_get_shussobetsu_kishu_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_kishu(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = shussobetsu_getter.get_shussobetsu_kishu(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_KISHU",
@@ -289,6 +311,7 @@ def test_get_shussobetsu_kishu_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_kishu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -313,7 +336,7 @@ def test_get_shussobetsu_chokyoshi_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_chokyoshi()
+    result = shussobetsu_getter.get_shussobetsu_chokyoshi(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_CHOKYOSHI", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -327,7 +350,10 @@ def test_get_shussobetsu_chokyoshi_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_chokyoshi(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_chokyoshi(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_CHOKYOSHI",
@@ -345,7 +371,8 @@ def test_get_shussobetsu_chokyoshi_with_ketto_toroku_bango(
     mock_table_accessor.get_table_data.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_chokyoshi(
-        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
@@ -366,6 +393,7 @@ def test_get_shussobetsu_chokyoshi_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_chokyoshi(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -390,7 +418,7 @@ def test_get_shussobetsu_banushi_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_banushi()
+    result = shussobetsu_getter.get_shussobetsu_banushi(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_BANUSHI", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -404,7 +432,10 @@ def test_get_shussobetsu_banushi_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_banushi(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_banushi(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_BANUSHI",
@@ -421,7 +452,10 @@ def test_get_shussobetsu_banushi_with_ketto_toroku_bango(
     expected_df = pd.DataFrame({"KETTO_TOROKU_BANGO": [VALID_KETTO_TOROKU_BANGO]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_banushi(ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO)
+    result = shussobetsu_getter.get_shussobetsu_banushi(
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_BANUSHI",
@@ -441,6 +475,7 @@ def test_get_shussobetsu_banushi_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_banushi(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -465,7 +500,7 @@ def test_get_shussobetsu_seisansha2_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_seisansha2()
+    result = shussobetsu_getter.get_shussobetsu_seisansha2(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOBETSU_SEISANSHA2", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -479,7 +514,10 @@ def test_get_shussobetsu_seisansha2_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = shussobetsu_getter.get_shussobetsu_seisansha2(race_code=VALID_RACE_CODE)
+    result = shussobetsu_getter.get_shussobetsu_seisansha2(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOBETSU_SEISANSHA2",
@@ -497,7 +535,8 @@ def test_get_shussobetsu_seisansha2_with_ketto_toroku_bango(
     mock_table_accessor.get_table_data.return_value = expected_df
 
     result = shussobetsu_getter.get_shussobetsu_seisansha2(
-        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO
+        ketto_toroku_bango=VALID_KETTO_TOROKU_BANGO,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
@@ -518,6 +557,7 @@ def test_get_shussobetsu_seisansha2_with_date_range(
     result = shussobetsu_getter.get_shussobetsu_seisansha2(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(

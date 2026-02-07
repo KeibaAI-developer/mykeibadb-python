@@ -21,7 +21,7 @@ def test_get_odds1_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1()
+    result = odds_getter.get_odds1(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -35,7 +35,7 @@ def test_get_odds1_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1",
@@ -55,6 +55,7 @@ def test_get_odds1_with_date_range(
     result = odds_getter.get_odds1(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -79,7 +80,7 @@ def test_get_odds1_tansho_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_tansho()
+    result = odds_getter.get_odds1_tansho(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_TANSHO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -93,7 +94,7 @@ def test_get_odds1_tansho_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_tansho(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_tansho(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_TANSHO",
@@ -113,6 +114,7 @@ def test_get_odds1_tansho_with_date_range(
     result = odds_getter.get_odds1_tansho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -137,7 +139,7 @@ def test_get_odds1_fukusho_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_fukusho()
+    result = odds_getter.get_odds1_fukusho(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_FUKUSHO", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -151,7 +153,7 @@ def test_get_odds1_fukusho_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_fukusho(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_fukusho(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_FUKUSHO",
@@ -171,6 +173,7 @@ def test_get_odds1_fukusho_with_date_range(
     result = odds_getter.get_odds1_fukusho(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -195,7 +198,7 @@ def test_get_odds1_wakuren_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_wakuren()
+    result = odds_getter.get_odds1_wakuren(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_WAKUREN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -209,7 +212,7 @@ def test_get_odds1_wakuren_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_wakuren(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_wakuren(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_WAKUREN",
@@ -229,6 +232,7 @@ def test_get_odds1_wakuren_with_date_range(
     result = odds_getter.get_odds1_wakuren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -253,7 +257,7 @@ def test_get_odds1_jikeiretsu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_jikeiretsu()
+    result = odds_getter.get_odds1_jikeiretsu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_JIKEIRETSU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -267,7 +271,7 @@ def test_get_odds1_jikeiretsu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_jikeiretsu(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_jikeiretsu(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_JIKEIRETSU",
@@ -287,6 +291,7 @@ def test_get_odds1_jikeiretsu_with_date_range(
     result = odds_getter.get_odds1_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -311,7 +316,7 @@ def test_get_odds1_tansho_jikeiretsu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_tansho_jikeiretsu()
+    result = odds_getter.get_odds1_tansho_jikeiretsu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_TANSHO_JIKEIRETSU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -325,7 +330,7 @@ def test_get_odds1_tansho_jikeiretsu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_tansho_jikeiretsu(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_tansho_jikeiretsu(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_TANSHO_JIKEIRETSU",
@@ -345,6 +350,7 @@ def test_get_odds1_tansho_jikeiretsu_with_date_range(
     result = odds_getter.get_odds1_tansho_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -369,7 +375,7 @@ def test_get_odds1_fukusho_jikeiretsu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_fukusho_jikeiretsu()
+    result = odds_getter.get_odds1_fukusho_jikeiretsu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_FUKUSHO_JIKEIRETSU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -383,7 +389,10 @@ def test_get_odds1_fukusho_jikeiretsu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_fukusho_jikeiretsu(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_fukusho_jikeiretsu(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_FUKUSHO_JIKEIRETSU",
@@ -403,6 +412,7 @@ def test_get_odds1_fukusho_jikeiretsu_with_date_range(
     result = odds_getter.get_odds1_fukusho_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -427,7 +437,7 @@ def test_get_odds1_wakuren_jikeiretsu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_wakuren_jikeiretsu()
+    result = odds_getter.get_odds1_wakuren_jikeiretsu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_WAKUREN_JIKEIRETSU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -441,7 +451,10 @@ def test_get_odds1_wakuren_jikeiretsu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds1_wakuren_jikeiretsu(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds1_wakuren_jikeiretsu(
+        race_code=VALID_RACE_CODE,
+        convert_codes=False,
+    )
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_WAKUREN_JIKEIRETSU",
@@ -461,6 +474,7 @@ def test_get_odds1_wakuren_jikeiretsu_with_date_range(
     result = odds_getter.get_odds1_wakuren_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -485,7 +499,7 @@ def test_get_odds2_umaren_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds2_umaren()
+    result = odds_getter.get_odds2_umaren(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS2_UMAREN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -499,7 +513,7 @@ def test_get_odds2_umaren_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds2_umaren(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds2_umaren(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS2_UMAREN",
@@ -519,6 +533,7 @@ def test_get_odds2_umaren_with_date_range(
     result = odds_getter.get_odds2_umaren(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -543,7 +558,7 @@ def test_get_odds2_umaren_jikeiretsu_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds2_umaren_jikeiretsu()
+    result = odds_getter.get_odds2_umaren_jikeiretsu(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS2_UMAREN_JIKEIRETSU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -557,7 +572,7 @@ def test_get_odds2_umaren_jikeiretsu_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds2_umaren_jikeiretsu(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds2_umaren_jikeiretsu(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS2_UMAREN_JIKEIRETSU",
@@ -577,6 +592,7 @@ def test_get_odds2_umaren_jikeiretsu_with_date_range(
     result = odds_getter.get_odds2_umaren_jikeiretsu(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -601,7 +617,7 @@ def test_get_odds3_wide_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds3_wide()
+    result = odds_getter.get_odds3_wide(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS3_WIDE", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -615,7 +631,7 @@ def test_get_odds3_wide_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds3_wide(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds3_wide(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS3_WIDE",
@@ -635,6 +651,7 @@ def test_get_odds3_wide_with_date_range(
     result = odds_getter.get_odds3_wide(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -659,7 +676,7 @@ def test_get_odds4_umatan_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds4_umatan()
+    result = odds_getter.get_odds4_umatan(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS4_UMATAN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -673,7 +690,7 @@ def test_get_odds4_umatan_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds4_umatan(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds4_umatan(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS4_UMATAN",
@@ -693,6 +710,7 @@ def test_get_odds4_umatan_with_date_range(
     result = odds_getter.get_odds4_umatan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -717,7 +735,7 @@ def test_get_odds5_sanrenpuku_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds5_sanrenpuku()
+    result = odds_getter.get_odds5_sanrenpuku(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS5_SANRENPUKU", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -731,7 +749,7 @@ def test_get_odds5_sanrenpuku_with_race_code(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds5_sanrenpuku(race_code=VALID_RACE_CODE)
+    result = odds_getter.get_odds5_sanrenpuku(race_code=VALID_RACE_CODE, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS5_SANRENPUKU",
@@ -751,6 +769,7 @@ def test_get_odds5_sanrenpuku_with_date_range(
     result = odds_getter.get_odds5_sanrenpuku(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(
@@ -775,7 +794,7 @@ def test_get_odds6_sanrentan_without_filters(
     expected_df = pd.DataFrame({"RACE_CODE": [VALID_RACE_CODE]})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds6_sanrentan()
+    result = odds_getter.get_odds6_sanrentan(convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with("ODDS6_SANRENTAN", None)
     pd.testing.assert_frame_equal(result, expected_df)
@@ -789,7 +808,7 @@ def test_get_odds6_sanrentan_with_race_codes_list(
     expected_df = pd.DataFrame({"RACE_CODE": VALID_RACE_CODES})
     mock_table_accessor.get_table_data.return_value = expected_df
 
-    result = odds_getter.get_odds6_sanrentan(race_code=VALID_RACE_CODES)
+    result = odds_getter.get_odds6_sanrentan(race_code=VALID_RACE_CODES, convert_codes=False)
 
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS6_SANRENTAN",
@@ -809,6 +828,7 @@ def test_get_odds6_sanrentan_with_date_range(
     result = odds_getter.get_odds6_sanrentan(
         start_date=VALID_START_DATE,
         end_date=VALID_END_DATE,
+        convert_codes=False,
     )
 
     mock_table_accessor.get_table_data_with_composite_date_period.assert_called_once_with(

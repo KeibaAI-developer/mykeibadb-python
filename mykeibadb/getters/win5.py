@@ -7,10 +7,12 @@ Tables:
     - WIN5_HARAIMODOSHI: 重勝式払戻情報
 """
 
+from collections.abc import Callable
 from datetime import date
 
 import pandas as pd
 
+from mykeibadb.code_converter import convert_keibajo_code
 from mykeibadb.getters.base import BaseGetter
 from mykeibadb.utils import validate_date_range
 
@@ -25,23 +27,31 @@ class Win5Getter(BaseGetter):
         self,
         start_date: date | None = None,
         end_date: date | None = None,
+        convert_codes: bool = True,
     ) -> pd.DataFrame:
         """WIN5テーブルから重勝式ベース情報を取得.
 
         Args:
             start_date (date | None): 開始日（開催日基準）
             end_date (date | None): 終了日（開催日基準）
+            convert_codes (bool): コード値を名称に変換するかどうか
 
         Returns:
             pd.DataFrame: 重勝式ベース情報のDataFrame
         """
         validate_date_range(start_date, end_date)
-        return self._get_table_with_period_composite_date(
+        df = self._get_table_with_period_composite_date(
             "WIN5",
             None,
             start_date,
             end_date,
         )
+        if df.empty or not convert_codes:
+            return df
+        conversions: list[tuple[str, str, Callable[[str], str]]] = [
+            (f"keibajo_code{i}", f"keibajo{i}", convert_keibajo_code) for i in range(1, 6)
+        ]
+        return self._apply_code_conversions(df, conversions)
 
     def get_win5_haraimodoshi(
         self,
