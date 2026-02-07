@@ -77,23 +77,37 @@ listen_addresses = '*'
 `C:\Program Files\PostgreSQL\16\data\pg_hba.conf`の最後に、接続元に応じた行を追加：
 
 ```conf
-# Docker からの接続を許可
+# Docker からの接続を許可（Docker ブリッジネットワークの CIDR を指定）
 host    all             all             172.17.0.0/16           md5
-host    all             all             host.docker.internal    md5
 
 # LAN内の別PCからの接続を許可（例: 192.168.1.0/24）
 # host    all             all             192.168.1.0/24          md5
 ```
 
-#### 2. pg_hba.confの編集
+> **注意**: Docker Desktopのネットワーク設定によっては、CIDRが異なる場合があります。`docker network inspect bridge`で実際のサブネットを確認してください。
+
+#### 3. Windows ファイアウォールの設定
 
 コマンドプロンプト（管理者権限）で実行：
 
 ```cmd
-netsh advfirewall firewall add rule name="PostgreSQL" dir=in action=allow protocol=TCP localport=5432
+# プライベートネットワークのみで許可（推奨）
+netsh advfirewall firewall add rule name="PostgreSQL-Private" dir=in action=allow protocol=TCP localport=5432 profile=private
 ```
 
-#### 3. PostgreSQLサービスの再起動
+```cmd
+# または、接続元IPを明示的に制限（より安全）
+netsh advfirewall firewall add rule name="PostgreSQL-Docker" dir=in action=allow protocol=TCP localport=5432 remoteip=172.17.0.0/16
+```
+
+```cmd
+# または、LAN内の特定サブネットのみ許可
+netsh advfirewall firewall add rule name="PostgreSQL-LAN" dir=in action=allow protocol=TCP localport=5432 remoteip=192.168.1.0/24 profile=private
+```
+
+> **セキュリティ注意**: 接続元IPやネットワークプロファイルを制限せずに5432ポートを開放すると、外部ネットワークからPostgreSQLサーバーに接続可能になる危険性があります。必要最小限の範囲に制限してください。
+
+#### 4. PostgreSQLサービスの再起動
 
 コマンドプロンプト（管理者権限）で実行：
 
@@ -255,7 +269,7 @@ except ValidationError as e:
 - [テーブル仕様（DATA_TABLE.md）](doc/DATA_TABLE.md): 全63テーブルの詳細（カラム定義など）
 - [コード仕様（CODE_TABLE.md）](doc/CODE_TABLE.md): 各種コード値の定義
 - [ディレクトリ構造（DIRECTORY.md）](doc/DIRECTORY.md): プロジェクトのディレクトリ構造
-- [サンプルコード（example/）](example/getter/): 各Getterの使用例
+- [サンプルコード（example/getter/）](example/getter/): 各Getterの使用例
 
 ## リンク
 
