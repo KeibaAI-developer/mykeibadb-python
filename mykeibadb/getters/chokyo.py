@@ -42,6 +42,7 @@ class ChokyoGetter(BaseGetter):
         """
         validate_ketto_toroku_bango(ketto_toroku_bango)
         validate_tracen_kubun(tracen_kubun)
+        validate_date_range(start_date, end_date)
         filters: dict[str, Any] = {}
         if ketto_toroku_bango:
             filters["KETTO_TOROKU_BANGO"] = ketto_toroku_bango
