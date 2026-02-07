@@ -5,21 +5,28 @@ PostgreSQLへの接続設定や共通のテストデータを提供する。
 
 import os
 from collections.abc import Generator
+from pathlib import Path
 
 import pandas as pd
 import pytest
+from dotenv import load_dotenv
 
 from mykeibadb.config import DBConfig
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBConnectionError
 from mykeibadb.tables import SUPPORTED_TABLES, TableAccessor
 
+# mykeibadb-python/.envファイルを読み込む
+_env_path = Path(__file__).parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+
 
 def _is_postgres_available() -> bool:
     """PostgreSQLが利用可能かどうかを確認."""
     try:
         config = DBConfig(
-            host=os.getenv("MYKEIBADB_HOST", "host.docker.internal"),
+            host=os.getenv("MYKEIBADB_HOST", "localhost"),
             port=int(os.getenv("MYKEIBADB_PORT", "5432")),
             database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
             user=os.getenv("MYKEIBADB_USER", "postgres"),
@@ -42,7 +49,7 @@ pytestmark = pytest.mark.skipif(
 def db_config() -> DBConfig:
     """テスト用のDBConfig fixture."""
     return DBConfig(
-        host=os.getenv("MYKEIBADB_HOST", "host.docker.internal"),
+        host=os.getenv("MYKEIBADB_HOST", "localhost"),
         port=int(os.getenv("MYKEIBADB_PORT", "5432")),
         database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
         user=os.getenv("MYKEIBADB_USER", "postgres"),
