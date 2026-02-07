@@ -1,0 +1,125 @@
+"""結合テスト用の共通fixture.
+
+PostgreSQLへの接続設定や共通のテストデータを提供する。
+"""
+
+import os
+from collections.abc import Generator
+from pathlib import Path
+
+import pandas as pd
+import pytest
+from dotenv import load_dotenv
+
+from mykeibadb.config import DBConfig
+from mykeibadb.connection import ConnectionManager
+from mykeibadb.exceptions import MykeibaDBConnectionError
+from mykeibadb.tables import SUPPORTED_TABLES, TableAccessor
+
+# mykeibadb-python/.envファイルを読み込む
+_env_path = Path(__file__).parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+
+
+def _is_postgres_available() -> bool:
+    """PostgreSQLが利用可能かどうかを確認."""
+    try:
+        config = DBConfig(
+            host=os.getenv("MYKEIBADB_HOST", "localhost"),
+            port=int(os.getenv("MYKEIBADB_PORT", "5432")),
+            database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
+            user=os.getenv("MYKEIBADB_USER", "postgres"),
+            password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
+        )
+        with ConnectionManager(config):
+            return True
+    except MykeibaDBConnectionError:
+        return False
+
+
+# PostgreSQLが利用不可の場合はスキップ
+pytestmark = pytest.mark.skipif(
+    not _is_postgres_available(),
+    reason="PostgreSQLに接続できません。mykeibadbが起動していることを確認してください。",
+)
+
+
+@pytest.fixture
+def db_config() -> DBConfig:
+    """テスト用のDBConfig fixture."""
+    return DBConfig(
+        host=os.getenv("MYKEIBADB_HOST", "localhost"),
+        port=int(os.getenv("MYKEIBADB_PORT", "5432")),
+        database=os.getenv("MYKEIBADB_DATABASE", "mykeibadb"),
+        user=os.getenv("MYKEIBADB_USER", "postgres"),
+        password=os.getenv("MYKEIBADB_PASSWORD", "postgres"),
+    )
+
+
+@pytest.fixture
+def connection_manager(db_config: DBConfig) -> Generator[ConnectionManager, None, None]:
+    """ConnectionManager fixture.
+
+    テスト終了後に自動的に接続をクローズする。
+
+    Yields:
+        ConnectionManager: 接続マネージャーインスタンス
+    """
+    manager = ConnectionManager(db_config)
+    yield manager
+    manager.close()
+
+
+@pytest.fixture
+def table_accessor(connection_manager: ConnectionManager) -> TableAccessor:
+    """TableAccessor fixture.
+
+    Args:
+        connection_manager: ConnectionManager fixture
+
+    Returns:
+        TableAccessor: テーブルアクセサーインスタンス
+    """
+    return TableAccessor(connection_manager)
+
+
+def get_sample_data(
+    connection_manager: ConnectionManager,
+    table_name: str,
+    limit: int = 10,
+) -> pd.DataFrame:
+    """テーブルからサンプルデータを取得するヘルパー関数.
+
+    大量データのテーブルから少数のサンプルを取得するために使用する。
+
+    Args:
+        connection_manager: データベース接続マネージャー
+        table_name: テーブル名
+        limit: 取得する行数（デフォルト10）
+
+    Returns:
+        pd.DataFrame: サンプルデータ
+
+    Raises:
+        ValueError: テーブル名がサポートされていない場合、またはlimitが無効な値の場合
+        TypeError: limitがint型でない場合
+    """
+    # セキュリティ対策: SUPPORTED_TABLESに対してテーブル名を検証
+    if table_name not in SUPPORTED_TABLES:
+        raise ValueError(
+            f"テーブル '{table_name}' はサポートされていません。 "
+            f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
+        )
+
+    # limit の型と範囲を明示的に検証する
+    if not isinstance(limit, int):
+        raise TypeError(f"limit には int 型を指定してください（指定値: {limit!r}）")
+    if limit <= 0:
+        raise ValueError(f"limit は正の整数である必要があります（指定値: {limit}）")
+
+    # ホワイトリスト検証済みのtable_name と 型検証済みの limit を使用
+    # PostgreSQLのテーブル名は小文字で保存されているため、小文字に変換
+    # LIMITはパラメータ化してSQLインジェクションを防止
+    query = f"SELECT * FROM {table_name.lower()} LIMIT %s"
+    return connection_manager.fetch_dataframe(query, (limit,))

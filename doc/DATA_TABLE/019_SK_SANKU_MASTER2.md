@@ -1,0 +1,49 @@
+# SANKU_MASTER2
+
+- レコード名: 産駒マスタ
+
+## カラム一覧
+
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
+| 名前 | キー | 項目名 | バイト | 説明 | 例 |
+| --- | --- | --- | --- | --- | --- |
+| INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-22 03:41:19 |
+| UPDATE_TIMESTAMP |   | テーブル更新時間 | 19.0 | (現在未使用) | 0000-00-00 00:00:00 |
+| RECORD_SHUBETSU_ID |   | レコード種別ID | 2.0 | SK をセットレコードフォーマットを特定する | SK |
+| DATA_KUBUN |   | データ区分 | 1.0 | 1:新規登録 2:更新 | 1 |
+|   |   |   |   | 0:該当レコード削除(提供ミスなどの理由による) |  |
+| DATA_SAKUSEI_NENGAPPI |   | データ作成年月日 | 8.0 | 西暦4桁＋月日各2桁 yyyymmdd 形式 | 20030605 |
+| KETTO_TOROKU_BANGO | ○ | 血統登録番号 | 10.0 | 生年(西暦)4桁＋品種1桁＋数字5桁 | 2002100816 |
+| SEINENGAPPI |   | 生年月日 | 8.0 | 年4桁(西暦)＋月日各2桁 yyyymmdd 形式 | 20020325 |
+| SEIBETSU_CODE |   | 性別コード | 1.0 | <コード表 2202.性別コード>参照 | 1 |
+| HINSHU_CODE |   | 品種コード | 1.0 | <コード表 2201.品種コード>参照 | 1 |
+| MOSHOKU_CODE |   | 毛色コード | 2.0 | <コード表 2203.毛色コード>参照 | 03 |
+| MOCHIKOMI_KUBUN |   | 産駒持込区分 | 1.0 | 0:内国産 1:持込 2:輸入内国産扱い 3:輸入 | 0 |
+| YUNYU_NEN |   | 輸入年 | 4.0 | 西暦4桁 | 0000 |
+| SEISANSHA_CODE |   | 生産者コード | 8.0 | 生産者マスタにリンク | 37012600 |
+| SANCHI_MEI |   | 産地名 | 20.0 | 全角10文字 | 早来町 |
+| KETTO1_HANSHOKU_TOROKU_BANGO |   | 3代血統 繁殖登録番号 | 10.0 | 父･母･父父･父母･母父･母母･父父父･父父母･父母父･父母母･母父父･母父母･母母父･母母母の順に設定 | 1120001232 |
+| KETTO2_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1220043928 |
+| KETTO3_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1130001358 |
+| KETTO4_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240007543 |
+| KETTO5_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1140002772 |
+| KETTO6_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240009165 |
+| KETTO7_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1130000398 |
+| KETTO8_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240000635 |
+| KETTO9_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1140001950 |
+| KETTO10_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240007542 |
+| KETTO11_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1130001153 |
+| KETTO12_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240008968 |
+| KETTO13_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1130000111 |
+| KETTO14_HANSHOKU_TOROKU_BANGO |   |   | 10.0 |   | 1240005206 |
+
+## 追加カラム一覧
+
+`MasterGetter.get_sanku_master2()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|seibetsu|性別|SEIBETSU_CODEを略に変換 <コード表 2202.性別コード>参照| 牡 |
+|hinshu|品種|HINSHU_CODEを名称に変換 <コード表 2201.品種コード>参照| サラブレッド |
+|moshoku|毛色|MOSHOKU_CODEを名称に変換 <コード表 2203.毛色コード>参照| 鹿毛 |
