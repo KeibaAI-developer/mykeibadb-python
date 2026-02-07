@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-22 14:11:53 |
@@ -59,3 +61,27 @@
 | JUSHO3_JURYO_SHUBETSU_CODE |   | 重量種別コード | 1.0 | <コード表 2008.重量種別コード>参照 | 0 |
 | JUSHO3_KYORI |   | 距離 | 4.0 | 単位:メートル | 0000 |
 | JUSHO3_TRACK_CODE |   | トラックコード | 2.0 | <コード表 2009.トラックコード>参照 | 00 |
+
+## 追加カラム一覧
+
+`RaceGetter.get_kaisai_schedule()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|keibajo|競馬場名|KEIBAJO_CODEを場略名(3文字)に変換 <コード表 2001.競馬場コード>参照| 中山 |
+|yobi|曜日|YOBI_CODEを略名(1文字)に変換 <コード表 2002.曜日コード>参照| 日 |
+|jusho1_grade|重賞1 グレード|JUSHO1_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GI |
+|jusho1_kyoso_shubetsu|重賞1 競走種別|JUSHO1_KYOSO_SHUBETSU_CODEを略名(8文字)に変換 <コード表 2005.競走種別コード>参照| サラ系３歳以上 |
+|jusho1_kyoso_kigo|重賞1 競走記号|JUSHO1_KYOSO_KIGO_CODEを名称に変換 <コード表 2006.競走記号コード>参照| (国際)(指定) |
+|jusho1_juryo_shubetsu|重賞1 重量種別|JUSHO1_JURYO_SHUBETSU_CODEを内容に変換 <コード表 2008.重量種別コード>参照| 定量 |
+|jusho1_track|重賞1 トラック|JUSHO1_TRACK_CODEを略名(6文字)に変換 <コード表 2009.トラックコード>参照| 芝・右 |
+|jusho2_grade|重賞2 グレード|JUSHO2_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照|  |
+|jusho2_kyoso_shubetsu|重賞2 競走種別|JUSHO2_KYOSO_SHUBETSU_CODEを略名(8文字)に変換 <コード表 2005.競走種別コード>参照|  |
+|jusho2_kyoso_kigo|重賞2 競走記号|JUSHO2_KYOSO_KIGO_CODEを名称に変換 <コード表 2006.競走記号コード>参照|  |
+|jusho2_juryo_shubetsu|重賞2 重量種別|JUSHO2_JURYO_SHUBETSU_CODEを内容に変換 <コード表 2008.重量種別コード>参照|  |
+|jusho2_track|重賞2 トラック|JUSHO2_TRACK_CODEを略名(6文字)に変換 <コード表 2009.トラックコード>参照|  |
+|jusho3_grade|重賞3 グレード|JUSHO3_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照|  |
+|jusho3_kyoso_shubetsu|重賞3 競走種別|JUSHO3_KYOSO_SHUBETSU_CODEを略名(8文字)に変換 <コード表 2005.競走種別コード>参照|  |
+|jusho3_kyoso_kigo|重賞3 競走記号|JUSHO3_KYOSO_KIGO_CODEを名称に変換 <コード表 2006.競走記号コード>参照|  |
+|jusho3_juryo_shubetsu|重賞3 重量種別|JUSHO3_JURYO_SHUBETSU_CODEを内容に変換 <コード表 2008.重量種別コード>参照|  |
+|jusho3_track|重賞3 トラック|JUSHO3_TRACK_CODEを略名(6文字)に変換 <コード表 2009.トラックコード>参照|  |

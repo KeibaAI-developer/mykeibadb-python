@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-31 11:17:45 |
@@ -603,3 +605,18 @@
 | DIRT_LONG_4CHAKU_RUIKEI |   |   | 6.0 |   | 000001 |
 | DIRT_LONG_5CHAKU_RUIKEI |   |   | 6.0 |   | 000005 |
 | DIRT_LONG_CHAKUGAI_RUIKEI |   |   | 6.0 |   | 000009 |
+
+## 追加カラム一覧
+
+`MasterGetter.get_kishu_master()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|kijo_shikaku|騎乗資格|KIJO_SHIKAKU_CODEを名称に変換 <コード表 2302.騎乗資格コード>参照| 騎手 |
+|kishu_minarai|騎手見習|KISHU_MINARAI_CODEを略名に変換 <コード表 2303.騎手見習コード>参照|  |
+|tozai_shozoku|東西所属|TOZAI_SHOZOKU_CODEを名称に変換 <コード表 2301.東西所属コード>参照| 栗東 |
+|hatsukijo1_ijokubun|初騎乗1 異常区分|HATSUKIJO1_IJOKUBUN_CODEを名称に変換 <コード表 2101.異常区分コード>参照|  |
+|hatsukijo2_ijokubun|初騎乗2 異常区分|HATSUKIJO2_IJOKUBUN_CODEを名称に変換 <コード表 2101.異常区分コード>参照|  |
+|jusho1_grade|重賞1 グレード|JUSHO1_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GIII |
+|jusho2_grade|重賞2 グレード|JUSHO2_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照|  |
+|jusho3_grade|重賞3 グレード|JUSHO3_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GII |

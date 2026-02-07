@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-02-01 10:36:56 |
@@ -35,3 +37,16 @@
 
 `RACE_CODE`の実際の値は14桁の開催コードになっています。  
 JV-Linkもしくはmykeibadbのバグと思われます。
+## 追加カラム一覧
+
+`SokuhoGetter.get_tenko_baba_jotai()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|keibajo|競馬場名|KEIBAJO_CODEを場略名(3文字)に変換 <コード表 2001.競馬場コード>参照| 東京 |
+|tenko_jotai_genzai_name|現在の天候|TENKO_JOTAI_GENZAIを名称に変換 <コード表 2011.天候コード>参照| 晴 |
+|baba_jotai_shiba_genzai_name|現在の芝馬場状態|BABA_JOTAI_SHIBA_GENZAIを名称に変換 <コード表 2010.馬場状態コード>参照| 良 |
+|baba_jotai_dirt_genzai_name|現在のダート馬場状態|BABA_JOTAI_DIRT_GENZAIを名称に変換 <コード表 2010.馬場状態コード>参照| 良 |
+|tenko_jotai_henkomae_name|変更前の天候|TENKO_JOTAI_HENKOMAEを名称に変換 <コード表 2011.天候コード>参照|  |
+|baba_jotai_shiba_henkomae_name|変更前の芝馬場状態|BABA_JOTAI_SHIBA_HENKOMAEを名称に変換 <コード表 2010.馬場状態コード>参照|  |
+|baba_jotai_dirt_henkoma_name|変更前のダート馬場状態|BABA_JOTAI_DIRT_HENKOMAを名称に変換 <コード表 2010.馬場状態コード>参照|  |

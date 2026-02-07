@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-31 11:17:45 |
@@ -575,3 +577,14 @@
 | DIRT_LONG_4CHAKU_RUIKEI |   |   | 6.0 |   | 000003 |
 | DIRT_LONG_5CHAKU_RUIKEI |   |   | 6.0 |   | 000000 |
 | DIRT_LONG_CHAKUGAI_RUIKEI |   |   | 6.0 |   | 000013 |
+
+## 追加カラム一覧
+
+`MasterGetter.get_chokyoshi_master()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|tozai_shozoku|東西所属|TOZAI_SHOZOKU_CODEを名称に変換 <コード表 2301.東西所属コード>参照| 美浦 |
+|jusho1_grade|重賞1 グレード|JUSHO1_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GIII |
+|jusho2_grade|重賞2 グレード|JUSHO2_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照|  |
+|jusho3_grade|重賞3 グレード|JUSHO3_GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GI |

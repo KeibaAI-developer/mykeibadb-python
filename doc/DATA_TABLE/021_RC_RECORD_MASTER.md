@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19 |   | 2026-01-22 03:35:07 |
@@ -58,3 +60,23 @@
 | HOJIUMA3_FUTAN_JURYO |   | 負担重量 | 3 | 単位:0.1kg | 000 |
 | HOJIUMA3_KISHU_CODE |   | 騎手コード | 5 |   | 00000 |
 | HOJIUMA3_KISHUMEI |   | 騎手名 | 34 | 全角17文字　姓＋全角空白1文字＋名　外国人の場合は連続17文字 |  |
+
+## 追加カラム一覧
+
+`MasterGetter.get_record_master()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|keibajo|競馬場名|KEIBAJO_CODEを場略名(3文字)に変換 <コード表 2001.競馬場コード>参照| 新潟 |
+|grade|グレード|GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GIII |
+|kyoso_shubetsu|競走種別|KYOSO_SHUBETSU_CODEを略名(8文字)に変換 <コード表 2005.競走種別コード>参照| サラ系３歳以上 |
+|track|トラック|TRACK_CODEを略名(6文字)に変換 <コード表 2009.トラックコード>参照| 芝・直 |
+|tenko|天候|TENKO_CODEを名称に変換 <コード表 2011.天候コード>参照| 晴 |
+|shiba_babajotai|芝馬場状態|SHIBA_BABAJOTAI_CODEを名称に変換 <コード表 2010.馬場状態コード>参照| 良 |
+|dirt_babajotai|ダート馬場状態|DIRT_BABAJOTAI_CODEを名称に変換 <コード表 2010.馬場状態コード>参照|  |
+|hojiuma1_umakigo|保持馬1 馬記号|HOJIUMA1_UMAKIGO_CODEを名称に変換 <コード表 2204.馬記号コード>参照| 抽 |
+|hojiuma1_seibetsu|保持馬1 性別|HOJIUMA1_SEIBETSU_CODEを略に変換 <コード表 2202.性別コード>参照| 牡 |
+|hojiuma2_umakigo|保持馬2 馬記号|HOJIUMA2_UMAKIGO_CODEを名称に変換 <コード表 2204.馬記号コード>参照|  |
+|hojiuma2_seibetsu|保持馬2 性別|HOJIUMA2_SEIBETSU_CODEを略に変換 <コード表 2202.性別コード>参照|  |
+|hojiuma3_umakigo|保持馬3 馬記号|HOJIUMA3_UMAKIGO_CODEを名称に変換 <コード表 2204.馬記号コード>参照|  |
+|hojiuma3_seibetsu|保持馬3 性別|HOJIUMA3_SEIBETSU_CODEを略に変換 <コード表 2202.性別コード>参照|  |

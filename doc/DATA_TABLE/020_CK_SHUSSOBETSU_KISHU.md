@@ -5,6 +5,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-22 05:26:36 |
@@ -648,3 +650,11 @@
 | KOKURA_SHOGAI_4CHAKU_RUIKEI |   |   | 3.0 |   | 000  |
 | KOKURA_SHOGAI_5CHAKU_RUIKEI |   |   | 3.0 |   | 000  |
 | KOKURA_SHOGAI_CHAKUGAI_RUIKEI |   |   | 3.0 |   | 000  |
+
+## 追加カラム一覧
+
+`ShussobetsuGetter.get_shussobetsu_kishu()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|keibajo|競馬場名|KEIBAJO_CODEを場略名(3文字)に変換 <コード表 2001.競馬場コード>参照| 中山 |
