@@ -102,7 +102,8 @@ def get_sample_data(
         pd.DataFrame: サンプルデータ
 
     Raises:
-        ValueError: テーブル名がサポートされていない場合
+        ValueError: テーブル名がサポートされていない場合、またはlimitが無効な値の場合
+        TypeError: limitがint型でない場合
     """
     # セキュリティ対策: SUPPORTED_TABLESに対してテーブル名を検証
     if table_name not in SUPPORTED_TABLES:
@@ -111,5 +112,14 @@ def get_sample_data(
             f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
         )
 
-    query = f"SELECT * FROM {table_name} LIMIT {limit}"  # noqa: S608
-    return connection_manager.fetch_dataframe(query)
+    # limit の型と範囲を明示的に検証する
+    if not isinstance(limit, int):
+        raise TypeError(f"limit には int 型を指定してください（指定値: {limit!r}）")
+    if limit <= 0:
+        raise ValueError(f"limit は正の整数である必要があります（指定値: {limit}）")
+
+    # ホワイトリスト検証済みのtable_name と 型検証済みの limit を使用
+    # PostgreSQLのテーブル名は小文字で保存されているため、小文字に変換
+    # LIMITはパラメータ化してSQLインジェクションを防止
+    query = f"SELECT * FROM {table_name.lower()} LIMIT %s"
+    return connection_manager.fetch_dataframe(query, (limit,))
