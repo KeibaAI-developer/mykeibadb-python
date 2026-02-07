@@ -37,7 +37,7 @@ jobs:
         echo "::group::isort check"
         isort --profile=black --line-length=100 --check-only --diff \
           mykeibadb/ \
-          tests/
+          test/
         echo "::endgroup::"
 
     - name: Run flake8
@@ -45,7 +45,7 @@ jobs:
         echo "::group::flake8 check"
         flake8 \
           mykeibadb/ \
-          tests/ \
+          test/ \
           --max-line-length=100 \
           --ignore=E203,W503,ANN101,ANN204,ANN401,D105,D107,D403,D415,DAR101,DAR201,DAR402 \
           --select=E,W,F,N,D \
@@ -100,14 +100,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev]
 
-    - name: Run unit tests
+    - name: Run unit test
       run: |
-        pytest tests/unit -v --cov=mykeibadb --cov-report=xml --cov-report=term-missing
+        pytest test/unit -v --cov=mykeibadb --cov-report=xml --cov-report=term-missing
 
     # 統合テスト実装後に有効化
-    # - name: Run integration tests
+    # - name: Run integration test
     #   run: |
-    #     pytest tests/integration -v --cov=mykeibadb --cov-append --cov-report=xml --cov-report=term-missing
+    #     pytest test/integration -v --cov=mykeibadb --cov-append --cov-report=xml --cov-report=term-missing
     #   env:
     #     DB_HOST: localhost
     #     DB_PORT: 5432

@@ -3,6 +3,7 @@
 mykeibadbのコードテーブルに基づいてコード値を人間が読める形式に変換する関数を提供する。
 """
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -269,6 +270,6 @@ def _load_yaml(filename: str) -> dict[str, str]:
     Returns:
         YAMLファイルの内容を表す辞書
     """
-    yaml_path = Path(__file__).parent / filename
+    yaml_path = os.path.join(Path(__file__).parent, "mapping", filename)
     with open(yaml_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
