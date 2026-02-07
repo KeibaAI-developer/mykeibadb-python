@@ -5,6 +5,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 |名前|キー|項目名|バイト|説明|例|
 |:----|:----|:----|:----|:----|----|
 |INSERT_TIMESTAMP| |テーブル作成時間|19| | 2026-01-27 00:31:47 |
@@ -52,3 +54,23 @@
 |HANDICAP_HAPPYOBI| |ハンデ発表日|8|ハンデキャップレースにおいてハンデが発表された日| 00000000 |
 | | | | |西暦4桁＋月日各2桁 yyyymmdd 形式|  |
 |TOROKU_TOSU| |登録頭数|3|特別登録された頭数| 023 |
+
+## 追加カラム一覧
+
+`RaceGetter.get_tokubetsu_torokuba()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|keibajo|競馬場名|KEIBAJO_CODEを場略名(3文字)に変換 <コード表 2001.競馬場コード>参照| 東京 |
+|yobi|曜日|YOBI_CODEを略名(1文字)に変換 <コード表 2002.曜日コード>参照| 日 |
+|grade|グレード|GRADE_CODEを名称に変換 <コード表 2003.グレードコード>参照| GIII |
+|kyoso_shubetsu|競走種別|KYOSO_SHUBETSU_CODEを略名(8文字)に変換 <コード表 2005.競走種別コード>参照| サラ系４歳以上 |
+|kyoso_kigo|競走記号|KYOSO_KIGO_CODEを名称に変換 <コード表 2006.競走記号コード>参照| (国際)(指定) |
+|juryo_shubetsu|重量種別|JURYO_SHUBETSU_CODEを内容に変換 <コード表 2008.重量種別コード>参照| 別定 |
+|kyoso_joken_2sai|競走条件 2歳|KYOSO_JOKEN_CODE_2SAIを名称に変換 <コード表 2007.競走条件コード>参照|  |
+|kyoso_joken_3sai|競走条件 3歳|KYOSO_JOKEN_CODE_3SAIを名称に変換 <コード表 2007.競走条件コード>参照|  |
+|kyoso_joken_4sai|競走条件 4歳|KYOSO_JOKEN_CODE_4SAIを名称に変換 <コード表 2007.競走条件コード>参照| オープン |
+|kyoso_joken_5sai_ijo|競走条件 5歳以上|KYOSO_JOKEN_CODE_5SAI_IJOを名称に変換 <コード表 2007.競走条件コード>参照| オープン |
+|kyoso_joken_saijakunen|競走条件 最若年|KYOSO_JOKEN_CODE_SAIJAKUNENを名称に変換 <コード表 2007.競走条件コード>参照| オープン |
+|track|トラック|TRACK_CODEを略名(6文字)に変換 <コード表 2009.トラックコード>参照| ダート・左 |
+

@@ -4,6 +4,8 @@
 
 ## カラム一覧
 
+mykeibadb公式ドキュメントに則りカラム名を大文字で記載していますが、データフレームとして取得した際はカラム名は小文字になります。
+
 | 名前 | キー | 項目名 | バイト | 説明 | 例 |
 | --- | --- | --- | --- | --- | --- |
 | INSERT_TIMESTAMP |   | テーブル作成時間 | 19.0 |   | 2026-01-22 03:37:48 |
@@ -223,3 +225,15 @@
 | KYAKUSHITSU_KEIKO_SASHI |   |   | 3.0 |   | 005 |
 | KYAKUSHITSU_KEIKO_OIKOMI |   |   | 3.0 |   | 001 |
 | TOROKU_RACE_SU |   | 登録レース数 | 3.0 | JRA-VANに登録されている成績レース数 | 010 |
+
+## 追加カラム一覧
+
+`MasterGetter.get_kyosoba_master2()` メソッドではデフォルトで`convert_codes=True`が指定されており、以下のカラムが追加されます。
+
+|名前|項目名|説明|例|
+|:----|:----|:----|----|
+|umakigo|馬記号|UMAKIGO_CODEを名称に変換 <コード表 2204.馬記号コード>参照|  |
+|seibetsu|性別|SEIBETSU_CODEを略に変換 <コード表 2202.性別コード>参照| 牡 |
+|hinshu|品種|HINSHU_CODEを名称に変換 <コード表 2201.品種コード>参照| サラブレッド |
+|moshoku|毛色|MOSHOKU_CODEを名称に変換 <コード表 2203.毛色コード>参照| 黒鹿毛 |
+|tozai_shozoku|東西所属|TOZAI_SHOZOKU_CODEを名称に変換 <コード表 2301.東西所属コード>参照| 栗東 |
