@@ -5,10 +5,10 @@
 """
 
 try:
-    from importlib.metadata import version
+    from importlib.metadata import version, PackageNotFoundError
 
     __version__ = version("mykeibadb-python")
-except Exception:
+except (PackageNotFoundError, ImportError):
     __version__ = "unknown"
 
 from mykeibadb.config import ConfigManager
