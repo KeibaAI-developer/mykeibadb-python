@@ -220,6 +220,15 @@ def test_convert_ijo_kubun_code(code: str, expected: str) -> None:
         ("T__", "大差"),
         ("___", ""),  # 未設定
         ("999", ""),  # 存在しないコード
+        # スペースパディング形式（DBから取得した場合）
+        ("1  ", "１馬身"),
+        ("2  ", "２馬身"),
+        ("A  ", "アタマ"),
+        ("H  ", "ハナ"),
+        ("K  ", "クビ"),
+        (" 12", "1/2馬身"),
+        (" 34", "3/4馬身"),
+        ("   ", ""),  # スペースのみ（未設定）
     ],
 )
 def test_convert_chakusa_code(code: str, expected: str) -> None:

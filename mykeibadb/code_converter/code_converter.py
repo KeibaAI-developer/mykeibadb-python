@@ -158,13 +158,13 @@ def convert_chakusa_code(code: str) -> str:
     """着差コードを名称に変換する.
 
     Args:
-        code: 着差コード（例: "1__", "A__", "K__"）
+        code: 着差コード（例: "1__", "A__", "K__" または "1  ", "A  ", "K  "）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
     """
     chakusa_code_to_name: dict[str, str] = _load_yaml("chakusa_code.yml")
-    return chakusa_code_to_name.get(code, "")
+    return chakusa_code_to_name.get(code.replace(" ", "_"), "")
 
 
 def convert_hinshu_code(code: str) -> str:
