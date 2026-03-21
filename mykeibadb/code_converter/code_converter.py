@@ -258,6 +258,19 @@ def convert_kishu_minarai_code(code: str) -> str:
     return kishu_minarai_code_to_name.get(code, "")
 
 
+def convert_kyakushitsu_hantei_code(code: str) -> str:
+    """脚質判定コードを名称に変換する.
+
+    Args:
+        code: 脚質判定コード（例: "0", "1", "2", "3", "4"）
+
+    Returns:
+        名称。該当するコードがない場合は空文字列を返す。
+    """
+    kyakushitsu_hantei_code_to_name: dict[str, str] = _load_yaml("kyakushitsu_hantei_code.yml")
+    return kyakushitsu_hantei_code_to_name.get(code, "")
+
+
 @lru_cache(maxsize=None)
 def _load_yaml(filename: str) -> dict[str, str]:
     """YAMLファイルを読み込んで辞書として返す.

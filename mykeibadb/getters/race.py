@@ -27,6 +27,7 @@ from mykeibadb.code_converter import (
     convert_juryo_shubetsu_code,
     convert_keibajo_code,
     convert_kishu_minarai_code,
+    convert_kyakushitsu_hantei_code,
     convert_kyoso_joken_code,
     convert_kyoso_kigo_code,
     convert_kyoso_shubetsu_code,
@@ -243,6 +244,7 @@ class RaceGetter(BaseGetter):
             ("chakusa_code1", "chakusa1", convert_chakusa_code),
             ("chakusa_code2", "chakusa2", convert_chakusa_code),
             ("chakusa_code3", "chakusa3", convert_chakusa_code),
+            ("kyakushitsu_hantei", "kyakushitsu", convert_kyakushitsu_hantei_code),
         ]
         return self._apply_code_conversions(df, conversions)
 

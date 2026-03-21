@@ -531,6 +531,7 @@ def test_get_umagoto_race_joho_convert_codes_true(
             "chakusa_code1": ["1__"],
             "chakusa_code2": ["_12"],
             "chakusa_code3": ["___"],
+            "kyakushitsu_hantei": ["3"],
         }
     )
     mock_table_accessor.get_table_data.return_value = source_df.copy()
@@ -553,6 +554,7 @@ def test_get_umagoto_race_joho_convert_codes_true(
         "chakusa1",
         "chakusa2",
         "chakusa3",
+        "kyakushitsu",
     ]
     for col in expected_new_columns:
         assert col in result.columns, f"変換列 '{col}' が結果に含まれていない"
@@ -570,6 +572,7 @@ def test_get_umagoto_race_joho_convert_codes_true(
     assert row["chakusa1"] == "１馬身"
     assert row["chakusa2"] == "1/2馬身"
     assert row["chakusa3"] == ""
+    assert row["kyakushitsu"] == "差"
 
     # 元のコード列も保持されていることを確認
     assert row["keibajo_code"] == "05"

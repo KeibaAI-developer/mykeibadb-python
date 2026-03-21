@@ -23,6 +23,9 @@
 | 2301 | 東西所属コード | [TOZAI_SHOZOKU_CODE](#TOZAI_SHOZOKU_CODE) |
 | 2302 | 騎乗資格コード | [KIJO_SHIKAKU_CODE](#KIJO_SHIKAKU_CODE) |
 | 2303 | 騎手見習コード | [KISHU_MINARAI_CODE](#KISHU_MINARAI_CODE) |
+|  -   | 脚質判定コード | [KYAKUSHITSU_HANTEI_CODE](#KYAKUSHITSU_HANTEI_CODE) |
+
+※ 脚質判定コードは公式コードNo.なし
 
 ## KEIBAJO_CODE
 
@@ -579,3 +582,13 @@
 |   |   |   | 通算免許期間が5年未満で障害競走勝利数が15回以下(2023年1月から) |
 |   |   |   | 女性騎手：通算免許期間が5年未満で勝利度数が50回以下　(2019年3月から) |
 | 9 | ◇ | 2Kg減 | 女性騎手：通算免許期間が5年未満で勝利度数が101回以上、または5年以上(2019年3月から) |
+
+## KYAKUSHITSU_HANTEI_CODE
+| 値 | 名称 |
+| --- | --- |
+| CODE | MEISHO |
+| 0 | 未設定・未整備時の初期値 |
+| 1 | 逃 |
+| 2 | 先 |
+| 3 | 差 |
+| 4 | 追 |
