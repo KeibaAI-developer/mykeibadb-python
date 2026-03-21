@@ -16,7 +16,7 @@ from .conftest import JRA_OFFICIAL_KAISAI_COUNT
 def _get_kaisai_schedule_count(conn: psycopg2.extensions.connection, year: str) -> int:
     """指定年の中央競馬開催日数をkaisai_scheduleテーブルから取得."""
     query = """
-        SELECT COUNT(*) AS race_count
+        SELECT COUNT(*) AS kaisai_count
         FROM kaisai_schedule
         WHERE TRIM(kaisai_nen) = %s
           AND TRIM(keibajo_code) BETWEEN '01' AND '10'

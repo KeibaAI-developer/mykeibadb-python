@@ -256,7 +256,7 @@ with ConnectionManager(config) as conn:
 `test/mykeibadb/`以下のテストを実行することで、JRA公式発表のデータとmykeibadbのレコード数が一致しているかを確認できます。
 
 ```bash
-pytest test/mykeibadb/ -v
+pytest test/mykeibadb/
 ```
 
 > **注意**: これらのテストは実行中のPostgreSQLに接続するため、CIでは実行されません。PostgreSQLに接続できない場合はスキップされます。
