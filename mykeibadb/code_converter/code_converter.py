@@ -262,7 +262,7 @@ def convert_kyakushitsu_hantei_code(code: str) -> str:
     """脚質判定コードを名称に変換する.
 
     Args:
-        code: 脚質判定コード（例: "1", "2", "3", "4"）
+        code: 脚質判定コード（例: "0", "1", "2", "3", "4"）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。

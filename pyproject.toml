@@ -61,7 +61,7 @@ where = ["."]
 include = ["mykeibadb*"]
 
 [tool.setuptools.package-data]
-mykeibadb = ["py.typed"]
+mykeibadb = ["py.typed", "code_converter/mapping/*.yml"]
 
 [tool.black]
 line-length = 100

@@ -25,6 +25,8 @@
 | 2303 | 騎手見習コード | [KISHU_MINARAI_CODE](#KISHU_MINARAI_CODE) |
 |  -   | 脚質判定コード | [KYAKUSHITSU_HANTEI_CODE](#KYAKUSHITSU_HANTEI_CODE) |
 
+※ 脚質判定コードは公式コードNo.なし
+
 ## KEIBAJO_CODE
 
 | 値 | 場名 | 場略名(1文字) | 場略名(2文字) | 場略名(3文字) | 場欧字名 | 場欧字略名(3文字) |
