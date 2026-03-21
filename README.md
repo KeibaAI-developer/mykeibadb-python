@@ -250,18 +250,16 @@ with ConnectionManager(config) as conn:
 | `QueryExecutionError` | SQLクエリの実行に失敗した場合 |
 | `ValidationError` | 引数の検証に失敗した場合（レースコードの桁数不正など） |
 
-```python
-from mykeibadb.exceptions import MykeibaDBConnectionError, ValidationError
-from mykeibadb.getters import RaceGetter
 
-try:
-    getter = RaceGetter()
-    df = getter.get_race_shosai(race_code="2025122806050811")
-except MykeibaDBConnectionError as e:
-    print(f"接続エラー: {e}")
-except ValidationError as e:
-    print(f"引数エラー: {e}")
+## mykeibadbのデータ取得状況の確認
+
+`test/mykeibadb/`以下のテストを実行することで、JRA公式発表のデータとmykeibadbのレコード数が一致しているかを確認できます。
+
+```bash
+pytest test/mykeibadb/ -v
 ```
+
+> **注意**: これらのテストは実行中のPostgreSQLに接続するため、CIでは実行されません。PostgreSQLに接続できない場合はスキップされます。
 
 
 ## ドキュメント
