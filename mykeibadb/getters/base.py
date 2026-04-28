@@ -38,8 +38,8 @@ class BaseGetter:
         """
         self._logger = logger or logging.getLogger(__name__)
         config = ConfigManager.from_env() if config is None else config
-        self.connection_manager = ConnectionManager(config, logger=self._logger)
-        self.table_accessor = TableAccessor(self.connection_manager, logger=self._logger)
+        self.connection_manager = ConnectionManager(config, logger=logger)
+        self.table_accessor = TableAccessor(self.connection_manager, logger=logger)
 
     def _get_table_with_period(
         self,
