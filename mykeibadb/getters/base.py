@@ -4,6 +4,7 @@
 共通の初期化処理とヘルパーメソッドを含む。
 """
 
+import logging
 from collections.abc import Callable
 from datetime import date
 from typing import Any
@@ -25,16 +26,20 @@ class BaseGetter:
         table_accessor (TableAccessor): テーブルアクセサー
     """
 
-    def __init__(self, config: DBConfig | None = None) -> None:
+    def __init__(
+        self, config: DBConfig | None = None, logger: logging.Logger | None = None
+    ) -> None:
         """Getterクラスを初期化.
 
         Args:
             config (DBConfig | None): データベース設定。
                 Noneの場合は環境変数から設定を読み込む。
+            logger (logging.Logger | None): ロガーインスタンス
         """
+        self._logger = logger or logging.getLogger(__name__)
         config = ConfigManager.from_env() if config is None else config
-        self.connection_manager = ConnectionManager(config)
-        self.table_accessor = TableAccessor(self.connection_manager)
+        self.connection_manager = ConnectionManager(config, logger=self._logger)
+        self.table_accessor = TableAccessor(self.connection_manager, logger=self._logger)
 
     def _get_table_with_period(
         self,
@@ -63,6 +68,7 @@ class BaseGetter:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件や日付カラム名の場合
         """
+        self._logger.debug("テーブルからデータを取得: table=%s, filters=%s", table_name, filters)
         # 期間フィルタがない場合は通常の取得
         if not start_date and not end_date:
             return self.table_accessor.get_table_data(table_name, filters)
@@ -98,6 +104,7 @@ class BaseGetter:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件や年カラム名の場合
         """
+        self._logger.debug("テーブルからデータを取得: table=%s, filters=%s", table_name, filters)
         # 期間フィルタがない場合は通常の取得
         if not start_date and not end_date:
             return self.table_accessor.get_table_data(table_name, filters)
@@ -135,6 +142,7 @@ class BaseGetter:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件やカラム名の場合
         """
+        self._logger.debug("テーブルからデータを取得: table=%s, filters=%s", table_name, filters)
         # 期間フィルタがない場合は通常の取得
         if not start_date and not end_date:
             return self.table_accessor.get_table_data(table_name, filters)
