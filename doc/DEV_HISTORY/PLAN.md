@@ -5,7 +5,7 @@
 | PR | タイトル | 依存 | 状態 |
 |----|---------|------|------|
 | PR#01 | analytics 基盤（_models / _cte_helpers） | なし | ✅ |
-| PR#02 | analyze_chakudo 実装 | PR#01 | - |
+| PR#02 | analyze_chakudo 実装 | PR#01 | ✅ |
 | PR#03 | analyze_entry_attr_chakudo 実装 | PR#01, PR#02 | - |
 | PR#04 | 調教分析関数 + 公開API完成 | PR#01〜PR#03 | - |
 
@@ -72,7 +72,7 @@
 
 ## PR#02: analyze_chakudo 実装
 
-- [ ] PR完了
+- [x] PR完了
 
 **ブランチ名:** `feature/mykeibadb-analytics-chakudo`
 **起点・マージ先:** `develop`
@@ -87,20 +87,20 @@
 
 **作業内容:**
 
-- [ ] `chakudo.py` 実装
+- [x] `chakudo.py` 実装
   - `kakutei_chakujun ~ '^[0-9]{2}$'` で取消除外
   - `haraimodoshi` テーブルJOINで回収率計算
   - `course_kubun` + `week_in_course` 両方指定時に `build_course_week_cte` でCTE生成
   - 片方のみ指定時は `ValueError` を raise
-- [ ] `__init__.py` にエクスポート追加
-- [ ] `test_chakudo.py` 実装（正常系・準正常系）
-- [ ] 静的解析（isort・flake8・mypy）
-- [ ] セルフレビュー（code-review）
+- [x] `__init__.py` にエクスポート追加
+- [x] `test_chakudo.py` 実装（正常系・準正常系）
+- [x] 静的解析（isort・flake8・mypy）
+- [x] セルフレビュー（code-review）
 
 **完了条件:**
 
-- [ ] `pytest test/unit/mykeibadb/analytics/test_chakudo.py -v` が全件パス
-- [ ] 静的解析エラーなし
+- [x] `pytest test/unit/mykeibadb/analytics/test_chakudo.py -v` が全件パス
+- [x] 静的解析エラーなし
 
 ---
 
