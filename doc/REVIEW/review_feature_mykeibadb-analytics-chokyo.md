@@ -4,7 +4,7 @@
 
 - **対象**: develop → feature/mykeibadb-analytics-chokyo
 - **レビュー日**: 2026-06-04
-- **レビュー対象ファイル数**: 3ファイル（chokyo.py, __init__.py, test_chokyo.py）
+- **レビュー対象ファイル数**: 5ファイル（chokyo.py, __init__.py, test_chokyo.py, PLAN.md, review_feature_mykeibadb-analytics-chokyo.md）
 
 ## 指摘事項
 

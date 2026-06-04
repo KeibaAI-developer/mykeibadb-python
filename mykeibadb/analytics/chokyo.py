@@ -50,28 +50,28 @@ def get_uma_chokyo(
         ketto = str(info_df.iloc[0]["ketto_toroku_bango"])
         race_date = str(info_df.iloc[0]["race_date"])
 
-        wood_sql = """
-            SELECT tracen_kubun, chokyo_nengappi, chokyo_jikoku,
-                   time_gokei_6furlong, time_gokei_5furlong, time_gokei_4furlong,
-                   laptime_1furlong, laptime_2furlong, laptime_3furlong
-            FROM woodchip_chokyo
-            WHERE ketto_toroku_bango = %s
-              AND time_gokei_6furlong NOT IN ('0000', '9999')
-              AND chokyo_nengappi < %s
-            ORDER BY chokyo_nengappi DESC, chokyo_jikoku DESC
+        wood_sql = f"""
+            SELECT w.tracen_kubun, w.chokyo_nengappi, w.chokyo_jikoku,
+                   w.time_gokei_6furlong, w.time_gokei_5furlong, w.time_gokei_4furlong,
+                   w.laptime_1furlong, w.laptime_2furlong, w.laptime_3furlong
+            FROM woodchip_chokyo w
+            WHERE w.ketto_toroku_bango = %s
+              AND {_WOOD_VALID}
+              AND w.chokyo_nengappi < %s
+            ORDER BY w.chokyo_nengappi DESC, w.chokyo_jikoku DESC
         """
         wood_df = manager.fetch_dataframe(wood_sql, params=(ketto, race_date))
 
-        hanro_sql = """
-            SELECT tracen_kubun, chokyo_nengappi, chokyo_jikoku,
-                   time_gokei_4furlong,
-                   lap_time_1furlong, lap_time_2furlong,
-                   lap_time_3furlong, lap_time_4furlong
-            FROM hanro_chokyo
-            WHERE ketto_toroku_bango = %s
-              AND time_gokei_4furlong NOT IN ('0000', '9999')
-              AND chokyo_nengappi < %s
-            ORDER BY chokyo_nengappi DESC, chokyo_jikoku DESC
+        hanro_sql = f"""
+            SELECT h.tracen_kubun, h.chokyo_nengappi, h.chokyo_jikoku,
+                   h.time_gokei_4furlong,
+                   h.lap_time_1furlong, h.lap_time_2furlong,
+                   h.lap_time_3furlong, h.lap_time_4furlong
+            FROM hanro_chokyo h
+            WHERE h.ketto_toroku_bango = %s
+              AND {_HANRO_VALID}
+              AND h.chokyo_nengappi < %s
+            ORDER BY h.chokyo_nengappi DESC, h.chokyo_jikoku DESC
         """
         hanro_df = manager.fetch_dataframe(hanro_sql, params=(ketto, race_date))
 
