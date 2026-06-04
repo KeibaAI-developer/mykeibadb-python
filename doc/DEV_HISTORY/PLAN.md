@@ -6,7 +6,7 @@
 |----|---------|------|------|
 | PR#01 | analytics 基盤（_models / _cte_helpers） | なし | ✅ |
 | PR#02 | analyze_chakudo 実装 | PR#01 | ✅ |
-| PR#03 | analyze_entry_attr_chakudo 実装 | PR#01, PR#02 | - |
+| PR#03 | analyze_entry_attr_chakudo 実装 | PR#01, PR#02 | ✅ |
 | PR#04 | 調教分析関数 + 公開API完成 | PR#01〜PR#03 | - |
 
 ---
@@ -106,7 +106,7 @@
 
 ## PR#03: analyze_entry_attr_chakudo 実装
 
-- [ ] PR完了
+- [x] PR完了
 
 **ブランチ名:** `feature/mykeibadb-analytics-entry-attr`
 **起点・マージ先:** `develop`
@@ -121,7 +121,7 @@
 
 **作業内容:**
 
-- [ ] `entry_attr.py` 実装
+- [x] `entry_attr.py` 実装
   - `attr_def` が `dict` の場合は `EntryAttrDef.from_dict` で変換
   - `source.type` 対応:
     - `"past_finish_count"`: `chakujun <= top_n` の出走回数集計（grade_codes / keibajo_code / kyori フィルタ）
@@ -129,16 +129,16 @@
     - `"prev_race_name"`: 直前レース名をサブクエリで取得
     - `"debut_venue"`: 初出走の競馬場コードをサブクエリで取得
   - 未対応 `type` 指定時は `ValueError` を raise
-- [ ] `__init__.py` にエクスポート追加
-- [ ] `test_entry_attr.py` 実装（source.type 4種の正常系・準正常系）
-- [ ] 静的解析（isort・flake8・mypy）
-- [ ] セルフレビュー（code-review）
+- [x] `__init__.py` にエクスポート追加
+- [x] `test_entry_attr.py` 実装（source.type 4種の正常系・準正常系）
+- [x] 静的解析（isort・flake8・mypy）
+- [x] セルフレビュー（code-review）
 
 **完了条件:**
 
-- [ ] `pytest test/unit/mykeibadb/analytics/test_entry_attr.py -v` が全件パス
-- [ ] `source.type` 全4種のテストが存在する
-- [ ] 静的解析エラーなし
+- [x] `pytest test/unit/mykeibadb/analytics/test_entry_attr.py -v` が全件パス
+- [x] `source.type` 全4種のテストが存在する
+- [x] 静的解析エラーなし
 
 ---
 
