@@ -150,6 +150,10 @@ def _build_attr_sql(
         return _build_prev_race_name_sql()
     if source.type == "debut_venue":
         return _build_debut_venue_sql()
+    if source.type == "jockey_continuity":
+        return _build_jockey_continuity_sql()
+    if source.type == "sire_condition_finisher":
+        return _build_sire_condition_finisher_sql(source, params)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -225,6 +229,60 @@ def _build_debut_venue_sql() -> tuple[str, str, str]:
             LIMIT 1
         )"""
     return "", "", attr_val_expr
+
+
+def _build_jockey_continuity_sql() -> tuple[str, str, str]:
+    """jockey_continuity 用のattr_val式を生成する."""
+    prev_sql = (
+        "(SELECT u2.kishu_code"
+        " FROM umagoto_race_joho u2"
+        " JOIN race_joho r2 ON u2.race_code = r2.race_code"
+        " WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango"
+        "   AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi)"
+        "       < (r.kaisai_nen || r.kaisai_tsuki_nichi)"
+        " ORDER BY r2.kaisai_nen DESC, r2.kaisai_tsuki_nichi DESC"
+        " LIMIT 1)"
+    )
+    past_sql = (
+        "(SELECT u2.kishu_code"
+        " FROM umagoto_race_joho u2"
+        " JOIN race_joho r2 ON u2.race_code = r2.race_code"
+        " WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango"
+        "   AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi)"
+        "       < (r.kaisai_nen || r.kaisai_tsuki_nichi))"
+    )
+    attr_val_expr = (
+        f"CASE WHEN u.kishu_code = {prev_sql} THEN '継続'"
+        f" WHEN u.kishu_code IN {past_sql} THEN '乗り戻り'"
+        " ELSE 'テン乗り' END"
+    )
+    return "", "", attr_val_expr
+
+
+def _build_sire_condition_finisher_sql(
+    source: AttrSource,
+    params: list[Any],
+) -> tuple[str, str, str]:
+    """sire_condition_finisher 用のattr_val式を生成する."""
+    cond_parts: list[str] = [
+        "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
+        "u2.kakutei_chakujun != '00'",
+        "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
+    ]
+    params.append(int(source.top_n))
+    if source.condition is not None:
+        cond_parts.extend(build_race_condition_where(source.condition, params, race_alias="r2"))
+    cond_where = "\n                  AND ".join(cond_parts)
+    attr_val_expr = (
+        "CASE WHEN km2.ketto1_bamei IN (\n"
+        "                SELECT u2.bamei\n"
+        "                FROM umagoto_race_joho u2\n"
+        "                JOIN race_joho r2 ON u2.race_code = r2.race_code\n"
+        f"                WHERE {cond_where}\n"
+        "            ) THEN 1 ELSE 0 END"
+    )
+    join_sql = "JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango"
+    return "", join_sql, attr_val_expr
 
 
 def _build_case_when(rows: RowsDef, params: list[Any]) -> str:

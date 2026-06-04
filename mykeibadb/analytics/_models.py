@@ -197,7 +197,9 @@ class AttrSource:
             "career_count": キャリア戦数
             "prev_race_name": 前走レース名
             "debut_venue": デビュー競馬場コード
-        top_n (int): 何着以内を入着とみなすか（"past_finish_count"用）
+            "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
+            "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
+        top_n (int): 何着以内を入着とみなすか（"past_finish_count"/"sire_condition_finisher"用）
         grade_codes (list[str] | None): 対象グレードコードリスト
         keibajo_code (str | None): 対象競馬場コード
         kyori (int | None): 対象距離

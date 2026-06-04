@@ -107,6 +107,68 @@ def test_analyze_entry_attr_debut_venue_sql_contains_subquery(mocker: MockerFixt
     assert "r2.keibajo_code" in sql
 
 
+def test_analyze_entry_attr_jockey_continuity_sql(mocker: MockerFixture) -> None:
+    """jockey_continuity 指定時に kishu_code サブクエリと継続ラベルが SQL に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_result_row("継続")])
+
+    attr_def = EntryAttrDef(
+        source=AttrSource(type="jockey_continuity"),
+        rows={"継続": "継続", "乗り戻り": "乗り戻り", "テン乗り": "テン乗り"},
+    )
+    result = analyze_entry_attr_chakudo(manager, attr_def)
+
+    assert result.success is True
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kishu_code" in sql
+    assert "SELECT u2.kishu_code" in sql
+    assert "LIMIT 1" in sql
+    assert "継続" in sql
+    assert "乗り戻り" in sql
+    assert "テン乗り" in sql
+
+
+def test_analyze_entry_attr_sire_condition_finisher_sql(mocker: MockerFixture) -> None:
+    """sire_condition_finisher 指定時に kyosoba_master2 JOIN と condition が SQL に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_result_row("1")])
+
+    attr_def = EntryAttrDef(
+        source=AttrSource(
+            type="sire_condition_finisher",
+            top_n=1,
+            condition=RaceCondition(kyori=2400),
+        ),
+        rows={"1": 1, "0": 0},
+    )
+    result = analyze_entry_attr_chakudo(manager, attr_def)
+
+    assert result.success is True
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "kyosoba_master2" in sql
+    assert "ketto1_bamei" in sql
+    assert "r2.kyori = %s" in sql
+    assert 2400 in params
+
+
+def test_analyze_entry_attr_sire_condition_finisher_no_condition(mocker: MockerFixture) -> None:
+    """sire_condition_finisher で condition=None のとき集計が成功する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_result_row("0")])
+
+    attr_def = EntryAttrDef(
+        source=AttrSource(type="sire_condition_finisher", top_n=1),
+        rows={"1": 1, "0": 0},
+    )
+    result = analyze_entry_attr_chakudo(manager, attr_def)
+
+    assert result.success is True
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyosoba_master2" in sql
+    assert "kyori = %s" not in sql
+
+
 def test_analyze_entry_attr_accepts_dict(mocker: MockerFixture) -> None:
     """dict形式で attr_def を渡せる."""
     manager = mocker.MagicMock()
