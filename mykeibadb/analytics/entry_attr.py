@@ -2,8 +2,15 @@
 
 from typing import Any
 
-from mykeibadb.analytics._cte_helpers import build_payout_ctes
-from mykeibadb.analytics._models import AttrSource, ChakudoResult, ChakudoRow, EntryAttrDef, RowsDef
+from mykeibadb.analytics._cte_helpers import build_payout_ctes, build_race_condition_where
+from mykeibadb.analytics._models import (
+    AttrSource,
+    ChakudoResult,
+    ChakudoRow,
+    EntryAttrDef,
+    RaceCondition,
+    RowsDef,
+)
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
@@ -11,12 +18,7 @@ from mykeibadb.exceptions import MykeibaDBError
 def analyze_entry_attr_chakudo(
     manager: ConnectionManager,
     attr_def: EntryAttrDef | dict[str, Any],
-    race_name: str | None = None,
-    keibajo: str | None = None,
-    kyori: int | None = None,
-    year_from: str | None = None,
-    year_to: str | None = None,
-    grade: str | None = None,
+    condition: RaceCondition | None = None,
 ) -> ChakudoResult:
     """出走馬属性別の着度数・勝率・回収率を集計する.
 
@@ -24,12 +26,7 @@ def analyze_entry_attr_chakudo(
         manager (ConnectionManager): DB接続マネージャ
         attr_def (EntryAttrDef | dict[str, Any]): 属性集計条件定義。dictの場合は
             EntryAttrDef.from_dict で変換。
-        race_name (str | None): レース名フィルタ（部分一致）
-        keibajo (str | None): 競馬場コードフィルタ
-        kyori (int | None): 距離フィルタ
-        year_from (str | None): 集計開始年（YYYY形式）
-        year_to (str | None): 集計終了年（YYYY形式）
-        grade (str | None): グレードコードフィルタ
+        condition (RaceCondition | None): レース絞り込み条件
 
     Returns:
         ChakudoResult: グループ別集計結果
@@ -54,24 +51,8 @@ def analyze_entry_attr_chakudo(
             "u.kakutei_chakujun ~ '^[0-9]{2}$'",
             "u.kakutei_chakujun != '00'",
         ]
-        if race_name:
-            where_parts.append("r.race_name LIKE %s")
-            params.append(f"%{race_name}%")
-        if keibajo:
-            where_parts.append("r.keibajo_code = %s")
-            params.append(keibajo)
-        if kyori:
-            where_parts.append("r.kyori = %s")
-            params.append(kyori)
-        if year_from:
-            where_parts.append("r.kaisai_nen >= %s")
-            params.append(year_from)
-        if year_to:
-            where_parts.append("r.kaisai_nen <= %s")
-            params.append(year_to)
-        if grade:
-            where_parts.append("r.grade_code = %s")
-            params.append(grade)
+        if condition is not None:
+            where_parts.extend(build_race_condition_where(condition, params))
 
         where_clause = "\n              AND ".join(where_parts)
         cte_parts.append(
@@ -102,7 +83,7 @@ def analyze_entry_attr_chakudo(
         )
 
         sql = f"""
-            WITH {", ".join(cte_parts)}
+            WITH RECURSIVE {", ".join(cte_parts)}
             SELECT
                 grp,
                 COUNT(*) AS total,

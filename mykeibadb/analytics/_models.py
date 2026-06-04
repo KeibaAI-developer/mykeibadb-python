@@ -125,6 +125,46 @@ class AttrSource:
 
 
 @dataclass
+class RaceCondition:
+    """レースの絞り込み条件.
+
+    Attributes:
+        keibajo_code (str | None): 競馬場コードフィルタ
+        kyori (int | None): 距離フィルタ
+        year_from (str | None): 集計開始年（YYYY形式）
+        year_to (str | None): 集計終了年（YYYY形式）
+        grade_code (str | None): グレードコードフィルタ
+        kyoso_joken_codes (list[str] | None): 競走条件コードフィルタ（複数指定可）
+            年齢別条件コード5カラムの最大値と比較する。
+        race_shubetsu (str | None): レース種別フィルタ。「平地」または「障害」。
+            track_code から導出する。
+        shiba_da (str | None): 芝ダフィルタ。「芝」または「ダ」。
+            track_code から導出する。
+        babajotai_code (str | None): 馬場状態コードフィルタ。「1」=良、「2」=稍重、「3」=重、「4」=不良。
+            shiba_babajotai_code / dirt_babajotai_code のうち有効な方と比較する。
+        sayuu (str | None): 回り方向フィルタ。「左」「右」「直」。
+            track_code から導出する。
+        course_kubun (str | None): コース区分フィルタ。「A」〜「E」。
+            week_in_course と同時指定時は build_course_week_cte でCTE処理する。
+        week_in_course (int | None): コース区分使用開始からの週番号フィルタ。
+            course_kubun と必ず同時に指定すること。
+    """
+
+    keibajo_code: str | None = None
+    kyori: int | None = None
+    year_from: str | None = None
+    year_to: str | None = None
+    grade_code: str | None = None
+    kyoso_joken_codes: list[str] | None = None
+    race_shubetsu: str | None = None
+    shiba_da: str | None = None
+    babajotai_code: str | None = None
+    sayuu: str | None = None
+    course_kubun: str | None = None
+    week_in_course: int | None = None
+
+
+@dataclass
 class EntryAttrDef:
     """出走馬属性集計の条件定義.
 
