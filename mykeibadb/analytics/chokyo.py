@@ -243,6 +243,9 @@ def analyze_chokyo_debut_seiseki(
 
     Raises:
         ValueError: condition内に未対応の course が含まれる場合
+
+    Note:
+        condition が空リストの場合はデビュー期間の全馬を対象として集計する。
     """
     for t in condition:
         resolve_threshold_col(t)

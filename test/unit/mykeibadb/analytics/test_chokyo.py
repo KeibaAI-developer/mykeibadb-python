@@ -351,6 +351,7 @@ def test_analyze_chokyo_debut_seiseki_wood_only(mocker: MockerFixture) -> None:
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "woodchip_chokyo" in sql
     assert "debut_horses" in sql
+    assert "INTERSECT" not in sql
 
 
 def test_analyze_chokyo_debut_seiseki_hanro_only(mocker: MockerFixture) -> None:
