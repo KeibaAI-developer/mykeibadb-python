@@ -409,6 +409,21 @@ def test_analyze_chokyo_debut_seiseki_db_error(mocker: MockerFixture) -> None:
     assert result["success"] is False
 
 
+def test_analyze_chokyo_debut_seiseki_empty_condition(mocker: MockerFixture) -> None:
+    """空conditionでwood/hanro CTEなし・INTERSECTなし・集計成功."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 100, "winners": 20}])
+
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", [])
+
+    assert result["success"] is True
+    assert result["total"] == 100
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "woodchip_chokyo" not in sql
+    assert "hanro_chokyo" not in sql
+    assert "INTERSECT" not in sql
+
+
 def test_analyze_chokyo_debut_seiseki_invalid_course_raises() -> None:
     """不正なcourseでValueErrorが発生する."""
     manager = object()

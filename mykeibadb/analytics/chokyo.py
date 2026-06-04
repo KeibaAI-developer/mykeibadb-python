@@ -242,7 +242,7 @@ def analyze_chokyo_debut_seiseki(
             キー: success, debut_date_from, debut_date_to, total, winners, win_rate
 
     Raises:
-        ValueError: condition内に未対応の course が含まれる場合
+        ValueError: condition内に未対応の course または metric が含まれる場合、もしくは furlong が正の整数でない場合
 
     Note:
         condition が空リストの場合はデビュー期間の全馬を対象として集計する。
@@ -264,7 +264,8 @@ def analyze_chokyo_debut_seiseki(
         SELECT ketto_toroku_bango,
                MIN(kaisai_nen || kaisai_gappi) AS debut_date
         FROM umagoto_race_joho
-        WHERE kakutei_chakujun != '00'
+        WHERE kakutei_chakujun ~ '^[0-9]{2}$'
+          AND kakutei_chakujun != '00'
         GROUP BY ketto_toroku_bango
         HAVING MIN(kaisai_nen || kaisai_gappi) BETWEEN %s AND %s
     )""")

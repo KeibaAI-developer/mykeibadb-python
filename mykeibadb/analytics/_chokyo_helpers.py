@@ -15,18 +15,19 @@ def resolve_threshold_col(threshold: ChokyoThreshold) -> tuple[str, str]:
         threshold (ChokyoThreshold): 調教閾値条件
 
     Returns:
-        str: テーブル名（"woodchip_chokyo" または "hanro_chokyo"）
-        str: カラム名
+        tuple[str, str]: (テーブル名（"woodchip_chokyo" または "hanro_chokyo"）, カラム名)
 
     Raises:
-        ValueError: course / metric の組み合わせが未対応の場合
+        ValueError: course / metric が未対応、または furlong が正の整数でない場合
     """
     if threshold.course not in _VALID_COURSES:
         raise ValueError(f"未対応の course です: {threshold.course!r}")
     if threshold.metric not in _VALID_METRICS:
         raise ValueError(f"未対応の metric です: {threshold.metric!r}")
 
-    n = threshold.furlong
+    n = int(threshold.furlong)
+    if n <= 0:
+        raise ValueError(f"furlong は正の整数でなければなりません: {threshold.furlong!r}")
     if threshold.metric == "gokei":
         col = f"time_gokei_{n}furlong"
     elif threshold.course == "wood":
