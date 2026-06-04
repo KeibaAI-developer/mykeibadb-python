@@ -3,11 +3,12 @@
 import pytest
 
 from mykeibadb.analytics._cte_helpers import (
+    SUBJECT_MAP,
     build_course_week_cte,
     build_payout_ctes,
     build_race_condition_where,
 )
-from mykeibadb.analytics._models import RaceCondition
+from mykeibadb.analytics._models import RaceCondition, Subject
 
 
 # 正常系
@@ -98,6 +99,51 @@ def test_build_course_week_cte_various_params(course_kubun: str, week_in_course:
     assert "cw_target" in cte_sql
     assert course_kubun in params
     assert week_in_course in params
+
+
+# SUBJECT_MAP 正常系
+def test_subject_map_covers_all_subjects() -> None:
+    """全Subjectがマッピングに定義されている."""
+    for subject in Subject:
+        assert subject in SUBJECT_MAP
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [Subject.UMA, Subject.KISHU, Subject.CHOKYOSHI, Subject.BANUSHI],
+)
+def test_subject_map_no_join_for_umagoto_subjects(subject: Subject) -> None:
+    """umagoto_race_joho直接参照の主体はJOIN不要."""
+    assert SUBJECT_MAP[subject].join_sql is None
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [Subject.SIRE, Subject.SEISANSHA],
+)
+def test_subject_map_km2_join_for_sire_seisansha(subject: Subject) -> None:
+    """種牡馬/生産者はkyosoba_master2 JOINが設定されている."""
+    mapping = SUBJECT_MAP[subject]
+    assert mapping.join_sql is not None
+    assert "kyosoba_master2" in mapping.join_sql
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [Subject.UMA, Subject.KISHU, Subject.CHOKYOSHI, Subject.BANUSHI],
+)
+def test_subject_map_has_code_col_for_umagoto_subjects(subject: Subject) -> None:
+    """umagoto_race_joho直接参照の主体はコード列が定義されている."""
+    assert SUBJECT_MAP[subject].code_col is not None
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [Subject.SIRE, Subject.SEISANSHA],
+)
+def test_subject_map_no_code_col_for_sire_seisansha(subject: Subject) -> None:
+    """種牡馬/生産者はコード指定不可（code_col=None）."""
+    assert SUBJECT_MAP[subject].code_col is None
 
 
 # build_race_condition_where 正常系
