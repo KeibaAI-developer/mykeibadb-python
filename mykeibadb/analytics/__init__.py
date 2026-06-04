@@ -13,6 +13,7 @@ from mykeibadb.analytics._models import (
 from mykeibadb.analytics.chakudo import analyze_chakudo, analyze_subject_chakudo
 from mykeibadb.analytics.chokyo import analyze_chokyo_seiseki, get_uma_chokyo
 from mykeibadb.analytics.entry_attr import analyze_entry_attr_chakudo
+from mykeibadb.analytics.uma import get_uma_rekisen
 
 __all__ = [
     "analyze_chakudo",
@@ -28,4 +29,5 @@ __all__ = [
     "Subject",
     "ChokyoThreshold",
     "ChokyoCondition",
+    "get_uma_rekisen",
 ]

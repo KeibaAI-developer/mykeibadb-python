@@ -15,25 +15,49 @@ _HANRO_VALID = "h.time_gokei_4furlong NOT IN ('0000', '9999')"
 
 def get_uma_chokyo(
     manager: ConnectionManager,
-    race_code: str,
-    horse_num: int,
+    race_code: str | None = None,
+    horse_num: int | None = None,
+    ketto_toroku_bango: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> dict[str, Any]:
     """馬の調教データを取得する.
 
-    race_code と horse_num でレースを特定し、その1つ前のレース以降かつ
-    対象レース当日より前のウッドチップ・坂路調教データを返す。
-    前走が存在しない場合（デビュー戦など）はレース当日より前の全調教データを返す。
+    指定方法は2通り（排他）:
+      - race_code + horse_num: レース起点。前走〜当日の調教窓を自動設定
+      - ketto_toroku_bango: 血統登録番号で直接指定。date_from/date_toで窓指定
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
-        race_code (str): レースコード（race_code、16桁）
-        horse_num (int): 馬番（1〜18）
+        race_code (str | None): レースコード（horse_numと併用）
+        horse_num (int | None): 馬番（race_codeと併用）
+        ketto_toroku_bango (str | None): 血統登録番号（直接指定）
+        date_from (str | None): 調教日下限（yyyymmdd、ketto指定時）
+        date_to (str | None): 調教日上限（yyyymmdd、ketto指定時）
 
     Returns:
         dict[str, Any]: success フラグと調教データのリスト。
             キー: success, race_date, ketto_toroku_bango,
                   wood_records（list）, hanro_records（list）
+
+    Raises:
+        ValueError: 指定方法が不正な場合
     """
+    if race_code is not None and horse_num is not None:
+        return _get_chokyo_by_race(manager, race_code, horse_num)
+    if ketto_toroku_bango is not None:
+        return _get_chokyo_by_ketto(manager, ketto_toroku_bango, date_from, date_to)
+    raise ValueError(
+        "race_code+horse_num または ketto_toroku_bango のいずれかを指定してください。"
+    )
+
+
+def _get_chokyo_by_race(
+    manager: ConnectionManager,
+    race_code: str,
+    horse_num: int,
+) -> dict[str, Any]:
+    """レースコード・馬番から調教データを取得する."""
     try:
         umaban_str = f"{horse_num:02}"
         info_sql = """
@@ -118,6 +142,67 @@ def get_uma_chokyo(
             "success": True,
             "race_date": race_date,
             "ketto_toroku_bango": ketto,
+            "wood_records": wood_records,
+            "hanro_records": hanro_records,
+        }
+    except MykeibaDBError as e:
+        return {"success": False, "error": str(e)}
+
+
+def _get_chokyo_by_ketto(
+    manager: ConnectionManager,
+    ketto_toroku_bango: str,
+    date_from: str | None,
+    date_to: str | None,
+) -> dict[str, Any]:
+    """血統登録番号から調教データを取得する."""
+    try:
+        wood_parts: list[str] = ["w.ketto_toroku_bango = %s", f"AND {_WOOD_VALID}"]
+        wood_params: list[Any] = [ketto_toroku_bango]
+        if date_from is not None:
+            wood_parts.append("AND w.chokyo_nengappi >= %s")
+            wood_params.append(date_from)
+        if date_to is not None:
+            wood_parts.append("AND w.chokyo_nengappi <= %s")
+            wood_params.append(date_to)
+
+        wood_sql = f"""
+            SELECT w.tracen_kubun, w.chokyo_nengappi, w.chokyo_jikoku,
+                   w.time_gokei_6furlong, w.time_gokei_5furlong, w.time_gokei_4furlong,
+                   w.laptime_1furlong, w.laptime_2furlong, w.laptime_3furlong
+            FROM woodchip_chokyo w
+            WHERE {" ".join(wood_parts)}
+            ORDER BY w.chokyo_nengappi DESC, w.chokyo_jikoku DESC
+        """
+        wood_df = manager.fetch_dataframe(wood_sql, params=tuple(wood_params))
+
+        hanro_parts: list[str] = ["h.ketto_toroku_bango = %s", f"AND {_HANRO_VALID}"]
+        hanro_params: list[Any] = [ketto_toroku_bango]
+        if date_from is not None:
+            hanro_parts.append("AND h.chokyo_nengappi >= %s")
+            hanro_params.append(date_from)
+        if date_to is not None:
+            hanro_parts.append("AND h.chokyo_nengappi <= %s")
+            hanro_params.append(date_to)
+
+        hanro_sql = f"""
+            SELECT h.tracen_kubun, h.chokyo_nengappi, h.chokyo_jikoku,
+                   h.time_gokei_4furlong,
+                   h.lap_time_1furlong, h.lap_time_2furlong,
+                   h.lap_time_3furlong, h.lap_time_4furlong
+            FROM hanro_chokyo h
+            WHERE {" ".join(hanro_parts)}
+            ORDER BY h.chokyo_nengappi DESC, h.chokyo_jikoku DESC
+        """
+        hanro_df = manager.fetch_dataframe(hanro_sql, params=tuple(hanro_params))
+
+        wood_records = [_row_to_wood_record(r) for _, r in wood_df.iterrows()]
+        hanro_records = [_row_to_hanro_record(r) for _, r in hanro_df.iterrows()]
+
+        return {
+            "success": True,
+            "race_date": None,
+            "ketto_toroku_bango": ketto_toroku_bango,
             "wood_records": wood_records,
             "hanro_records": hanro_records,
         }

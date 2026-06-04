@@ -230,7 +230,55 @@ def test_analyze_chokyo_seiseki_condition_params(mocker: MockerFixture) -> None:
     assert [701] in params
 
 
+def test_get_uma_chokyo_by_ketto_toroku_bango(mocker: MockerFixture) -> None:
+    """ketto_toroku_bangoで調教データが取得できる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.side_effect = [
+        _make_df([_make_wood_row()]),
+        _make_df([_make_hanro_row()]),
+    ]
+
+    result = get_uma_chokyo(manager, ketto_toroku_bango="2020100001")
+
+    assert result["success"] is True
+    assert result["ketto_toroku_bango"] == "2020100001"
+    assert result["race_date"] is None
+    assert len(result["wood_records"]) == 1
+    assert len(result["hanro_records"]) == 1
+
+
+def test_get_uma_chokyo_ketto_with_date_range(mocker: MockerFixture) -> None:
+    """ketto_toroku_bangoとdate_from/date_toでフィルタが追加される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.side_effect = [
+        _make_df([_make_wood_row()]),
+        _make_df([]),
+    ]
+
+    result = get_uma_chokyo(
+        manager,
+        ketto_toroku_bango="2020100001",
+        date_from="20230101",
+        date_to="20230201",
+    )
+
+    assert result["success"] is True
+    wood_sql = manager.fetch_dataframe.call_args_list[0][0][0]
+    wood_params = manager.fetch_dataframe.call_args_list[0][1]["params"]
+    assert "chokyo_nengappi >= %s" in wood_sql
+    assert "chokyo_nengappi <= %s" in wood_sql
+    assert "20230101" in wood_params
+    assert "20230201" in wood_params
+
+
 # 準正常系
+def test_get_uma_chokyo_no_args_raises() -> None:
+    """引数なしでValueErrorが発生する."""
+    manager = object()
+    with __import__("pytest").raises(ValueError, match="ketto_toroku_bango"):
+        get_uma_chokyo(manager)  # type: ignore[arg-type]
+
+
 def test_get_uma_chokyo_returns_error_on_db_failure(mocker: MockerFixture) -> None:
     """DBエラーで success=False / error が設定される."""
     manager = mocker.MagicMock()
