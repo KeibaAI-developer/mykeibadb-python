@@ -122,6 +122,35 @@ class RaceCondition:
     course_kubun: str | None = None
     week_in_course: int | None = None
 
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> "RaceCondition":
+        """辞書からRaceConditionを生成する.
+
+        kyori / week_in_course は int に変換する。
+
+        Args:
+            d (dict[str, Any]): 条件辞書
+
+        Returns:
+            RaceCondition: 生成したRaceConditionインスタンス
+        """
+        raw_kyori = d.get("kyori")
+        raw_week = d.get("week_in_course")
+        return RaceCondition(
+            keibajo_code=d.get("keibajo_code"),
+            kyori=int(raw_kyori) if raw_kyori is not None else None,
+            year_from=d.get("year_from"),
+            year_to=d.get("year_to"),
+            grade_code=d.get("grade_code"),
+            kyoso_joken_codes=d.get("kyoso_joken_codes"),
+            race_shubetsu=d.get("race_shubetsu"),
+            shiba_da=d.get("shiba_da"),
+            babajotai_code=d.get("babajotai_code"),
+            sayuu=d.get("sayuu"),
+            course_kubun=d.get("course_kubun"),
+            week_in_course=int(raw_week) if raw_week is not None else None,
+        )
+
 
 class Subject(Enum):
     """着度数集計の主体."""
@@ -168,13 +197,11 @@ class AttrSource:
             "career_count": キャリア戦数
             "prev_race_name": 前走レース名
             "debut_venue": デビュー競馬場コード
-            "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
-            "sire_condition_finisher": 父馬が指定条件レースでtop_n内に好走した馬か否か
-        top_n (int): 何着以内を入着とみなすか（"past_finish_count"/"sire_condition_finisher"用）
+        top_n (int): 何着以内を入着とみなすか（"past_finish_count"用）
         grade_codes (list[str] | None): 対象グレードコードリスト
         keibajo_code (str | None): 対象競馬場コード
         kyori (int | None): 対象距離
-        condition (RaceCondition | None): レース絞り込み条件（"sire_condition_finisher"用）
+        condition (RaceCondition | None): レース絞り込み条件
     """
 
     type: str
@@ -198,7 +225,7 @@ class AttrSource:
         raw_condition = d.get("condition")
         condition: RaceCondition | None = None
         if raw_condition is not None:
-            condition = RaceCondition(**raw_condition)
+            condition = RaceCondition.from_dict(raw_condition)
         return AttrSource(
             type=d["type"],
             top_n=int(d.get("top_n", 1)),
