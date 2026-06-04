@@ -4,6 +4,7 @@
 接続プールの管理、クエリ実行、DataFrameへの変換機能を含む。
 """
 
+import logging
 import warnings
 from typing import Any
 
@@ -30,15 +31,17 @@ class ConnectionManager:
     MIN_CONNECTIONS = 1
     MAX_CONNECTIONS = 10
 
-    def __init__(self, config: DBConfig) -> None:
+    def __init__(self, config: DBConfig, logger: logging.Logger | None = None) -> None:
         """接続マネージャーを初期化.
 
         Args:
             config (DBConfig): データベース接続設定
+            logger (logging.Logger | None): ロガーインスタンス
 
         Raises:
             MykeibaDBConnectionError: DB接続に失敗した場合
         """
+        self._logger = logger or logging.getLogger(__name__)
         self.config = config
         self._pool: pool.SimpleConnectionPool | None = None
         self._initialize_pool()
@@ -71,8 +74,10 @@ class ConnectionManager:
                 result: list[tuple[Any, ...]] = cursor.fetchall()
                 return result
         except psycopg2.ProgrammingError as e:
+            self._logger.error("SQLクエリの実行に失敗しました: %s. クエリ: %s", e, query)
             raise QueryExecutionError(f"SQLクエリの実行に失敗しました: {e}. クエリ: {query}") from e
         except psycopg2.Error as e:
+            self._logger.error("クエリ実行中にエラーが発生しました: %s", e)
             raise QueryExecutionError(f"クエリ実行中にエラーが発生しました: {e}") from e
         finally:
             if conn is not None:
@@ -111,8 +116,10 @@ class ConnectionManager:
                 df = pd.read_sql_query(query, conn, params=params)
             return df
         except (psycopg2.ProgrammingError, DatabaseError) as e:
+            self._logger.error("SQLクエリの実行に失敗しました: %s. クエリ: %s", e, query)
             raise QueryExecutionError(f"SQLクエリの実行に失敗しました: {e}. クエリ: {query}") from e
         except psycopg2.Error as e:
+            self._logger.error("クエリ実行中にエラーが発生しました: %s", e)
             raise QueryExecutionError(f"クエリ実行中にエラーが発生しました: {e}") from e
         finally:
             if conn is not None:
@@ -153,12 +160,15 @@ class ConnectionManager:
                 password=self.config.password,
             )
         except psycopg2.OperationalError as e:
-            raise MykeibaDBConnectionError(
+            msg = (
                 f"PostgreSQLへの接続に失敗しました: "
                 f"host={self.config.host}, port={self.config.port}, "
                 f"database={self.config.database}. 詳細: {e}"
-            ) from e
+            )
+            self._logger.error(msg)
+            raise MykeibaDBConnectionError(msg) from e
         except psycopg2.Error as e:
+            self._logger.error("接続プールの初期化に失敗しました: %s", e)
             raise MykeibaDBConnectionError(f"接続プールの初期化に失敗しました: {e}") from e
 
     def _get_connection(self) -> psycopg2.extensions.connection:
@@ -171,11 +181,13 @@ class ConnectionManager:
             MykeibaDBConnectionError: 接続の取得に失敗した場合
         """
         if self._pool is None:
+            self._logger.error("接続プールが初期化されていません")
             raise MykeibaDBConnectionError("接続プールが初期化されていません")
 
         try:
             return self._pool.getconn()
         except psycopg2.Error as e:
+            self._logger.error("接続プールからの接続取得に失敗しました: %s", e)
             raise MykeibaDBConnectionError(f"接続プールからの接続取得に失敗しました: {e}") from e
 
     def _put_connection(self, conn: psycopg2.extensions.connection) -> None:

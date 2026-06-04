@@ -149,7 +149,7 @@ class SokuhoGetter(BaseGetter):
             ("baba_jotai_dirt_genzai", "baba_jotai_dirt_genzai_name", convert_babajotai_code),
             ("tenko_jotai_henkomae", "tenko_jotai_henkomae_name", convert_tenko_code),
             ("baba_jotai_shiba_henkomae", "baba_jotai_shiba_henkomae_name", convert_babajotai_code),
-            ("baba_jotai_dirt_henkoma", "baba_jotai_dirt_henkoma_name", convert_babajotai_code),
+            ("baba_jotai_dirt_henkomae", "baba_jotai_dirt_henkomae_name", convert_babajotai_code),
         ]
         return self._apply_code_conversions(df, conversions)
 

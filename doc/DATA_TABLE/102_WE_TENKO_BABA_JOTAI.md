@@ -49,4 +49,4 @@ JV-Linkもしくはmykeibadbのバグと思われます。
 |baba_jotai_dirt_genzai_name|現在のダート馬場状態|BABA_JOTAI_DIRT_GENZAIを名称に変換 <コード表 2010.馬場状態コード>参照| 良 |
 |tenko_jotai_henkomae_name|変更前の天候|TENKO_JOTAI_HENKOMAEを名称に変換 <コード表 2011.天候コード>参照|  |
 |baba_jotai_shiba_henkomae_name|変更前の芝馬場状態|BABA_JOTAI_SHIBA_HENKOMAEを名称に変換 <コード表 2010.馬場状態コード>参照|  |
-|baba_jotai_dirt_henkoma_name|変更前のダート馬場状態|BABA_JOTAI_DIRT_HENKOMAを名称に変換 <コード表 2010.馬場状態コード>参照|  |
+|baba_jotai_dirt_henkomae_name|変更前のダート馬場状態|BABA_JOTAI_DIRT_HENKOMAEを名称に変換 <コード表 2010.馬場状態コード>参照|  |

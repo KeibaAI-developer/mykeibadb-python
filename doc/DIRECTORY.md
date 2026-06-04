@@ -29,7 +29,6 @@ mykeibadb-python/
 │       ├── sokuho.py        # 速報データ
 │       └── win5.py          # WIN5データ
 ├── test/                    # テストコード
-│   ├── __init__.py
 │   ├── unit/                # ユニットテスト
 │   │   ├── code_converter/
 │   │   ├── config/
@@ -38,9 +37,8 @@ mykeibadb-python/
 │   │   ├── tables/
 │   │   ├── utils/
 │   │   └── test_import.py
-│   └── integration/         # 統合テスト
-│       ├── conftest.py
-│       └── test_*.py        # 各種統合テスト
+│   ├── integration/         # 統合テスト
+│   └── mykeibadb/           # mykeibadbデータ取得状況確認テスト
 ├── example/                 # サンプルコード
 │   ├── db_connect_test.py   # DB接続テスト
 │   └── getter/              # Getter使用例
@@ -50,8 +48,6 @@ mykeibadb-python/
 │   ├── DATA_TABLE.md        # データテーブル一覧
 │   └── DATA_TABLE/          # テーブル詳細ドキュメント
 ├── .github/                 # GitHub関連設定
-│   └── workflows/           # GitHub Actionsワークフロー
-│       └── ci.yml           # CI/CD設定
 ├── .env.example             # 環境変数サンプル
 ├── .gitignore               # Git無視ファイル
 ├── pyproject.toml           # プロジェクト設定

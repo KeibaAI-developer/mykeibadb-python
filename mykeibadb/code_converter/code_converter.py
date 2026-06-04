@@ -158,13 +158,13 @@ def convert_chakusa_code(code: str) -> str:
     """着差コードを名称に変換する.
 
     Args:
-        code: 着差コード（例: "1__", "A__", "K__"）
+        code: 着差コード（例: "1__", "A__", "K__" または "1  ", "A  ", "K  "）
 
     Returns:
         名称。該当するコードがない場合は空文字列を返す。
     """
     chakusa_code_to_name: dict[str, str] = _load_yaml("chakusa_code.yml")
-    return chakusa_code_to_name.get(code, "")
+    return chakusa_code_to_name.get(code.replace(" ", "_"), "")
 
 
 def convert_hinshu_code(code: str) -> str:
@@ -256,6 +256,19 @@ def convert_kishu_minarai_code(code: str) -> str:
     """
     kishu_minarai_code_to_name: dict[str, str] = _load_yaml("kishu_minarai_code.yml")
     return kishu_minarai_code_to_name.get(code, "")
+
+
+def convert_kyakushitsu_hantei_code(code: str) -> str:
+    """脚質判定コードを名称に変換する.
+
+    Args:
+        code: 脚質判定コード（例: "0", "1", "2", "3", "4"）
+
+    Returns:
+        名称。該当するコードがない場合は空文字列を返す。
+    """
+    kyakushitsu_hantei_code_to_name: dict[str, str] = _load_yaml("kyakushitsu_hantei_code.yml")
+    return kyakushitsu_hantei_code_to_name.get(code, "")
 
 
 @lru_cache(maxsize=None)

@@ -4,6 +4,7 @@
 SQLクエリの生成、テーブル名のバリデーション、フィルタ処理などを行う。
 """
 
+import logging
 from datetime import date
 from typing import Any
 
@@ -104,12 +105,16 @@ class TableAccessor:
         connection_manager (ConnectionManager): データベース接続マネージャー
     """
 
-    def __init__(self, connection_manager: ConnectionManager) -> None:
+    def __init__(
+        self, connection_manager: ConnectionManager, logger: logging.Logger | None = None
+    ) -> None:
         """テーブルアクセサーを初期化.
 
         Args:
             connection_manager (ConnectionManager): データベース接続マネージャー
+            logger (logging.Logger | None): ロガーインスタンス
         """
+        self._logger = logger or logging.getLogger(__name__)
         self.connection_manager = connection_manager
 
     def get_table_data(
@@ -135,8 +140,8 @@ class TableAccessor:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件の場合
         """
-        _validate_table_name(table_name)
-        _validate_filters(filters)
+        self._validate_table_name(table_name)
+        self._validate_filters(filters)
 
         query, params = _build_query(table_name, filters)
         return self.connection_manager.fetch_dataframe(query, params)
@@ -168,9 +173,9 @@ class TableAccessor:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件や日付カラム名の場合
         """
-        _validate_table_name(table_name)
-        _validate_filters(filters)
-        _validate_date_column(date_column)
+        self._validate_table_name(table_name)
+        self._validate_filters(filters)
+        self._validate_date_column(date_column)
 
         query, params = _build_query_with_date_range(
             table_name, filters, start_date, end_date, date_column
@@ -204,9 +209,9 @@ class TableAccessor:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件や年カラム名の場合
         """
-        _validate_table_name(table_name)
-        _validate_filters(filters)
-        _validate_date_column(year_column, "年カラム名")
+        self._validate_table_name(table_name)
+        self._validate_filters(filters)
+        self._validate_date_column(year_column, "年カラム名")
 
         query, params = _build_query_with_year_only_range(
             table_name, filters, start_date, end_date, year_column
@@ -242,15 +247,96 @@ class TableAccessor:
             TableNotFoundError: テーブルが存在しない場合
             InvalidFilterError: 無効なフィルタ条件やカラム名の場合
         """
-        _validate_table_name(table_name)
-        _validate_filters(filters)
-        _validate_date_column(year_column, "年カラム名")
-        _validate_date_column(date_column, "日付カラム名")
+        self._validate_table_name(table_name)
+        self._validate_filters(filters)
+        self._validate_date_column(year_column, "年カラム名")
+        self._validate_date_column(date_column, "日付カラム名")
 
         query, params = _build_query_with_composite_date_range(
             table_name, filters, start_date, end_date, year_column, date_column
         )
         return self.connection_manager.fetch_dataframe(query, params)
+
+    def _validate_table_name(self, table_name: str) -> None:
+        """テーブル名の妥当性を検証.
+
+        Args:
+            table_name (str): 検証するテーブル名
+
+        Raises:
+            TableNotFoundError: テーブルがサポートされていない場合
+        """
+        if table_name not in SUPPORTED_TABLES:
+            msg = (
+                f"テーブル '{table_name}' はサポートされていません。 "
+                f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
+            )
+            self._logger.error(msg)
+            raise TableNotFoundError(msg)
+
+    def _validate_filters(self, filters: dict[str, Any] | None) -> None:
+        """フィルタ条件の妥当性を検証.
+
+        Args:
+            filters (dict[str, Any] | None): 検証するフィルタ条件
+
+        Raises:
+            InvalidFilterError: フィルタ条件が不正な場合
+        """
+        if filters is None:
+            return
+
+        for key, value in filters.items():
+            # カラム名のバリデーション（SQLインジェクション対策）
+            if not is_valid_identifier(key):
+                msg = (
+                    f"無効なカラム名です: '{key}'. "
+                    f"カラム名は英数字とアンダースコアのみ使用できます。"
+                )
+                self._logger.error(msg)
+                raise InvalidFilterError(msg)
+
+            # 値の型チェック
+            if isinstance(value, list):
+                if len(value) == 0:
+                    msg = f"フィルタ値のリストが空です: キー='{key}'"
+                    self._logger.error(msg)
+                    raise InvalidFilterError(msg)
+                for item in value:
+                    if not isinstance(item, (str, int)):
+                        msg = (
+                            f"無効なフィルタ値の型です: キー='{key}', "
+                            f"値='{item}', 型={type(item).__name__}. "
+                            f"strまたはintを指定してください。"
+                        )
+                        self._logger.error(msg)
+                        raise InvalidFilterError(msg)
+            elif not isinstance(value, (str, int)):
+                msg = (
+                    f"無効なフィルタ値の型です: キー='{key}', "
+                    f"値='{value}', 型={type(value).__name__}. "
+                    f"str, int, またはそれらのリストを指定してください。"
+                )
+                self._logger.error(msg)
+                raise InvalidFilterError(msg)
+
+    def _validate_date_column(self, column_name: str, label: str = "日付カラム名") -> None:
+        """日付カラム名の妥当性を検証.
+
+        Args:
+            column_name (str): 検証するカラム名
+            label (str): エラーメッセージ用のラベル
+
+        Raises:
+            InvalidFilterError: カラム名が不正な場合
+        """
+        if not is_valid_identifier(column_name):
+            msg = (
+                f"無効な{label}です: '{column_name}'. "
+                f"カラム名は英数字とアンダースコアのみ使用できます。"
+            )
+            self._logger.error(msg)
+            raise InvalidFilterError(msg)
 
 
 def _build_query_with_date_range(
@@ -459,75 +545,3 @@ def _finalize_query(
         query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
         return query, tuple(params)
     return base_query, None
-
-
-def _validate_date_column(column_name: str, label: str = "日付カラム名") -> None:
-    """日付カラム名の妥当性を検証.
-
-    Args:
-        column_name (str): 検証するカラム名
-        label (str): エラーメッセージ用のラベル
-
-    Raises:
-        InvalidFilterError: カラム名が不正な場合
-    """
-    if not is_valid_identifier(column_name):
-        raise InvalidFilterError(
-            f"無効な{label}です: '{column_name}'. "
-            f"カラム名は英数字とアンダースコアのみ使用できます。"
-        )
-
-
-def _validate_table_name(table_name: str) -> None:
-    """テーブル名の妥当性を検証.
-
-    Args:
-        table_name (str): 検証するテーブル名
-
-    Raises:
-        TableNotFoundError: テーブルがサポートされていない場合
-    """
-    if table_name not in SUPPORTED_TABLES:
-        raise TableNotFoundError(
-            f"テーブル '{table_name}' はサポートされていません。 "
-            f"サポートされているテーブルについてはdoc/DATA_TABLE.mdを参照してください。"
-        )
-
-
-def _validate_filters(filters: dict[str, Any] | None) -> None:
-    """フィルタ条件の妥当性を検証.
-
-    Args:
-        filters (dict[str, Any] | None): 検証するフィルタ条件
-
-    Raises:
-        InvalidFilterError: フィルタ条件が不正な場合
-    """
-    if filters is None:
-        return
-
-    for key, value in filters.items():
-        # カラム名のバリデーション（SQLインジェクション対策）
-        if not is_valid_identifier(key):
-            raise InvalidFilterError(
-                f"無効なカラム名です: '{key}'. "
-                f"カラム名は英数字とアンダースコアのみ使用できます。"
-            )
-
-        # 値の型チェック
-        if isinstance(value, list):
-            if len(value) == 0:
-                raise InvalidFilterError(f"フィルタ値のリストが空です: キー='{key}'")
-            for item in value:
-                if not isinstance(item, (str, int)):
-                    raise InvalidFilterError(
-                        f"無効なフィルタ値の型です: キー='{key}', "
-                        f"値='{item}', 型={type(item).__name__}. "
-                        f"strまたはintを指定してください。"
-                    )
-        elif not isinstance(value, (str, int)):
-            raise InvalidFilterError(
-                f"無効なフィルタ値の型です: キー='{key}', "
-                f"値='{value}', 型={type(value).__name__}. "
-                f"str, int, またはそれらのリストを指定してください。"
-            )
