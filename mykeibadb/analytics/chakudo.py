@@ -28,7 +28,7 @@ def analyze_chakudo(
     Args:
         manager (ConnectionManager): DB接続マネージャ
         group_expr (str): GROUP BY に使用するSQL式
-        sort_expr (str): ORDER BY に使用するSQL式
+        sort_expr (str): base CTE の SELECT で sort_key を生成するSQL式（ASC/DESC等のORDER BY句断片は含めない）
         race_name (str | None): レース名フィルタ（部分一致）
         keibajo (str | None): 競馬場コードフィルタ
         kyori (int | None): 距離フィルタ
@@ -43,7 +43,17 @@ def analyze_chakudo(
 
     Raises:
         ValueError: course_kubun と week_in_course のどちらか一方のみ指定した場合
+        ValueError: group_expr または sort_expr に危険なSQLトークン（';', '--', '/*'）が含まれる場合
+
+    Note:
+        group_expr / sort_expr は SQL に直接埋め込まれるため、必ず信頼済みの式を渡すこと。
+        危険トークンの除去は最低限の保護であり、完全なSQLインジェクション防御ではない。
     """
+    _dangerous_tokens = (";", "--", "/*")
+    for expr_name, expr in (("group_expr", group_expr), ("sort_expr", sort_expr)):
+        if any(tok in expr for tok in _dangerous_tokens):
+            raise ValueError(f"{expr_name} に危険なSQLトークンが含まれています: {expr!r}")
+
     if (course_kubun is None) != (week_in_course is None):
         raise ValueError(
             "course_kubun と week_in_course は両方同時に指定するか、両方 None にしてください。"

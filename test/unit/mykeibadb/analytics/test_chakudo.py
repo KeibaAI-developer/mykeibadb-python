@@ -4,8 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics._models import ChakudoRow
-from mykeibadb.analytics.chakudo import analyze_chakudo
+from mykeibadb.analytics import ChakudoRow, analyze_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 
