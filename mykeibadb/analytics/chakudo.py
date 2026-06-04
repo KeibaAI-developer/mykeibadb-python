@@ -71,6 +71,7 @@ def analyze_subject_chakudo(
     Raises:
         ValueError: code非対応の主体にcodeを指定した場合
     """
+    _validate_course_week(condition)
     mapping = SUBJECT_MAP[subject]
     if code is not None and mapping.code_col is None:
         raise ValueError(

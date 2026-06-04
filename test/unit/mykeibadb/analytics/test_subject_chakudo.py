@@ -136,6 +136,26 @@ def test_analyze_subject_chakudo_all_subjects_callable(
 
 
 # 準正常系
+def test_analyze_subject_chakudo_course_kubun_without_week_raises(
+    mocker: MockerFixture,
+) -> None:
+    """course_kubunのみ指定でValueErrorが発生する."""
+    manager = mocker.MagicMock()
+    condition = RaceCondition(course_kubun="A")
+    with pytest.raises(ValueError, match="week_in_course"):
+        analyze_subject_chakudo(manager, Subject.KISHU, condition=condition)
+
+
+def test_analyze_subject_chakudo_week_without_course_kubun_raises(
+    mocker: MockerFixture,
+) -> None:
+    """week_in_courseのみ指定でValueErrorが発生する."""
+    manager = mocker.MagicMock()
+    condition = RaceCondition(week_in_course=1)
+    with pytest.raises(ValueError, match="week_in_course"):
+        analyze_subject_chakudo(manager, Subject.KISHU, condition=condition)
+
+
 def test_analyze_subject_chakudo_sire_code_raises() -> None:
     """Subject.SIREにcodeを指定するとValueErrorが発生する."""
     manager = object()
