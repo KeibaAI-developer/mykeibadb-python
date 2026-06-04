@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+import pandas as pd
+
 
 @dataclass
 class ChakudoRow:
@@ -31,6 +33,33 @@ class ChakudoRow:
     fukusho_rate: float
     tansho_kaishuu: float
     fukusho_kaishuu: float
+
+    @staticmethod
+    def from_series(row: "pd.Series[Any]") -> "ChakudoRow":
+        """DataFrameの1行からChakudoRowを生成する.
+
+        Args:
+            row (pd.Series[Any]): DataFrameの行データ
+
+        Returns:
+            ChakudoRow: 生成したChakudoRowインスタンス
+        """
+        return ChakudoRow(
+            group=str(row["grp"]),
+            total=int(row["total"]),
+            wins=int(row["wins"]),
+            second=int(row["second"]),
+            third=int(row["third"]),
+            chakugai=int(row["chakugai"]),
+            win_rate=float(row["win_rate"]) if pd.notna(row["win_rate"]) else 0.0,
+            fukusho_rate=float(row["fukusho_rate"]) if pd.notna(row["fukusho_rate"]) else 0.0,
+            tansho_kaishuu=(
+                float(row["tansho_kaishuu"]) if pd.notna(row["tansho_kaishuu"]) else 0.0
+            ),
+            fukusho_kaishuu=(
+                float(row["fukusho_kaishuu"]) if pd.notna(row["fukusho_kaishuu"]) else 0.0
+            ),
+        )
 
 
 @dataclass

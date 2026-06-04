@@ -2,8 +2,6 @@
 
 from typing import Any
 
-import pandas as pd
-
 from mykeibadb.analytics._cte_helpers import build_course_week_cte, build_payout_ctes
 from mykeibadb.analytics._models import ChakudoResult, ChakudoRow
 from mykeibadb.connection import ConnectionManager
@@ -147,28 +145,7 @@ def analyze_chakudo(
         """
 
         df = manager.fetch_dataframe(sql, params=tuple(params))
-        rows = []
-        for _, row in df.iterrows():
-            rows.append(
-                ChakudoRow(
-                    group=str(row["grp"]),
-                    total=int(row["total"]),
-                    wins=int(row["wins"]),
-                    second=int(row["second"]),
-                    third=int(row["third"]),
-                    chakugai=int(row["chakugai"]),
-                    win_rate=float(row["win_rate"]) if pd.notna(row["win_rate"]) else 0.0,
-                    fukusho_rate=(
-                        float(row["fukusho_rate"]) if pd.notna(row["fukusho_rate"]) else 0.0
-                    ),
-                    tansho_kaishuu=(
-                        float(row["tansho_kaishuu"]) if pd.notna(row["tansho_kaishuu"]) else 0.0
-                    ),
-                    fukusho_kaishuu=(
-                        float(row["fukusho_kaishuu"]) if pd.notna(row["fukusho_kaishuu"]) else 0.0
-                    ),
-                )
-            )
+        rows = [ChakudoRow.from_series(row) for _, row in df.iterrows()]
         return ChakudoResult(success=True, rows=rows)
     except MykeibaDBError as e:
         return ChakudoResult(success=False, error=str(e))
