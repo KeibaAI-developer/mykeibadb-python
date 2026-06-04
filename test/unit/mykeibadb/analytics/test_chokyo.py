@@ -4,7 +4,13 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import RaceCondition, analyze_chokyo_seiseki, get_uma_chokyo
+from mykeibadb.analytics import (
+    RaceCondition,
+    analyze_chokyo_debut_seiseki,
+    analyze_chokyo_seiseki,
+    get_uma_chokyo,
+)
+from mykeibadb.analytics._models import ChokyoThreshold
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -328,3 +334,104 @@ def test_analyze_chokyo_seiseki_returns_error_on_db_failure(mocker: MockerFixtur
     assert result["success"] is False
     assert result.get("error") is not None
     assert "タイムアウト" in result["error"]
+
+
+def test_analyze_chokyo_debut_seiseki_wood_only(mocker: MockerFixture) -> None:
+    """wood条件のみでwoodchip_chokyoのINTERSECTなしSQL生成."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 50, "winners": 10}])
+
+    condition = [ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=815)]
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", condition)
+
+    assert result["success"] is True
+    assert result["total"] == 50
+    assert result["winners"] == 10
+    assert result["win_rate"] == 20.0
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "woodchip_chokyo" in sql
+    assert "debut_horses" in sql
+    assert "INTERSECT" not in sql
+
+
+def test_analyze_chokyo_debut_seiseki_hanro_only(mocker: MockerFixture) -> None:
+    """hanro条件のみでhanro_chokyoのSQL生成."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 30, "winners": 6}])
+
+    condition = [ChokyoThreshold(course="hanro", metric="gokei", furlong=4, max_value=570)]
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", condition)
+
+    assert result["success"] is True
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "hanro_chokyo" in sql
+
+
+def test_analyze_chokyo_debut_seiseki_both_courses_uses_intersect(
+    mocker: MockerFixture,
+) -> None:
+    """wood+hanro条件でINTERSECTが使われる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 20, "winners": 5}])
+
+    condition = [
+        ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=815),
+        ChokyoThreshold(course="hanro", metric="gokei", furlong=4, max_value=570),
+    ]
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", condition)
+
+    assert result["success"] is True
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "INTERSECT" in sql
+
+
+def test_analyze_chokyo_debut_seiseki_zero_total_returns_zero_win_rate(
+    mocker: MockerFixture,
+) -> None:
+    """total=0のときwin_rate=0.0が返る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 0, "winners": 0}])
+
+    condition = [ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=815)]
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", condition)
+
+    assert result["win_rate"] == 0.0
+
+
+def test_analyze_chokyo_debut_seiseki_db_error(mocker: MockerFixture) -> None:
+    """DBエラーでsuccess=Falseが返る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.side_effect = QueryExecutionError("接続失敗")
+
+    condition = [ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=815)]
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", condition)
+
+    assert result["success"] is False
+
+
+def test_analyze_chokyo_debut_seiseki_empty_condition(mocker: MockerFixture) -> None:
+    """空conditionでwood/hanro CTEなし・INTERSECTなし・集計成功."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame([{"total": 100, "winners": 20}])
+
+    result = analyze_chokyo_debut_seiseki(manager, "20230101", "20231231", [])
+
+    assert result["success"] is True
+    assert result["total"] == 100
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "woodchip_chokyo" not in sql
+    assert "hanro_chokyo" not in sql
+    assert "INTERSECT" not in sql
+
+
+def test_analyze_chokyo_debut_seiseki_invalid_course_raises() -> None:
+    """不正なcourseでValueErrorが発生する."""
+    manager = object()
+    condition = [ChokyoThreshold(course="turf", metric="gokei", furlong=6)]
+    with pytest.raises(ValueError, match="course"):
+        analyze_chokyo_debut_seiseki(
+            manager,  # type: ignore[arg-type]
+            "20230101",
+            "20231231",
+            condition,
+        )
