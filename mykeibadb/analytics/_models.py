@@ -1,6 +1,7 @@
 """着度数・回収率集計のデータモデル定義モジュール."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 import pandas as pd
@@ -83,48 +84,6 @@ RowsDef = dict[str, tuple[int, int] | int | str]
 
 
 @dataclass
-class AttrSource:
-    """出走馬属性の算出方法を定義するデータクラス.
-
-    Attributes:
-        type (str): 属性算出種別。以下のいずれか:
-            "past_finish_count": 過去N着以内の回数（grade_codes/keibajo_code/kyoriでフィルタ可）
-            "career_count": キャリア戦数
-            "prev_race_name": 前走レース名
-            "debut_venue": デビュー競馬場コード
-        top_n (int): 何着以内を入着とみなすか（"past_finish_count"用）
-        grade_codes (list[str] | None): 対象グレードコードリスト
-        keibajo_code (str | None): 対象競馬場コード
-        kyori (int | None): 対象距離
-    """
-
-    type: str
-    top_n: int = 1
-    grade_codes: list[str] | None = None
-    keibajo_code: str | None = None
-    kyori: int | None = None
-
-    @staticmethod
-    def from_dict(d: dict[str, Any]) -> "AttrSource":
-        """辞書からAttrSourceを生成する.
-
-        Args:
-            d (dict[str, Any]): 属性辞書
-
-        Returns:
-            AttrSource: 生成したAttrSourceインスタンス
-        """
-        raw_kyori = d.get("kyori")
-        return AttrSource(
-            type=d["type"],
-            top_n=int(d.get("top_n", 1)),
-            grade_codes=d.get("grade_codes"),
-            keibajo_code=d.get("keibajo_code"),
-            kyori=int(raw_kyori) if raw_kyori is not None else None,
-        )
-
-
-@dataclass
 class RaceCondition:
     """レースの絞り込み条件.
 
@@ -162,6 +121,92 @@ class RaceCondition:
     sayuu: str | None = None
     course_kubun: str | None = None
     week_in_course: int | None = None
+
+
+class Subject(Enum):
+    """着度数集計の主体."""
+
+    UMA = "uma"
+    KISHU = "kishu"
+    CHOKYOSHI = "chokyoshi"
+    BANUSHI = "banushi"
+    SIRE = "sire"
+    SEISANSHA = "seisansha"
+
+
+@dataclass
+class ChokyoThreshold:
+    """調教タイムの1閾値条件.
+
+    Attributes:
+        course (str): "wood"（ウッドチップ）または "hanro"（坂路）
+        metric (str): "gokei"（合計タイム）または "lap"（指定ハロン目のラップ）
+        furlong (int): 対象ハロン数（gokei=合計対象, lap=何ハロン目）
+        max_value (int | None): 上限（0.1秒単位、以下）
+        min_value (int | None): 下限（0.1秒単位、以上）
+        tracen_kubun (str | None): トレセン区分（'0'=美浦, '1'=栗東）
+    """
+
+    course: str
+    metric: str
+    furlong: int
+    max_value: int | None = None
+    min_value: int | None = None
+    tracen_kubun: str | None = None
+
+
+ChokyoCondition = list[ChokyoThreshold]
+
+
+@dataclass
+class AttrSource:
+    """出走馬属性の算出方法を定義するデータクラス.
+
+    Attributes:
+        type (str): 属性算出種別。以下のいずれか:
+            "past_finish_count": 過去N着以内の回数（grade_codes/keibajo_code/kyoriでフィルタ可）
+            "career_count": キャリア戦数
+            "prev_race_name": 前走レース名
+            "debut_venue": デビュー競馬場コード
+            "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
+            "sire_condition_finisher": 父馬が指定条件レースでtop_n内に好走した馬か否か
+        top_n (int): 何着以内を入着とみなすか（"past_finish_count"/"sire_condition_finisher"用）
+        grade_codes (list[str] | None): 対象グレードコードリスト
+        keibajo_code (str | None): 対象競馬場コード
+        kyori (int | None): 対象距離
+        condition (RaceCondition | None): レース絞り込み条件（"sire_condition_finisher"用）
+    """
+
+    type: str
+    top_n: int = 1
+    grade_codes: list[str] | None = None
+    keibajo_code: str | None = None
+    kyori: int | None = None
+    condition: RaceCondition | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> "AttrSource":
+        """辞書からAttrSourceを生成する.
+
+        Args:
+            d (dict[str, Any]): 属性辞書
+
+        Returns:
+            AttrSource: 生成したAttrSourceインスタンス
+        """
+        raw_kyori = d.get("kyori")
+        raw_condition = d.get("condition")
+        condition: RaceCondition | None = None
+        if raw_condition is not None:
+            condition = RaceCondition(**raw_condition)
+        return AttrSource(
+            type=d["type"],
+            top_n=int(d.get("top_n", 1)),
+            grade_codes=d.get("grade_codes"),
+            keibajo_code=d.get("keibajo_code"),
+            kyori=int(raw_kyori) if raw_kyori is not None else None,
+            condition=condition,
+        )
 
 
 @dataclass

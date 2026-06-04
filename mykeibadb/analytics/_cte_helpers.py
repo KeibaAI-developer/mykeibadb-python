@@ -1,8 +1,67 @@
 """着度数集計SQLで使用するCTE生成ヘルパーモジュール."""
 
-from typing import Any
+from typing import Any, NamedTuple
 
-from mykeibadb.analytics._models import RaceCondition
+from mykeibadb.analytics._models import RaceCondition, Subject
+
+
+class SubjectMapping(NamedTuple):
+    """Subject別の列・JOIN情報.
+
+    Attributes:
+        group_col (str): GROUP BY / SELECT に使う列式
+        name_col (str): 名称フィルタ列（LIKE フィルタ用）
+        code_col (str | None): コードフィルタ列。None の場合はコード指定不可
+        join_sql (str | None): 追加JOIN SQL。None の場合はJOIN不要
+    """
+
+    group_col: str
+    name_col: str
+    code_col: str | None
+    join_sql: str | None
+
+
+_KM2_JOIN = "JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango"
+
+SUBJECT_MAP: dict[Subject, SubjectMapping] = {
+    Subject.UMA: SubjectMapping(
+        group_col="u.bamei",
+        name_col="u.bamei",
+        code_col="u.ketto_toroku_bango",
+        join_sql=None,
+    ),
+    Subject.KISHU: SubjectMapping(
+        group_col="u.kishumei_ryakusho",
+        name_col="u.kishumei_ryakusho",
+        code_col="u.kishu_code",
+        join_sql=None,
+    ),
+    Subject.CHOKYOSHI: SubjectMapping(
+        group_col="u.chokyoshimei_ryakusho",
+        name_col="u.chokyoshimei_ryakusho",
+        code_col="u.chokyoshi_code",
+        join_sql=None,
+    ),
+    Subject.BANUSHI: SubjectMapping(
+        group_col="u.banushimei_hojinkaku_nashi",
+        name_col="u.banushimei_hojinkaku_nashi",
+        code_col="u.banushi_code",
+        join_sql=None,
+    ),
+    Subject.SIRE: SubjectMapping(
+        group_col="km2.ketto1_bamei",
+        name_col="km2.ketto1_bamei",
+        code_col=None,
+        join_sql=_KM2_JOIN,
+    ),
+    Subject.SEISANSHA: SubjectMapping(
+        group_col="km2.seisanshamei_hojinkaku_nashi",
+        name_col="km2.seisanshamei_hojinkaku_nashi",
+        code_col=None,
+        join_sql=_KM2_JOIN,
+    ),
+}
+
 
 # track_code → 左右 のマッピングを逆引きしたセット
 _SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {

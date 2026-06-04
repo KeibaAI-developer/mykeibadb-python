@@ -4,8 +4,11 @@ from mykeibadb.analytics._models import (
     AttrSource,
     ChakudoResult,
     ChakudoRow,
+    ChokyoCondition,
+    ChokyoThreshold,
     EntryAttrDef,
     RaceCondition,
+    Subject,
 )
 from mykeibadb.analytics.chakudo import analyze_chakudo
 from mykeibadb.analytics.chokyo import analyze_chokyo_seiseki, get_uma_chokyo
@@ -21,4 +24,7 @@ __all__ = [
     "AttrSource",
     "EntryAttrDef",
     "RaceCondition",
+    "Subject",
+    "ChokyoThreshold",
+    "ChokyoCondition",
 ]
