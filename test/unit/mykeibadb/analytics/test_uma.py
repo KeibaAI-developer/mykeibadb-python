@@ -31,7 +31,7 @@ def _make_rekisen_row() -> dict[str, object]:
 
 # 正常系
 def test_get_uma_rekisen_by_name(mocker: MockerFixture) -> None:
-    """uma_nameでChakudoResultが返る."""
+    """uma_nameで競走成績が返る."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_rekisen_row()])
 

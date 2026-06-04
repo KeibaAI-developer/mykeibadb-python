@@ -43,9 +43,18 @@ def get_uma_chokyo(
     Raises:
         ValueError: 指定方法が不正な場合
     """
-    if race_code is not None and horse_num is not None:
+    use_race = race_code is not None or horse_num is not None
+    use_ketto = ketto_toroku_bango is not None
+    if use_race and use_ketto:
+        raise ValueError(
+            "race_code+horse_num と ketto_toroku_bango は同時に指定できません。"
+        )
+    if use_race:
+        if race_code is None or horse_num is None:
+            raise ValueError("race_code と horse_num は両方同時に指定してください。")
         return _get_chokyo_by_race(manager, race_code, horse_num)
-    if ketto_toroku_bango is not None:
+    if use_ketto:
+        assert ketto_toroku_bango is not None
         return _get_chokyo_by_ketto(manager, ketto_toroku_bango, date_from, date_to)
     raise ValueError(
         "race_code+horse_num または ketto_toroku_bango のいずれかを指定してください。"

@@ -280,6 +280,32 @@ def test_get_uma_chokyo_no_args_raises() -> None:
         get_uma_chokyo(manager)  # type: ignore[arg-type]
 
 
+def test_get_uma_chokyo_both_modes_raises() -> None:
+    """race_code+horse_numとketto_toroku_bangoを同時指定するとValueErrorが発生する."""
+    manager = object()
+    with pytest.raises(ValueError, match="同時に指定"):
+        get_uma_chokyo(
+            manager,  # type: ignore[arg-type]
+            race_code="2023010105010101",
+            horse_num=1,
+            ketto_toroku_bango="2020100001",
+        )
+
+
+def test_get_uma_chokyo_race_code_only_raises() -> None:
+    """race_codeのみでhorse_numなしの場合はValueErrorが発生する."""
+    manager = object()
+    with pytest.raises(ValueError, match="両方同時に"):
+        get_uma_chokyo(manager, race_code="2023010105010101")  # type: ignore[arg-type]
+
+
+def test_get_uma_chokyo_horse_num_only_raises() -> None:
+    """horse_numのみでrace_codeなしの場合はValueErrorが発生する."""
+    manager = object()
+    with pytest.raises(ValueError, match="両方同時に"):
+        get_uma_chokyo(manager, horse_num=1)  # type: ignore[arg-type]
+
+
 def test_get_uma_chokyo_returns_error_on_db_failure(mocker: MockerFixture) -> None:
     """DBエラーで success=False / error が設定される."""
     manager = mocker.MagicMock()

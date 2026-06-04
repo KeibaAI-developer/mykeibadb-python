@@ -92,7 +92,7 @@ def _row_to_rekisen_dict(r: "pd.Series[Any]") -> dict[str, Any]:
         "race_code": str(r["race_code"]),
         "umaban": str(r["umaban"]),
         "kakutei_chakujun": str(r["kakutei_chakujun"]),
-        "kyori": int(r["kyori"]) if r["kyori"] else None,
+        "kyori": int(r["kyori"]) if pd.notna(r["kyori"]) else None,
         "track_code": str(r["track_code"]),
         "grade_code": str(r["grade_code"]),
     }
