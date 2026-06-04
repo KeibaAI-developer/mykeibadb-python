@@ -176,12 +176,15 @@ def _build_past_finish_count_sql(
     source: AttrSource,
     params: list[Any],
 ) -> tuple[str, str, str]:
-    """past_finish_count 用のCTE・JOIN句・attr_val式を生成する."""
+    """past_finish_count 用のattr_val式を生成する（対象レース以前に限定）."""
     where_parts = [
+        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
+        "(r2.kaisai_nen || r2.kaisai_tsuki_nichi) < (r.kaisai_nen || r.kaisai_tsuki_nichi)",
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
-        f"CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND {source.top_n}",
+        "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
+    params.append(int(source.top_n))
     if source.grade_codes:
         where_parts.append("r2.grade_code = ANY(%s)")
         params.append(source.grade_codes)
@@ -191,29 +194,28 @@ def _build_past_finish_count_sql(
     if source.kyori:
         where_parts.append("r2.kyori = %s")
         params.append(source.kyori)
-    where_sql = "\n        AND ".join(where_parts)
-    cte_sql = f"""attr_val_cte AS (
-        SELECT u2.ketto_toroku_bango, COUNT(*) AS cnt
-        FROM umagoto_race_joho u2
-        JOIN race_joho r2 ON u2.race_code = r2.race_code
-        WHERE {where_sql}
-        GROUP BY u2.ketto_toroku_bango
-    )"""
-    join_sql = "LEFT JOIN attr_val_cte avc ON u.ketto_toroku_bango = avc.ketto_toroku_bango"
-    return cte_sql, join_sql, "COALESCE(avc.cnt, 0)"
+    where_sql = "\n              AND ".join(where_parts)
+    attr_val_expr = f"""(
+            SELECT COUNT(*)
+            FROM umagoto_race_joho u2
+            JOIN race_joho r2 ON u2.race_code = r2.race_code
+            WHERE {where_sql}
+        )"""
+    return "", "", attr_val_expr
 
 
 def _build_career_count_sql() -> tuple[str, str, str]:
-    """career_count 用のCTE・JOIN句・attr_val式を生成する."""
-    cte_sql = """attr_val_cte AS (
-        SELECT u2.ketto_toroku_bango, COUNT(*) AS cnt
-        FROM umagoto_race_joho u2
-        WHERE u2.kakutei_chakujun ~ '^[0-9]{2}$'
-          AND u2.kakutei_chakujun != '00'
-        GROUP BY u2.ketto_toroku_bango
-    )"""
-    join_sql = "LEFT JOIN attr_val_cte avc ON u.ketto_toroku_bango = avc.ketto_toroku_bango"
-    return cte_sql, join_sql, "COALESCE(avc.cnt, 0)"
+    """career_count 用のattr_val式を生成する（対象レース以前に限定）."""
+    attr_val_expr = """(
+            SELECT COUNT(*)
+            FROM umagoto_race_joho u2
+            JOIN race_joho r2 ON u2.race_code = r2.race_code
+            WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango
+              AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi) < (r.kaisai_nen || r.kaisai_tsuki_nichi)
+              AND u2.kakutei_chakujun ~ '^[0-9]{2}$'
+              AND u2.kakutei_chakujun != '00'
+        )"""
+    return "", "", attr_val_expr
 
 
 def _build_prev_race_name_sql() -> tuple[str, str, str]:
@@ -258,15 +260,14 @@ def _build_case_when(rows: RowsDef, params: list[Any]) -> str:
     for label, cond in rows.items():
         if isinstance(cond, tuple):
             min_val, max_val = cond
-            cases.append(f"WHEN attr_val::INTEGER BETWEEN {min_val} AND {max_val} THEN %s")
-            params.append(label)
+            cases.append("WHEN attr_val::INTEGER BETWEEN %s AND %s THEN %s")
+            params.extend([int(min_val), int(max_val), label])
         elif isinstance(cond, int):
-            cases.append(f"WHEN attr_val::INTEGER = {cond} THEN %s")
-            params.append(label)
+            cases.append("WHEN attr_val::INTEGER = %s THEN %s")
+            params.extend([int(cond), label])
         else:
             cases.append("WHEN attr_val = %s THEN %s")
-            params.append(cond)
-            params.append(label)
+            params.extend([cond, label])
     return "CASE\n                " + "\n                ".join(cases) + "\n              END"
 
 

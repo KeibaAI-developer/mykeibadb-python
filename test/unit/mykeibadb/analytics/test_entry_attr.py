@@ -4,8 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import analyze_entry_attr_chakudo
-from mykeibadb.analytics._models import AttrSource, EntryAttrDef
+from mykeibadb.analytics import AttrSource, EntryAttrDef, analyze_entry_attr_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -43,8 +42,8 @@ def test_analyze_entry_attr_past_finish_count_returns_success(mocker: MockerFixt
     assert result.rows[0].total == 100
 
 
-def test_analyze_entry_attr_past_finish_count_sql_contains_cte(mocker: MockerFixture) -> None:
-    """past_finish_count 指定時に attr_val_cte が SQL に含まれる."""
+def test_analyze_entry_attr_past_finish_count_sql_contains_subquery(mocker: MockerFixture) -> None:
+    """past_finish_count 指定時に相関サブクエリが SQL に含まれ、過去レース限定条件がある."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -55,12 +54,14 @@ def test_analyze_entry_attr_past_finish_count_sql_contains_cte(mocker: MockerFix
     analyze_entry_attr_chakudo(manager, attr_def)
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "attr_val_cte" in sql
-    assert "BETWEEN 1 AND 3" in sql
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "SELECT COUNT(*)" in sql
+    assert "kaisai_tsuki_nichi" in sql
+    assert 3 in params  # top_n がパラメータでバインドされている
 
 
-def test_analyze_entry_attr_career_count_sql_contains_cte(mocker: MockerFixture) -> None:
-    """career_count 指定時に attr_val_cte が SQL に含まれる."""
+def test_analyze_entry_attr_career_count_sql_contains_subquery(mocker: MockerFixture) -> None:
+    """career_count 指定時に相関サブクエリが SQL に含まれ、過去レース限定条件がある."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -71,7 +72,8 @@ def test_analyze_entry_attr_career_count_sql_contains_cte(mocker: MockerFixture)
     analyze_entry_attr_chakudo(manager, attr_def)
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "attr_val_cte" in sql
+    assert "SELECT COUNT(*)" in sql
+    assert "kaisai_tsuki_nichi" in sql
 
 
 def test_analyze_entry_attr_prev_race_name_sql_contains_subquery(mocker: MockerFixture) -> None:
