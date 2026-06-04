@@ -45,8 +45,13 @@ class ChakudoRow:
         Returns:
             ChakudoRow: 生成したChakudoRowインスタンス
         """
+        grp_raw = row["grp"]
+        if isinstance(grp_raw, (int, float)) and not isinstance(grp_raw, bool):
+            group_str = str(int(grp_raw))
+        else:
+            group_str = str(grp_raw)
         return ChakudoRow(
-            group=str(row["grp"]),
+            group=group_str,
             total=int(row["total"]),
             wins=int(row["wins"]),
             second=int(row["second"]),
