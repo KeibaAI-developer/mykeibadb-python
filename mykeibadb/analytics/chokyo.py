@@ -4,7 +4,8 @@ from typing import Any
 
 import pandas as pd
 
-from mykeibadb.analytics._cte_helpers import build_payout_ctes
+from mykeibadb.analytics._cte_helpers import build_payout_ctes, build_race_condition_where
+from mykeibadb.analytics._models import RaceCondition
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
@@ -14,17 +15,18 @@ _HANRO_VALID = "h.time_gokei_4furlong NOT IN ('0000', '9999')"
 
 def get_uma_chokyo(
     manager: ConnectionManager,
-    race_id: str,
+    race_code: str,
     horse_num: int,
 ) -> dict[str, Any]:
     """馬の調教データを取得する.
 
-    race_id と horse_num でレースを特定し、そのレース当日より前の
-    ウッドチップ・坂路調教データを返す。
+    race_code と horse_num でレースを特定し、その1つ前のレース以降かつ
+    対象レース当日より前のウッドチップ・坂路調教データを返す。
+    前走が存在しない場合（デビュー戦など）はレース当日より前の全調教データを返す。
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
-        race_id (str): レースID（race_code）
+        race_code (str): レースコード（race_code、16桁）
         horse_num (int): 馬番（1〜18）
 
     Returns:
@@ -42,13 +44,36 @@ def get_uma_chokyo(
             WHERE u.race_code = %s
               AND u.umaban = %s
         """
-        info_df = manager.fetch_dataframe(info_sql, params=(race_id, umaban_str))
+        info_df = manager.fetch_dataframe(info_sql, params=(race_code, umaban_str))
         if info_df.empty:
             return {"success": True, "race_date": None, "ketto_toroku_bango": None,
                     "wood_records": [], "hanro_records": []}
 
         ketto = str(info_df.iloc[0]["ketto_toroku_bango"])
         race_date = str(info_df.iloc[0]["race_date"])
+
+        prev_sql = """
+            SELECT r2.kaisai_nen || r2.kaisai_gappi AS prev_race_date
+            FROM umagoto_race_joho u2
+            JOIN race_joho r2 ON u2.race_code = r2.race_code
+            WHERE u2.ketto_toroku_bango = %s
+              AND (r2.kaisai_nen || r2.kaisai_gappi) < %s
+              AND u2.kakutei_chakujun ~ '^[0-9]{2}$'
+              AND u2.kakutei_chakujun != '00'
+            ORDER BY r2.kaisai_nen DESC, r2.kaisai_gappi DESC
+            LIMIT 1
+        """
+        prev_df = manager.fetch_dataframe(prev_sql, params=(ketto, race_date))
+        prev_race_date = str(prev_df.iloc[0]["prev_race_date"]) if not prev_df.empty else None
+
+        wood_params: tuple[Any, ...]
+        wood_date_cond: str
+        if prev_race_date is not None:
+            wood_params = (ketto, prev_race_date, race_date)
+            wood_date_cond = "AND w.chokyo_nengappi > %s AND w.chokyo_nengappi < %s"
+        else:
+            wood_params = (ketto, race_date)
+            wood_date_cond = "AND w.chokyo_nengappi < %s"
 
         wood_sql = f"""
             SELECT w.tracen_kubun, w.chokyo_nengappi, w.chokyo_jikoku,
@@ -57,10 +82,21 @@ def get_uma_chokyo(
             FROM woodchip_chokyo w
             WHERE w.ketto_toroku_bango = %s
               AND {_WOOD_VALID}
-              AND w.chokyo_nengappi < %s
+              {wood_date_cond}
             ORDER BY w.chokyo_nengappi DESC, w.chokyo_jikoku DESC
         """
-        wood_df = manager.fetch_dataframe(wood_sql, params=(ketto, race_date))
+        wood_df = manager.fetch_dataframe(wood_sql, params=wood_params)
+
+        hanro_date_filter_sql = (
+            "AND h.chokyo_nengappi > %s AND h.chokyo_nengappi < %s"
+            if prev_race_date
+            else "AND h.chokyo_nengappi < %s"
+        )
+        hanro_params: tuple[Any, ...]
+        if prev_race_date is not None:
+            hanro_params = (ketto, prev_race_date, race_date)
+        else:
+            hanro_params = (ketto, race_date)
 
         hanro_sql = f"""
             SELECT h.tracen_kubun, h.chokyo_nengappi, h.chokyo_jikoku,
@@ -70,10 +106,10 @@ def get_uma_chokyo(
             FROM hanro_chokyo h
             WHERE h.ketto_toroku_bango = %s
               AND {_HANRO_VALID}
-              AND h.chokyo_nengappi < %s
+              {hanro_date_filter_sql}
             ORDER BY h.chokyo_nengappi DESC, h.chokyo_jikoku DESC
         """
-        hanro_df = manager.fetch_dataframe(hanro_sql, params=(ketto, race_date))
+        hanro_df = manager.fetch_dataframe(hanro_sql, params=hanro_params)
 
         wood_records = [_row_to_wood_record(r) for _, r in wood_df.iterrows()]
         hanro_records = [_row_to_hanro_record(r) for _, r in hanro_df.iterrows()]
@@ -89,15 +125,11 @@ def get_uma_chokyo(
         return {"success": False, "error": str(e)}
 
 
-def analyze_chokyo_debut_seiseki(
+def analyze_chokyo_seiseki(
     manager: ConnectionManager,
-    race_name: str | None = None,
-    keibajo: str | None = None,
-    kyori: int | None = None,
-    year_from: str | None = None,
-    year_to: str | None = None,
+    condition: RaceCondition | None = None,
 ) -> dict[str, Any]:
-    """調教タイプ別の新馬・未勝利戦成績を集計する.
+    """調教タイプ別のレース成績を集計する.
 
     対象レースの出走馬について、レース当日より前の坂路・ウッドチップ調教データの
     有無でグループ分けし、着度数・回収率を集計する。
@@ -105,11 +137,7 @@ def analyze_chokyo_debut_seiseki(
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
-        race_name (str | None): レース名フィルタ（部分一致）
-        keibajo (str | None): 競馬場コードフィルタ
-        kyori (int | None): 距離フィルタ
-        year_from (str | None): 集計開始年（YYYY形式）
-        year_to (str | None): 集計終了年（YYYY形式）
+        condition (RaceCondition | None): レース絞り込み条件
 
     Returns:
         dict[str, Any]: success フラグと集計結果。
@@ -119,25 +147,11 @@ def analyze_chokyo_debut_seiseki(
         params: list[Any] = []
 
         where_parts: list[str] = [
-            "r.kyoso_joken_code_saijakunen IN ('701', '703')",
             "u.kakutei_chakujun ~ '^[0-9]{2}$'",
             "u.kakutei_chakujun != '00'",
         ]
-        if race_name:
-            where_parts.append("r.race_name LIKE %s")
-            params.append(f"%{race_name}%")
-        if keibajo:
-            where_parts.append("r.keibajo_code = %s")
-            params.append(keibajo)
-        if kyori:
-            where_parts.append("r.kyori = %s")
-            params.append(kyori)
-        if year_from:
-            where_parts.append("r.kaisai_nen >= %s")
-            params.append(year_from)
-        if year_to:
-            where_parts.append("r.kaisai_nen <= %s")
-            params.append(year_to)
+        if condition is not None:
+            where_parts.extend(build_race_condition_where(condition, params))
 
         where_clause = "\n              AND ".join(where_parts)
 

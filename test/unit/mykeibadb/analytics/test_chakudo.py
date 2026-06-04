@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import ChakudoRow, analyze_chakudo
+from mykeibadb.analytics import ChakudoRow, RaceCondition, analyze_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -40,8 +40,8 @@ def test_analyze_chakudo_returns_success(mocker: MockerFixture) -> None:
     assert row.win_rate == 30.0
 
 
-def test_analyze_chakudo_with_filters_passes_params(mocker: MockerFixture) -> None:
-    """フィルタ引数が SQL パラメータとして渡される."""
+def test_analyze_chakudo_with_condition_passes_params(mocker: MockerFixture) -> None:
+    """RaceCondition のフィルタ引数が SQL パラメータとして渡される."""
     mock_df = _make_df([
         {
             "grp": "A", "sort_key": 0, "total": 50, "wins": 10,
@@ -55,23 +55,24 @@ def test_analyze_chakudo_with_filters_passes_params(mocker: MockerFixture) -> No
 
     analyze_chakudo(
         manager, "grp_expr", "sort_expr",
-        race_name="有馬記念",
-        keibajo="06",
-        kyori=2500,
-        year_from="2020",
-        year_to="2024",
-        grade="A",
+        condition=RaceCondition(
+            keibajo_code="06",
+            kyori=2500,
+            year_from="2020",
+            year_to="2024",
+            grade_code="A",
+            kyoso_joken_codes=["501"],
+        ),
     )
 
     call_args = manager.fetch_dataframe.call_args
     sql, params = call_args[0][0], call_args[1]["params"]
-    assert "%有馬記念%" in params
     assert "06" in params
     assert 2500 in params
     assert "2020" in params
     assert "2024" in params
     assert "A" in params
-    assert "race_name LIKE %s" in sql
+    assert "r.keibajo_code = %s" in sql
 
 
 def test_analyze_chakudo_empty_result(mocker: MockerFixture) -> None:
@@ -108,7 +109,7 @@ def test_analyze_chakudo_nan_rates_default_to_zero(mocker: MockerFixture) -> Non
 
 
 def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
-    """course_kubun + week_in_course 指定時に CTE が SQL に含まれる."""
+    """condition.course_kubun + condition.week_in_course 指定時に CTE が SQL に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([
         {
@@ -121,7 +122,7 @@ def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
 
     analyze_chakudo(
         manager, "grp_expr", "sort_expr",
-        keibajo="05", course_kubun="C", week_in_course=2,
+        condition=RaceCondition(keibajo_code="05", course_kubun="C", week_in_course=2),
     )
 
     sql = manager.fetch_dataframe.call_args[0][0]
@@ -130,7 +131,7 @@ def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
 
 
 def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> None:
-    """course_week指定なしの場合、keibajo が WHERE 句に含まれる."""
+    """course_week指定なしの場合、keibajo_code が WHERE 句に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([
         {
@@ -141,7 +142,10 @@ def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> N
         },
     ])
 
-    analyze_chakudo(manager, "grp_expr", "sort_expr", keibajo="05")
+    analyze_chakudo(
+        manager, "grp_expr", "sort_expr",
+        condition=RaceCondition(keibajo_code="05"),
+    )
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
@@ -151,17 +155,23 @@ def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> N
 
 # 準正常系
 def test_analyze_chakudo_raises_on_only_course_kubun(mocker: MockerFixture) -> None:
-    """course_kubun のみ指定で ValueError が発生する."""
+    """condition.course_kubun のみ指定で ValueError が発生する."""
     manager = mocker.MagicMock()
     with pytest.raises(ValueError):
-        analyze_chakudo(manager, "grp_expr", "sort_expr", course_kubun="C")
+        analyze_chakudo(
+            manager, "grp_expr", "sort_expr",
+            condition=RaceCondition(course_kubun="C"),
+        )
 
 
 def test_analyze_chakudo_raises_on_only_week_in_course(mocker: MockerFixture) -> None:
-    """week_in_course のみ指定で ValueError が発生する."""
+    """condition.week_in_course のみ指定で ValueError が発生する."""
     manager = mocker.MagicMock()
     with pytest.raises(ValueError):
-        analyze_chakudo(manager, "grp_expr", "sort_expr", week_in_course=1)
+        analyze_chakudo(
+            manager, "grp_expr", "sort_expr",
+            condition=RaceCondition(week_in_course=1),
+        )
 
 
 def test_analyze_chakudo_returns_error_on_db_failure(mocker: MockerFixture) -> None:

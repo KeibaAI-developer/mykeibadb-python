@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import AttrSource, EntryAttrDef, analyze_entry_attr_chakudo
+from mykeibadb.analytics import AttrSource, EntryAttrDef, RaceCondition, analyze_entry_attr_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -122,8 +122,8 @@ def test_analyze_entry_attr_accepts_dict(mocker: MockerFixture) -> None:
     assert result.success is True
 
 
-def test_analyze_entry_attr_past_finish_count_params(mocker: MockerFixture) -> None:
-    """past_finish_count のフィルタ引数が SQL パラメータとして渡される."""
+def test_analyze_entry_attr_condition_params(mocker: MockerFixture) -> None:
+    """RaceCondition のフィルタ引数が SQL パラメータとして渡される."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -134,13 +134,15 @@ def test_analyze_entry_attr_past_finish_count_params(mocker: MockerFixture) -> N
         ),
         rows={"0勝": (0, 0)},
     )
-    analyze_entry_attr_chakudo(manager, attr_def, race_name="東京優駿", year_from="2020")
+    analyze_entry_attr_chakudo(
+        manager, attr_def,
+        condition=RaceCondition(keibajo_code="05", year_from="2020"),
+    )
 
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert ["A"] in params
     assert "05" in params
     assert 2400 in params
-    assert "%東京優駿%" in params
     assert "2020" in params
 
 

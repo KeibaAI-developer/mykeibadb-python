@@ -2,20 +2,116 @@
 
 from typing import Any
 
+from mykeibadb.analytics._models import RaceCondition
+
+# track_code → 左右 のマッピングを逆引きしたセット
+_SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {
+    "左": ("11", "12", "13", "14", "15", "16", "23", "25", "27", "53"),
+    "右": ("17", "18", "19", "20", "21", "22", "24", "26", "28"),
+    "直": ("10", "29"),
+}
+
+
+def build_race_condition_where(
+    condition: RaceCondition,
+    params: list[Any],
+    include_keibajo_code: bool = True,
+) -> list[str]:
+    """RaceConditionからWHERE句のpartsリストを生成する.
+
+    course_kubun / week_in_course の組み合わせは build_course_week_cte でCTE処理するため
+    ここでは扱わない。course_kubun のみ（week_in_course=None）は WHERE 句として追加する。
+
+    Args:
+        condition (RaceCondition): レースフィルタ条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        include_keibajo_code (bool): keibajo_codeをWHERE句に含めるかどうか
+
+    Returns:
+        list[str]: WHERE句のpartsリスト
+
+    Raises:
+        ValueError: race_shubetsu / shiba_da / sayuu に未対応の値が指定された場合
+    """
+    where_parts: list[str] = []
+    if include_keibajo_code and condition.keibajo_code:
+        where_parts.append("r.keibajo_code = %s")
+        params.append(condition.keibajo_code)
+    if condition.kyori:
+        where_parts.append("r.kyori = %s")
+        params.append(condition.kyori)
+    if condition.year_from:
+        where_parts.append("r.kaisai_nen >= %s")
+        params.append(condition.year_from)
+    if condition.year_to:
+        where_parts.append("r.kaisai_nen <= %s")
+        params.append(condition.year_to)
+    if condition.grade_code:
+        where_parts.append("r.grade_code = %s")
+        params.append(condition.grade_code)
+    if condition.kyoso_joken_codes:
+        where_parts.append(
+            "GREATEST("
+            "NULLIF(TRIM(r.kyoso_joken_code_2sai), '')::INTEGER, "
+            "NULLIF(TRIM(r.kyoso_joken_code_3sai), '')::INTEGER, "
+            "NULLIF(TRIM(r.kyoso_joken_code_4sai), '')::INTEGER, "
+            "NULLIF(TRIM(r.kyoso_joken_code_5sai_ijo), '')::INTEGER, "
+            "NULLIF(TRIM(r.kyoso_joken_code_saijakunen), '')::INTEGER"
+            ") = ANY(%s::INTEGER[])"
+        )
+        params.append([int(c) for c in condition.kyoso_joken_codes])
+    if condition.race_shubetsu:
+        if condition.race_shubetsu == "平地":
+            where_parts.append("TRIM(r.track_code) BETWEEN '10' AND '29'")
+        elif condition.race_shubetsu == "障害":
+            where_parts.append("TRIM(r.track_code) BETWEEN '51' AND '59'")
+        else:
+            raise ValueError(f"未対応の race_shubetsu です: {condition.race_shubetsu!r}")
+    if condition.shiba_da:
+        if condition.shiba_da == "芝":
+            where_parts.append(
+                "(TRIM(r.track_code) BETWEEN '10' AND '22' "
+                "OR TRIM(r.track_code) BETWEEN '51' AND '59')"
+            )
+        elif condition.shiba_da == "ダ":
+            where_parts.append("TRIM(r.track_code) BETWEEN '23' AND '29'")
+        else:
+            raise ValueError(f"未対応の shiba_da です: {condition.shiba_da!r}")
+    if condition.babajotai_code:
+        where_parts.append(
+            "COALESCE("
+            "NULLIF(NULLIF(TRIM(r.shiba_babajotai_code), ''), '0'), "
+            "NULLIF(NULLIF(TRIM(r.dirt_babajotai_code), ''), '0')"
+            ") = %s"
+        )
+        params.append(condition.babajotai_code)
+    if condition.sayuu:
+        codes = _SAYUU_TRACK_CODES.get(condition.sayuu)
+        if codes is None:
+            raise ValueError(f"未対応の sayuu です: {condition.sayuu!r}")
+        placeholders = ", ".join(["%s"] * len(codes))
+        where_parts.append(f"TRIM(r.track_code) IN ({placeholders})")
+        params.extend(list(codes))
+    if condition.course_kubun and condition.week_in_course is None:
+        where_parts.append("r.course_kubun = %s")
+        params.append(condition.course_kubun)
+    return where_parts
+
 
 def build_course_week_cte(
-    keibajo: str | None,
+    keibajo_code: str | None,
     course_kubun: str,
     week_in_course: int,
     cte_params: list[Any],
 ) -> tuple[str, str]:
     """コース区分・週番号フィルタ用CTEとJOIN句を生成する.
 
-    同一コース区分の使用開始から2日間を1週として週番号を計算し、
-    指定コース・週番号の開催日のみに絞り込むCTEを生成する。
+    同一コース区分内で前回開催日との差が2日超の場合に週番号を+1し、
+    14日以上空いた場合は週番号を1にリセットする。
+    3日間開催にも対応する。
 
     Args:
-        keibajo (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
+        keibajo_code (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
         course_kubun (str): コース区分（例: 'C'）
         week_in_course (int): コース使用開始からの週番号（0以上の整数）
         cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
@@ -24,40 +120,57 @@ def build_course_week_cte(
         str: CTE SQL文字列（WITHキーワードなし）
         str: JOIN句
     """
-    keibajo_filter = "AND keibajo_code = %s" if keibajo else ""
-    if keibajo:
-        cte_params.append(keibajo)
+    keibajo_filter = "AND keibajo_code = %s" if keibajo_code else ""
+    if keibajo_code:
+        cte_params.append(keibajo_code)
     cte_params.extend([course_kubun, week_in_course])
 
     cte_sql = f"""
         cw_daily AS (
-            SELECT DISTINCT keibajo_code, kaisai_nen, kaisai_kai, kaisai_nichime, course_kubun
+            SELECT DISTINCT
+                keibajo_code, kaisai_nen, kaisai_kai, kaisai_nichime, course_kubun,
+                TO_DATE(kaisai_nen || kaisai_gappi, 'YYYYMMDD') AS race_date
             FROM race_shosai
             WHERE course_kubun != '' {keibajo_filter}
         ),
-        cw_with_prev AS (
-            SELECT *,
-                LAG(course_kubun) OVER (
-                    PARTITION BY keibajo_code, kaisai_nen ORDER BY kaisai_kai, kaisai_nichime
-                ) AS prev_course
-            FROM cw_daily
-        ),
         cw_with_group AS (
             SELECT *,
-                SUM(CASE WHEN course_kubun != COALESCE(prev_course, '_') THEN 1 ELSE 0 END)
-                    OVER (PARTITION BY keibajo_code, kaisai_nen ORDER BY kaisai_kai, kaisai_nichime)
-                    AS cw_group_id
-            FROM cw_with_prev
+                SUM(CASE WHEN course_kubun != COALESCE(
+                    LAG(course_kubun) OVER (
+                        PARTITION BY keibajo_code, kaisai_nen ORDER BY kaisai_kai, kaisai_nichime
+                    ), '_'
+                ) THEN 1 ELSE 0 END)
+                OVER (PARTITION BY keibajo_code, kaisai_nen ORDER BY kaisai_kai, kaisai_nichime)
+                AS cw_group_id
+            FROM cw_daily
         ),
-        cw_weeks AS (
+        cw_with_rn AS (
             SELECT *,
-                CEIL(
-                    ROW_NUMBER() OVER (
-                        PARTITION BY keibajo_code, kaisai_nen, cw_group_id
-                        ORDER BY kaisai_kai, kaisai_nichime
-                    ) / 2.0
-                )::INT AS week_in_course
+                ROW_NUMBER() OVER (
+                    PARTITION BY keibajo_code, kaisai_nen, cw_group_id
+                    ORDER BY kaisai_kai, kaisai_nichime
+                ) AS rn_in_group
             FROM cw_with_group
+        ),
+        cw_weeks(keibajo_code, kaisai_nen, kaisai_kai, kaisai_nichime, course_kubun,
+                 cw_group_id, rn_in_group, race_date, week_in_course) AS (
+            SELECT keibajo_code, kaisai_nen, kaisai_kai, kaisai_nichime, course_kubun,
+                   cw_group_id, rn_in_group, race_date, 1
+            FROM cw_with_rn
+            WHERE rn_in_group = 1
+            UNION ALL
+            SELECT curr.keibajo_code, curr.kaisai_nen, curr.kaisai_kai, curr.kaisai_nichime,
+                   curr.course_kubun, curr.cw_group_id, curr.rn_in_group, curr.race_date,
+                CASE
+                    WHEN (curr.race_date - prev.race_date) >= 14 THEN 1
+                    WHEN (curr.race_date - prev.race_date) > 2 THEN prev.week_in_course + 1
+                    ELSE prev.week_in_course
+                END
+            FROM cw_with_rn curr
+            JOIN cw_weeks prev ON curr.keibajo_code = prev.keibajo_code
+                AND curr.kaisai_nen = prev.kaisai_nen
+                AND curr.cw_group_id = prev.cw_group_id
+                AND curr.rn_in_group = prev.rn_in_group + 1
         ),
         cw_target AS (
             SELECT keibajo_code, kaisai_nen, kaisai_kai, kaisai_nichime
