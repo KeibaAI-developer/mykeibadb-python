@@ -271,13 +271,13 @@ def _build_sire_condition_finisher_sql(
     ]
     params.append(int(source.top_n))
     if source.condition is not None:
-        cond_parts.extend(build_race_condition_where(source.condition, params))
+        cond_parts.extend(build_race_condition_where(source.condition, params, race_alias="r2"))
     cond_where = "\n                  AND ".join(cond_parts)
     attr_val_expr = (
         "CASE WHEN km2.ketto1_bamei IN (\n"
         "                SELECT u2.bamei\n"
         "                FROM umagoto_race_joho u2\n"
-        "                JOIN race_joho r ON u2.race_code = r.race_code\n"
+        "                JOIN race_joho r2 ON u2.race_code = r2.race_code\n"
         f"                WHERE {cond_where}\n"
         "            ) THEN 1 ELSE 0 END"
     )

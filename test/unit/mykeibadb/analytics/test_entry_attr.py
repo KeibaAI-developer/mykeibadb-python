@@ -121,6 +121,8 @@ def test_analyze_entry_attr_jockey_continuity_sql(mocker: MockerFixture) -> None
     assert result.success is True
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "kishu_code" in sql
+    assert "SELECT u2.kishu_code" in sql
+    assert "LIMIT 1" in sql
     assert "継続" in sql
     assert "乗り戻り" in sql
     assert "テン乗り" in sql
@@ -146,6 +148,7 @@ def test_analyze_entry_attr_sire_condition_finisher_sql(mocker: MockerFixture) -
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert "kyosoba_master2" in sql
     assert "ketto1_bamei" in sql
+    assert "r2.kyori = %s" in sql
     assert 2400 in params
 
 
@@ -163,6 +166,7 @@ def test_analyze_entry_attr_sire_condition_finisher_no_condition(mocker: MockerF
     assert result.success is True
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "kyosoba_master2" in sql
+    assert "kyori = %s" not in sql
 
 
 def test_analyze_entry_attr_accepts_dict(mocker: MockerFixture) -> None:

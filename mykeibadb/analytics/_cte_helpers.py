@@ -75,6 +75,7 @@ def build_race_condition_where(
     condition: RaceCondition,
     params: list[Any],
     include_keibajo_code: bool = True,
+    race_alias: str = "r",
 ) -> list[str]:
     """RaceConditionからWHERE句のpartsリストを生成する.
 
@@ -85,6 +86,7 @@ def build_race_condition_where(
         condition (RaceCondition): レースフィルタ条件
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
         include_keibajo_code (bool): keibajo_codeをWHERE句に含めるかどうか
+        race_alias (str): race_johoテーブルのSQLエイリアス（デフォルト: "r"）
 
     Returns:
         list[str]: WHERE句のpartsリスト
@@ -92,55 +94,56 @@ def build_race_condition_where(
     Raises:
         ValueError: race_shubetsu / shiba_da / sayuu に未対応の値が指定された場合
     """
+    a = race_alias
     where_parts: list[str] = []
     if include_keibajo_code and condition.keibajo_code:
-        where_parts.append("r.keibajo_code = %s")
+        where_parts.append(f"{a}.keibajo_code = %s")
         params.append(condition.keibajo_code)
     if condition.kyori:
-        where_parts.append("r.kyori = %s")
+        where_parts.append(f"{a}.kyori = %s")
         params.append(condition.kyori)
     if condition.year_from:
-        where_parts.append("r.kaisai_nen >= %s")
+        where_parts.append(f"{a}.kaisai_nen >= %s")
         params.append(condition.year_from)
     if condition.year_to:
-        where_parts.append("r.kaisai_nen <= %s")
+        where_parts.append(f"{a}.kaisai_nen <= %s")
         params.append(condition.year_to)
     if condition.grade_code:
-        where_parts.append("r.grade_code = %s")
+        where_parts.append(f"{a}.grade_code = %s")
         params.append(condition.grade_code)
     if condition.kyoso_joken_codes:
         where_parts.append(
             "GREATEST("
-            "NULLIF(TRIM(r.kyoso_joken_code_2sai), '')::INTEGER, "
-            "NULLIF(TRIM(r.kyoso_joken_code_3sai), '')::INTEGER, "
-            "NULLIF(TRIM(r.kyoso_joken_code_4sai), '')::INTEGER, "
-            "NULLIF(TRIM(r.kyoso_joken_code_5sai_ijo), '')::INTEGER, "
-            "NULLIF(TRIM(r.kyoso_joken_code_saijakunen), '')::INTEGER"
+            f"NULLIF(TRIM({a}.kyoso_joken_code_2sai), '')::INTEGER, "
+            f"NULLIF(TRIM({a}.kyoso_joken_code_3sai), '')::INTEGER, "
+            f"NULLIF(TRIM({a}.kyoso_joken_code_4sai), '')::INTEGER, "
+            f"NULLIF(TRIM({a}.kyoso_joken_code_5sai_ijo), '')::INTEGER, "
+            f"NULLIF(TRIM({a}.kyoso_joken_code_saijakunen), '')::INTEGER"
             ") = ANY(%s::INTEGER[])"
         )
         params.append([int(c) for c in condition.kyoso_joken_codes])
     if condition.race_shubetsu:
         if condition.race_shubetsu == "平地":
-            where_parts.append("TRIM(r.track_code) BETWEEN '10' AND '29'")
+            where_parts.append(f"TRIM({a}.track_code) BETWEEN '10' AND '29'")
         elif condition.race_shubetsu == "障害":
-            where_parts.append("TRIM(r.track_code) BETWEEN '51' AND '59'")
+            where_parts.append(f"TRIM({a}.track_code) BETWEEN '51' AND '59'")
         else:
             raise ValueError(f"未対応の race_shubetsu です: {condition.race_shubetsu!r}")
     if condition.shiba_da:
         if condition.shiba_da == "芝":
             where_parts.append(
-                "(TRIM(r.track_code) BETWEEN '10' AND '22' "
-                "OR TRIM(r.track_code) BETWEEN '51' AND '59')"
+                f"(TRIM({a}.track_code) BETWEEN '10' AND '22' "
+                f"OR TRIM({a}.track_code) BETWEEN '51' AND '59')"
             )
         elif condition.shiba_da == "ダ":
-            where_parts.append("TRIM(r.track_code) BETWEEN '23' AND '29'")
+            where_parts.append(f"TRIM({a}.track_code) BETWEEN '23' AND '29'")
         else:
             raise ValueError(f"未対応の shiba_da です: {condition.shiba_da!r}")
     if condition.babajotai_code:
         where_parts.append(
             "COALESCE("
-            "NULLIF(NULLIF(TRIM(r.shiba_babajotai_code), ''), '0'), "
-            "NULLIF(NULLIF(TRIM(r.dirt_babajotai_code), ''), '0')"
+            f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
+            f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
             ") = %s"
         )
         params.append(condition.babajotai_code)
@@ -149,10 +152,10 @@ def build_race_condition_where(
         if codes is None:
             raise ValueError(f"未対応の sayuu です: {condition.sayuu!r}")
         placeholders = ", ".join(["%s"] * len(codes))
-        where_parts.append(f"TRIM(r.track_code) IN ({placeholders})")
+        where_parts.append(f"TRIM({a}.track_code) IN ({placeholders})")
         params.extend(list(codes))
     if condition.course_kubun and condition.week_in_course is None:
-        where_parts.append("r.course_kubun = %s")
+        where_parts.append(f"{a}.course_kubun = %s")
         params.append(condition.course_kubun)
     return where_parts
 
