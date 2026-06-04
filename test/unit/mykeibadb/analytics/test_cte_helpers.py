@@ -49,12 +49,18 @@ def test_build_course_week_cte_join_sql_has_all_join_columns() -> None:
 
 
 # 準正常系
-def test_build_course_week_cte_week_zero_is_valid() -> None:
-    """week_in_course=0でもエラーなくCTEが生成される."""
+def test_build_course_week_cte_week_zero_raises() -> None:
+    """week_in_course=0でValueErrorが発生する."""
     params: list[object] = []
-    cte_sql, _ = build_course_week_cte(None, "C", 0, params)
-    assert "cw_target" in cte_sql
-    assert params[-1] == 0
+    with pytest.raises(ValueError, match="week_in_course"):
+        build_course_week_cte(None, "C", 0, params)
+
+
+def test_build_course_week_cte_negative_week_raises() -> None:
+    """week_in_course負数でValueErrorが発生する."""
+    params: list[object] = []
+    with pytest.raises(ValueError, match="week_in_course"):
+        build_course_week_cte(None, "C", -1, params)
 
 
 def test_build_payout_ctes_returns_string() -> None:

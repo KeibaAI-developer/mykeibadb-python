@@ -113,13 +113,18 @@ def build_course_week_cte(
     Args:
         keibajo_code (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
         course_kubun (str): コース区分（例: 'C'）
-        week_in_course (int): コース使用開始からの週番号（0以上の整数）
+        week_in_course (int): コース使用開始からの週番号（1以上の整数）
         cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
         str: CTE SQL文字列（WITHキーワードなし）
         str: JOIN句
+
+    Raises:
+        ValueError: week_in_course が1未満の場合
     """
+    if week_in_course < 1:
+        raise ValueError(f"week_in_course は1以上の整数を指定してください: {week_in_course!r}")
     keibajo_filter = "AND keibajo_code = %s" if keibajo_code else ""
     if keibajo_code:
         cte_params.append(keibajo_code)

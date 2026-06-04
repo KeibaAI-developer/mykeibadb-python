@@ -83,7 +83,7 @@ def analyze_entry_attr_chakudo(
         )
 
         sql = f"""
-            WITH {", ".join(cte_parts)}
+            WITH RECURSIVE {", ".join(cte_parts)}
             SELECT
                 grp,
                 COUNT(*) AS total,

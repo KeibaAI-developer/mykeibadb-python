@@ -158,7 +158,7 @@ def analyze_chokyo_seiseki(
         payout_ctes = build_payout_ctes()
 
         sql = f"""
-            WITH {payout_ctes},
+            WITH RECURSIVE {payout_ctes},
             base AS (
                 SELECT
                     CASE

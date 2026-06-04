@@ -33,6 +33,7 @@ def analyze_chakudo(
 
     Raises:
         ValueError: condition.course_kubun と condition.week_in_course のどちらか一方のみ指定した場合
+        ValueError: condition.week_in_course が1未満の場合
         ValueError: group_expr または sort_expr に危険なSQLトークン（';', '--', '/*'）が含まれる場合
 
     Note:
@@ -94,7 +95,7 @@ def analyze_chakudo(
         )
 
         sql = f"""
-            WITH {", ".join(cte_parts)}
+            WITH RECURSIVE {", ".join(cte_parts)}
             SELECT
                 grp,
                 sort_key,
