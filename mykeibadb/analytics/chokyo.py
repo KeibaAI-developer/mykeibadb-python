@@ -157,13 +157,13 @@ def _get_chokyo_by_ketto(
 ) -> dict[str, Any]:
     """血統登録番号から調教データを取得する."""
     try:
-        wood_parts: list[str] = ["w.ketto_toroku_bango = %s", f"AND {_WOOD_VALID}"]
+        wood_parts: list[str] = ["w.ketto_toroku_bango = %s", _WOOD_VALID]
         wood_params: list[Any] = [ketto_toroku_bango]
         if date_from is not None:
-            wood_parts.append("AND w.chokyo_nengappi >= %s")
+            wood_parts.append("w.chokyo_nengappi >= %s")
             wood_params.append(date_from)
         if date_to is not None:
-            wood_parts.append("AND w.chokyo_nengappi <= %s")
+            wood_parts.append("w.chokyo_nengappi <= %s")
             wood_params.append(date_to)
 
         wood_sql = f"""
@@ -171,18 +171,18 @@ def _get_chokyo_by_ketto(
                    w.time_gokei_6furlong, w.time_gokei_5furlong, w.time_gokei_4furlong,
                    w.laptime_1furlong, w.laptime_2furlong, w.laptime_3furlong
             FROM woodchip_chokyo w
-            WHERE {" ".join(wood_parts)}
+            WHERE {" AND ".join(wood_parts)}
             ORDER BY w.chokyo_nengappi DESC, w.chokyo_jikoku DESC
         """
         wood_df = manager.fetch_dataframe(wood_sql, params=tuple(wood_params))
 
-        hanro_parts: list[str] = ["h.ketto_toroku_bango = %s", f"AND {_HANRO_VALID}"]
+        hanro_parts: list[str] = ["h.ketto_toroku_bango = %s", _HANRO_VALID]
         hanro_params: list[Any] = [ketto_toroku_bango]
         if date_from is not None:
-            hanro_parts.append("AND h.chokyo_nengappi >= %s")
+            hanro_parts.append("h.chokyo_nengappi >= %s")
             hanro_params.append(date_from)
         if date_to is not None:
-            hanro_parts.append("AND h.chokyo_nengappi <= %s")
+            hanro_parts.append("h.chokyo_nengappi <= %s")
             hanro_params.append(date_to)
 
         hanro_sql = f"""
@@ -191,7 +191,7 @@ def _get_chokyo_by_ketto(
                    h.lap_time_1furlong, h.lap_time_2furlong,
                    h.lap_time_3furlong, h.lap_time_4furlong
             FROM hanro_chokyo h
-            WHERE {" ".join(hanro_parts)}
+            WHERE {" AND ".join(hanro_parts)}
             ORDER BY h.chokyo_nengappi DESC, h.chokyo_jikoku DESC
         """
         hanro_df = manager.fetch_dataframe(hanro_sql, params=tuple(hanro_params))

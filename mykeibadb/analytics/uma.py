@@ -2,6 +2,8 @@
 
 from typing import Any
 
+import pandas as pd
+
 from mykeibadb.analytics._cte_helpers import build_race_condition_where
 from mykeibadb.analytics._models import RaceCondition
 from mykeibadb.connection import ConnectionManager
@@ -80,7 +82,7 @@ def get_uma_rekisen(
         return {"success": False, "error": str(e), "results": [], "count": 0}
 
 
-def _row_to_rekisen_dict(r: "Any") -> dict[str, Any]:
+def _row_to_rekisen_dict(r: "pd.Series[Any]") -> dict[str, Any]:
     """競走成績DataFrameの1行をdict変換する."""
     return {
         "ketto_toroku_bango": str(r["ketto_toroku_bango"]),

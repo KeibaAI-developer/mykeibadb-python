@@ -1,6 +1,7 @@
 """chokyo モジュールの単体テスト."""
 
 import pandas as pd
+import pytest
 from pytest_mock import MockerFixture
 
 from mykeibadb.analytics import RaceCondition, analyze_chokyo_seiseki, get_uma_chokyo
@@ -275,7 +276,7 @@ def test_get_uma_chokyo_ketto_with_date_range(mocker: MockerFixture) -> None:
 def test_get_uma_chokyo_no_args_raises() -> None:
     """引数なしでValueErrorが発生する."""
     manager = object()
-    with __import__("pytest").raises(ValueError, match="ketto_toroku_bango"):
+    with pytest.raises(ValueError, match="ketto_toroku_bango"):
         get_uma_chokyo(manager)  # type: ignore[arg-type]
 
 
