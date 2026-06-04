@@ -17,7 +17,7 @@ def build_course_week_cte(
     Args:
         keibajo (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
         course_kubun (str): コース区分（例: 'C'）
-        week_in_course (int): コース使用開始からの週番号（1始まり）
+        week_in_course (int): コース使用開始からの週番号（0以上の整数）
         cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:

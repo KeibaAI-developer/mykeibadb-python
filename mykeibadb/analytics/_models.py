@@ -85,12 +85,13 @@ class AttrSource:
         Returns:
             AttrSource: 生成したAttrSourceインスタンス
         """
+        raw_kyori = d.get("kyori")
         return AttrSource(
             type=d["type"],
-            top_n=d.get("top_n", 1),
+            top_n=int(d.get("top_n", 1)),
             grade_codes=d.get("grade_codes"),
             keibajo_code=d.get("keibajo_code"),
-            kyori=d.get("kyori"),
+            kyori=int(raw_kyori) if raw_kyori is not None else None,
         )
 
 
@@ -115,6 +116,9 @@ class EntryAttrDef:
 
         Returns:
             EntryAttrDef: 生成したEntryAttrDefインスタンス
+
+        Raises:
+            ValueError: rows の値が (min, max) タプル・int・str 以外の場合
         """
         source = AttrSource.from_dict(d["source"])
         rows: RowsDef = {}
@@ -124,5 +128,8 @@ class EntryAttrDef:
             elif isinstance(val, (int, str)):
                 rows[key] = val
             else:
-                rows[key] = val
+                raise ValueError(
+                    f"rows['{key}'] の値が無効です: {val!r}。"
+                    "(min, max) タプル・int・str のいずれかを指定してください。"
+                )
         return EntryAttrDef(source=source, rows=rows)

@@ -195,7 +195,7 @@ def analyze_chakudo(
 実装要件:
 - `kakutei_chakujun ~ '^[0-9]{2}$'` で取消（'00'）除外
 - `haraimodoshi` テーブルと JOIN して払い戻し金額から回収率を計算
-- `course_kubun` と `week_in_course` を両方指定した場合は `_build_course_week_cte` で CTE を生成
+- `course_kubun` と `week_in_course` を両方指定した場合は `build_course_week_cte` で CTE を生成
 - 片方のみ指定時は `ValueError` を raise
 
 ### 2. `analyze_entry_attr_chakudo`（`entry_attr.py`）
@@ -320,11 +320,23 @@ __all__ = [
 ## CTE ヘルパー（`_cte_helpers.py`）
 
 ```python
-def build_course_week_cte(course_kubun: str, week_in_course: int) -> tuple[str, list[Any]]:
-    """コース区分・週番号フィルタ用CTEを生成する
+def build_course_week_cte(
+    keibajo: str | None,
+    course_kubun: str,
+    week_in_course: int,
+    cte_params: list[Any],
+) -> tuple[str, str]:
+    """コース区分・週番号フィルタ用CTEとJOIN句を生成する
+
+    Args:
+        keibajo (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
+        course_kubun (str): コース区分（例: 'C'）
+        week_in_course (int): コース使用開始からの週番号（0以上の整数）
+        cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
-        tuple[str, list[Any]]: (CTE SQL文字列, バインドパラメータリスト)
+        str: CTE SQL文字列（WITHキーワードなし）
+        str: JOIN句
     """
 
 def build_payout_ctes() -> str:
