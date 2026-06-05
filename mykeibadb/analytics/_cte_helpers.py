@@ -157,6 +157,9 @@ def build_race_condition_where(
     if condition.course_kubun and condition.week_in_course is None:
         where_parts.append(f"{a}.course_kubun = %s")
         params.append(condition.course_kubun)
+    if condition.tokubetsu_kyoso_bango:
+        where_parts.append(f"TRIM({a}.tokubetsu_kyoso_bango) = %s")
+        params.append(condition.tokubetsu_kyoso_bango)
     return where_parts
 
 
