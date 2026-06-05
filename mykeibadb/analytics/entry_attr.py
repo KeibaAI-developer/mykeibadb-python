@@ -14,8 +14,7 @@ from mykeibadb.analytics._models import (
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
-_HORSE_HIST_CTE = """horse_hist AS (
-        SELECT u2.ketto_toroku_bango,
+_HORSE_HIST_BODY = """        SELECT u2.ketto_toroku_bango,
                r2.kaisai_nen AS hist_nen,
                r2.kaisai_gappi AS hist_gappi,
                u2.kakutei_chakujun AS hist_chakujun,
@@ -25,9 +24,50 @@ _HORSE_HIST_CTE = """horse_hist AS (
                r2.kyosomei_hondai AS hist_race_name,
                r2.grade_code AS hist_grade_code
         FROM umagoto_race_joho u2
-        JOIN race_shosai r2 ON u2.race_code = r2.race_code
-        WHERE u2.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)
-    )"""
+        JOIN race_shosai r2 ON u2.race_code = r2.race_code"""
+
+
+def _build_horse_hist_cte(source: AttrSource, params: list[Any]) -> str:
+    """horse_hist CTE SQL文字列を生成する.
+
+    past_finish_count でgrade_codes/keibajo_code/kyoriが指定されている場合は
+    race_code PKインデックスを活用したフィルタを使用する。
+    それ以外はketto_toroku_bango IN（全履歴スキャン）を使用する。
+
+    Args:
+        source (AttrSource): 属性算出方法の定義
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: horse_hist CTE SQL
+    """
+    race_filter_parts: list[str] = []
+    if source.type == "past_finish_count":
+        if source.grade_codes:
+            race_filter_parts.append("grade_code = ANY(%s)")
+            params.append(source.grade_codes)
+        if source.keibajo_code:
+            race_filter_parts.append("keibajo_code = %s")
+            params.append(source.keibajo_code)
+        if source.kyori:
+            race_filter_parts.append("TRIM(kyori)::INTEGER = %s")
+            params.append(int(source.kyori))
+
+    if race_filter_parts:
+        race_filter = "\n              AND ".join(race_filter_parts)
+        hist_where = (
+            f"WHERE u2.race_code IN (\n"
+            f"            SELECT race_code FROM race_shosai WHERE {race_filter}\n"
+            f"        )\n"
+            f"          AND u2.ketto_toroku_bango IN "
+            f"(SELECT ketto_toroku_bango FROM target_horses)"
+        )
+    else:
+        hist_where = (
+            "WHERE u2.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)"
+        )
+
+    return f"horse_hist AS MATERIALIZED (\n{_HORSE_HIST_BODY}\n        {hist_where}\n    )"
 
 
 def analyze_entry_attr_chakudo(
@@ -70,16 +110,17 @@ def analyze_entry_attr_chakudo(
         target_where = "\n          AND ".join(target_where_parts)
 
         cte_parts.append(
-            f"""target_horses AS (
+            f"""target_horses AS MATERIALIZED (
         SELECT DISTINCT u.ketto_toroku_bango, u.race_code,
-               r.kaisai_nen, r.kaisai_gappi, u.kishu_code
+               r.kaisai_nen, r.kaisai_gappi, u.kishu_code,
+               u.kakutei_chakujun, u.umaban
         FROM umagoto_race_joho u
         JOIN race_shosai r ON u.race_code = r.race_code
         WHERE {target_where}
     )"""
         )
 
-        cte_parts.append(_HORSE_HIST_CTE)
+        cte_parts.append(_build_horse_hist_cte(attr_def.source, params))
 
         attr_cte, attr_join_sql = _build_attr_cte(attr_def.source, params)
         cte_parts.append(attr_cte)
@@ -87,18 +128,12 @@ def analyze_entry_attr_chakudo(
         cte_parts.append(
             f"""base AS (
         SELECT
-            a.attr_val,
-            u.kakutei_chakujun,
-            u.umaban,
-            u.race_code
-        FROM umagoto_race_joho u
-        JOIN race_shosai r ON u.race_code = r.race_code
-        JOIN target_horses th
-            ON th.ketto_toroku_bango = u.ketto_toroku_bango
-           AND th.race_code = u.race_code
+            attr_agg.attr_val,
+            th.kakutei_chakujun,
+            th.umaban,
+            th.race_code
+        FROM target_horses th
         {attr_join_sql}
-        WHERE u.kakutei_chakujun ~ '^[0-9]{2}$'
-          AND u.kakutei_chakujun != '00'
     )"""
         )
 
@@ -226,8 +261,8 @@ def _build_past_finish_count_cte(
         GROUP BY t.ketto_toroku_bango, t.race_code
     )"""
     join = (
-        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
-        " AND attr_agg.race_code = u.race_code"
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
     return cte, join
 
@@ -249,8 +284,8 @@ def _build_career_count_cte() -> tuple[str, str]:
         GROUP BY t.ketto_toroku_bango, t.race_code
     )"""
     join = (
-        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
-        " AND attr_agg.race_code = u.race_code"
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
     return cte, join
 
@@ -271,8 +306,8 @@ def _build_prev_race_name_cte() -> tuple[str, str]:
         ORDER BY t.ketto_toroku_bango, t.race_code, h.hist_nen DESC, h.hist_gappi DESC
     )"""
     join = (
-        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
-        " AND attr_agg.race_code = u.race_code"
+        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
     return cte, join
 
@@ -292,7 +327,7 @@ def _build_debut_venue_cte() -> tuple[str, str]:
         ORDER BY ketto_toroku_bango, hist_nen, hist_gappi
     )"""
     join = (
-        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
+        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
     )
     return cte, join
 
@@ -335,8 +370,8 @@ def _build_jockey_continuity_cte() -> tuple[str, str]:
            AND paj.race_code = t.race_code
     )"""
     join = (
-        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
-        " AND attr_agg.race_code = u.race_code"
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
     return cte, join
 
@@ -369,8 +404,8 @@ def _build_sire_condition_finisher_cte(
         JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango
     )"""
     join = (
-        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = u.ketto_toroku_bango"
-        " AND attr_agg.race_code = u.race_code"
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
     return cte, join
 

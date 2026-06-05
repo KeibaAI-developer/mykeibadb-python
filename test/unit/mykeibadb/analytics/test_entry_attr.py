@@ -57,7 +57,9 @@ def test_analyze_entry_attr_past_finish_count_sql_contains_subquery(mocker: Mock
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert "horse_hist" in sql
     assert "COUNT(h.hist_nen)" in sql
-    assert 3 in params  # top_n がパラメータでバインドされている
+    assert 3 in params
+    assert ["A"] in params
+    assert "SELECT race_code FROM race_shosai" in sql
 
 
 def test_analyze_entry_attr_career_count_sql_contains_subquery(mocker: MockerFixture) -> None:
