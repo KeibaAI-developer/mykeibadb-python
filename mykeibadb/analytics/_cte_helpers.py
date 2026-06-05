@@ -100,8 +100,8 @@ def build_race_condition_where(
         where_parts.append(f"{a}.keibajo_code = %s")
         params.append(condition.keibajo_code)
     if condition.kyori:
-        where_parts.append(f"{a}.kyori = %s")
-        params.append(condition.kyori)
+        where_parts.append(f"TRIM({a}.kyori)::INTEGER = %s")
+        params.append(int(condition.kyori))
     if condition.year_from:
         where_parts.append(f"{a}.kaisai_nen >= %s")
         params.append(condition.year_from)
