@@ -209,6 +209,7 @@ class AttrSource:
         keibajo_code (str | None): 対象競馬場コード
         kyori (int | None): 対象距離
         condition (RaceCondition | None): レース絞り込み条件
+        allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
     """
 
     type: str
@@ -217,6 +218,7 @@ class AttrSource:
     keibajo_code: str | None = None
     kyori: int | None = None
     condition: RaceCondition | None = None
+    allowed_values: list[str] | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "AttrSource":
@@ -240,6 +242,7 @@ class AttrSource:
             keibajo_code=d.get("keibajo_code"),
             kyori=int(raw_kyori) if raw_kyori is not None else None,
             condition=condition,
+            allowed_values=d.get("allowed_values"),
         )
 
 

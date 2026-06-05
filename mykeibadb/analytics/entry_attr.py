@@ -218,7 +218,7 @@ def _build_attr_cte(
     if source.type == "prev_race_name":
         return _build_prev_race_name_cte()
     if source.type == "debut_venue":
-        return _build_debut_venue_cte()
+        return _build_debut_venue_cte(source, params)
     if source.type == "jockey_continuity":
         return _build_jockey_continuity_cte()
     if source.type == "sire_condition_finisher":
@@ -303,6 +303,8 @@ def _build_prev_race_name_cte() -> tuple[str, str]:
         JOIN horse_hist h
             ON h.ketto_toroku_bango = t.ketto_toroku_bango
            AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+           AND h.hist_race_name IS NOT NULL
+           AND TRIM(h.hist_race_name) != ''
         ORDER BY t.ketto_toroku_bango, t.race_code, h.hist_nen DESC, h.hist_gappi DESC
     )"""
     join = (
@@ -312,18 +314,26 @@ def _build_prev_race_name_cte() -> tuple[str, str]:
     return cte, join
 
 
-def _build_debut_venue_cte() -> tuple[str, str]:
+def _build_debut_venue_cte(source: AttrSource, params: list[Any]) -> tuple[str, str]:
     """debut_venue 用の attr_agg CTE を生成する.
 
     horse_hist からデビュー戦の競馬場コードを取得する。
+    source.allowed_values が指定されている場合はその競馬場コードのみ対象とする。
     """
-    cte = """attr_agg AS (
+    where_parts = [
+        "hist_chakujun ~ '^[0-9]{2}$'",
+        "hist_chakujun != '00'",
+    ]
+    if source.allowed_values:
+        where_parts.append("hist_keibajo_code = ANY(%s)")
+        params.append(source.allowed_values)
+    where = "\n          AND ".join(where_parts)
+    cte = f"""attr_agg AS (
         SELECT DISTINCT ON (ketto_toroku_bango)
             ketto_toroku_bango,
             hist_keibajo_code AS attr_val
         FROM horse_hist
-        WHERE hist_chakujun ~ '^[0-9]{2}$'
-          AND hist_chakujun != '00'
+        WHERE {where}
         ORDER BY ketto_toroku_bango, hist_nen, hist_gappi
     )"""
     join = (
@@ -413,13 +423,17 @@ def _build_sire_condition_finisher_cte(
 def _build_case_when(rows: RowsDef, params: list[Any]) -> str:
     """rowsからCASE WHEN式を生成する.
 
+    rowsが空の場合（dynamic type）はattr_valをそのまま返す。
+
     Args:
         rows (RowsDef): グループ定義辞書
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
-        str: CASE WHEN式
+        str: CASE WHEN式またはattr_val式
     """
+    if not rows:
+        return "attr_val::text"
     cases = []
     for label, cond in rows.items():
         if isinstance(cond, tuple):
@@ -438,6 +452,8 @@ def _build_case_when(rows: RowsDef, params: list[Any]) -> str:
 def _build_order_by(rows: RowsDef, params: list[Any]) -> str:
     """rows定義順でソートするORDER BY式を生成する.
 
+    rowsが空の場合（dynamic type）はgrpでソートする。
+
     Args:
         rows (RowsDef): グループ定義辞書
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
@@ -445,6 +461,8 @@ def _build_order_by(rows: RowsDef, params: list[Any]) -> str:
     Returns:
         str: ORDER BY式
     """
+    if not rows:
+        return "grp"
     cases = []
     for idx, label in enumerate(rows.keys()):
         cases.append(f"WHEN %s THEN {idx}")
