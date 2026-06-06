@@ -4,12 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import (
-    RaceCondition,
-    analyze_chokyo_debut_seiseki,
-    analyze_chokyo_seiseki,
-    get_uma_chokyo,
-)
+from mykeibadb.analytics import analyze_chokyo_debut_seiseki, get_uma_chokyo
 from mykeibadb.analytics._models import ChokyoThreshold
 from mykeibadb.exceptions import QueryExecutionError
 
@@ -55,16 +50,6 @@ def _make_hanro_row() -> dict[str, object]:
         "lap_time_2furlong": "125",
         "lap_time_3furlong": "130",
         "lap_time_4furlong": "145",
-    }
-
-
-def _make_seiseki_row(grp: str = "坂路+ウッド") -> dict[str, object]:
-    """analyze_chokyo_seiseki の集計結果行."""
-    return {
-        "grp": grp, "total": 100, "wins": 30,
-        "second": 20, "third": 15, "chakugai": 35,
-        "win_rate": 30.0, "fukusho_rate": 65.0,
-        "tansho_kaishuu": 78.0, "fukusho_kaishuu": 85.0,
     }
 
 
@@ -165,78 +150,6 @@ def test_get_uma_chokyo_no_prev_race_returns_all_chokyo(mocker: MockerFixture) -
     assert "chokyo_nengappi > %s" not in wood_sql
 
 
-def test_analyze_chokyo_seiseki_returns_success(mocker: MockerFixture) -> None:
-    """正常系: success=True と rows リストが返る."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_df([
-        _make_seiseki_row("坂路+ウッド"),
-        _make_seiseki_row("ウッドのみ"),
-        _make_seiseki_row("坂路のみ"),
-        _make_seiseki_row("なし"),
-    ])
-
-    result = analyze_chokyo_seiseki(manager)
-
-    assert result["success"] is True
-    assert len(result["rows"]) == 4
-    assert result["rows"][0]["group"] == "坂路+ウッド"
-
-
-def test_analyze_chokyo_seiseki_sql_contains_chokyo_subquery(mocker: MockerFixture) -> None:
-    """調教タイプ判定のサブクエリが SQL に含まれる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_df([_make_seiseki_row()])
-
-    analyze_chokyo_seiseki(manager)
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "woodchip_chokyo" in sql
-    assert "hanro_chokyo" in sql
-    assert "has_wood" in sql
-    assert "has_hanro" in sql
-
-
-def test_analyze_chokyo_seiseki_kyoso_joken_filter(mocker: MockerFixture) -> None:
-    """kyoso_joken_codes 指定時に競走条件コードフィルタが SQL に含まれる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_df([_make_seiseki_row()])
-
-    analyze_chokyo_seiseki(
-        manager,
-        condition=RaceCondition(kyoso_joken_codes=["701", "703"]),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "GREATEST" in sql
-    assert "kyoso_joken_code" in sql
-    assert [701, 703] in params
-
-
-def test_analyze_chokyo_seiseki_condition_params(mocker: MockerFixture) -> None:
-    """RaceCondition のフィルタ引数が SQL パラメータとして渡される."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_df([_make_seiseki_row()])
-
-    analyze_chokyo_seiseki(
-        manager,
-        condition=RaceCondition(
-            keibajo_code="05",
-            kyori=1600,
-            year_from="2020",
-            year_to="2023",
-            kyoso_joken_codes=["701"],
-        ),
-    )
-
-    params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "05" in params
-    assert 1600 in params
-    assert "2020" in params
-    assert "2023" in params
-    assert [701] in params
-
-
 def test_get_uma_chokyo_by_ketto_toroku_bango(mocker: MockerFixture) -> None:
     """ketto_toroku_bangoで調教データが取得できる."""
     manager = mocker.MagicMock()
@@ -322,18 +235,6 @@ def test_get_uma_chokyo_returns_error_on_db_failure(mocker: MockerFixture) -> No
     assert result["success"] is False
     assert result.get("error") is not None
     assert "接続失敗" in result["error"]
-
-
-def test_analyze_chokyo_seiseki_returns_error_on_db_failure(mocker: MockerFixture) -> None:
-    """DBエラーで success=False / error が設定される."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.side_effect = QueryExecutionError("タイムアウト")
-
-    result = analyze_chokyo_seiseki(manager)
-
-    assert result["success"] is False
-    assert result.get("error") is not None
-    assert "タイムアウト" in result["error"]
 
 
 def test_analyze_chokyo_debut_seiseki_wood_only(mocker: MockerFixture) -> None:
