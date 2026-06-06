@@ -319,7 +319,11 @@ def _prev_race_name_expr() -> str:
     Returns:
         str: 前走レース名を返すSELECT式
     """
-    hist_parts = list(_HIST_CORR_PARTS) + ["TRIM(r2.kyosomei_hondai) != ''"]
+    hist_parts = [
+        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
+        "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
+        "TRIM(r2.kyosomei_hondai) != ''",
+    ]
     hist_where = "\n            AND ".join(hist_parts)
     return (
         f"SELECT TRIM(r2.kyosomei_hondai)\n"
