@@ -112,6 +112,8 @@ class RaceCondition:
             week_in_course と同時指定時は build_course_week_cte でCTE処理する。
         week_in_course (int | None): コース区分使用開始からの週番号フィルタ。
             course_kubun と必ず同時に指定すること。
+        tokubetsu_kyoso_bango (str | None): 特別競走番号フィルタ。race_shosai の
+            tokubetsu_kyoso_bango と完全一致で比較する。
     """
 
     keibajo_code: str | None = None
@@ -126,6 +128,7 @@ class RaceCondition:
     sayuu: str | None = None
     course_kubun: str | None = None
     week_in_course: int | None = None
+    tokubetsu_kyoso_bango: str | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "RaceCondition":
@@ -154,6 +157,7 @@ class RaceCondition:
             sayuu=d.get("sayuu"),
             course_kubun=d.get("course_kubun"),
             week_in_course=int(raw_week) if raw_week is not None else None,
+            tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
         )
 
 
@@ -209,6 +213,7 @@ class AttrSource:
         keibajo_code (str | None): 対象競馬場コード
         kyori (int | None): 対象距離
         condition (RaceCondition | None): レース絞り込み条件
+        allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
     """
 
     type: str
@@ -217,6 +222,7 @@ class AttrSource:
     keibajo_code: str | None = None
     kyori: int | None = None
     condition: RaceCondition | None = None
+    allowed_values: list[str] | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "AttrSource":
@@ -240,6 +246,7 @@ class AttrSource:
             keibajo_code=d.get("keibajo_code"),
             kyori=int(raw_kyori) if raw_kyori is not None else None,
             condition=condition,
+            allowed_values=d.get("allowed_values"),
         )
 
 

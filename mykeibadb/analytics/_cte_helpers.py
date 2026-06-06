@@ -100,8 +100,8 @@ def build_race_condition_where(
         where_parts.append(f"{a}.keibajo_code = %s")
         params.append(condition.keibajo_code)
     if condition.kyori:
-        where_parts.append(f"{a}.kyori = %s")
-        params.append(condition.kyori)
+        where_parts.append(f"TRIM({a}.kyori)::INTEGER = %s")
+        params.append(int(condition.kyori))
     if condition.year_from:
         where_parts.append(f"{a}.kaisai_nen >= %s")
         params.append(condition.year_from)
@@ -157,6 +157,9 @@ def build_race_condition_where(
     if condition.course_kubun and condition.week_in_course is None:
         where_parts.append(f"{a}.course_kubun = %s")
         params.append(condition.course_kubun)
+    if condition.tokubetsu_kyoso_bango:
+        where_parts.append(f"TRIM({a}.tokubetsu_kyoso_bango) = %s")
+        params.append(condition.tokubetsu_kyoso_bango)
     return where_parts
 
 

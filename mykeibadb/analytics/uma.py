@@ -70,7 +70,7 @@ def get_uma_rekisen(
                 r.track_code,
                 r.grade_code
             FROM umagoto_race_joho u
-            JOIN race_joho r ON u.race_code = r.race_code
+            JOIN race_shosai r ON u.race_code = r.race_code
             WHERE {where_clause}
             ORDER BY r.kaisai_nen DESC, r.kaisai_gappi DESC, u.race_code
         """

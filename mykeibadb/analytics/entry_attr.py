@@ -14,6 +14,61 @@ from mykeibadb.analytics._models import (
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
+_HORSE_HIST_BODY = """        SELECT u2.ketto_toroku_bango,
+               r2.kaisai_nen AS hist_nen,
+               r2.kaisai_gappi AS hist_gappi,
+               u2.kakutei_chakujun AS hist_chakujun,
+               u2.kishu_code AS hist_kishu_code,
+               r2.keibajo_code AS hist_keibajo_code,
+               TRIM(r2.kyori)::INTEGER AS hist_kyori,
+               r2.kyosomei_hondai AS hist_race_name,
+               r2.grade_code AS hist_grade_code
+        FROM umagoto_race_joho u2
+        JOIN race_shosai r2 ON u2.race_code = r2.race_code"""
+
+
+def _build_horse_hist_cte(source: AttrSource, params: list[Any]) -> str:
+    """horse_hist CTE SQL文字列を生成する.
+
+    past_finish_count でgrade_codes/keibajo_code/kyoriが指定されている場合は
+    race_code PKインデックスを活用したフィルタを使用する。
+    それ以外はketto_toroku_bango IN（全履歴スキャン）を使用する。
+
+    Args:
+        source (AttrSource): 属性算出方法の定義
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: horse_hist CTE SQL
+    """
+    race_filter_parts: list[str] = []
+    if source.type == "past_finish_count":
+        if source.grade_codes:
+            race_filter_parts.append("grade_code = ANY(%s)")
+            params.append(source.grade_codes)
+        if source.keibajo_code:
+            race_filter_parts.append("keibajo_code = %s")
+            params.append(source.keibajo_code)
+        if source.kyori:
+            race_filter_parts.append("TRIM(kyori)::INTEGER = %s")
+            params.append(int(source.kyori))
+
+    if race_filter_parts:
+        race_filter = "\n              AND ".join(race_filter_parts)
+        hist_where = (
+            f"WHERE u2.race_code IN (\n"
+            f"            SELECT race_code FROM race_shosai WHERE {race_filter}\n"
+            f"        )\n"
+            f"          AND u2.ketto_toroku_bango IN "
+            f"(SELECT ketto_toroku_bango FROM target_horses)"
+        )
+    else:
+        hist_where = (
+            "WHERE u2.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)"
+        )
+
+    return f"horse_hist AS MATERIALIZED (\n{_HORSE_HIST_BODY}\n        {hist_where}\n    )"
+
 
 def analyze_entry_attr_chakudo(
     manager: ConnectionManager,
@@ -21,6 +76,9 @@ def analyze_entry_attr_chakudo(
     condition: RaceCondition | None = None,
 ) -> ChakudoResult:
     """出走馬属性別の着度数・勝率・回収率を集計する.
+
+    相関サブクエリを避けるため、対象馬を事前に target_horses CTE で絞り込み、
+    その馬の全履歴を horse_hist CTE で一括取得した後、属性値を集計する。
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
@@ -41,45 +99,55 @@ def analyze_entry_attr_chakudo(
         params: list[Any] = []
         cte_parts: list[str] = []
 
-        attr_cte, attr_join_sql, attr_val_expr = _build_attr_sql(attr_def.source, params)
-        if attr_cte:
-            cte_parts.append(attr_cte)
-
         cte_parts.append(build_payout_ctes())
 
-        where_parts: list[str] = [
+        target_where_parts: list[str] = [
             "u.kakutei_chakujun ~ '^[0-9]{2}$'",
             "u.kakutei_chakujun != '00'",
         ]
         if condition is not None:
-            where_parts.extend(build_race_condition_where(condition, params))
+            target_where_parts.extend(build_race_condition_where(condition, params))
+        target_where = "\n          AND ".join(target_where_parts)
 
-        where_clause = "\n              AND ".join(where_parts)
+        cte_parts.append(
+            f"""target_horses AS MATERIALIZED (
+        SELECT DISTINCT u.ketto_toroku_bango, u.race_code,
+               r.kaisai_nen, r.kaisai_gappi, u.kishu_code,
+               u.kakutei_chakujun, u.umaban
+        FROM umagoto_race_joho u
+        JOIN race_shosai r ON u.race_code = r.race_code
+        WHERE {target_where}
+    )"""
+        )
+
+        cte_parts.append(_build_horse_hist_cte(attr_def.source, params))
+
+        attr_cte, attr_join_sql = _build_attr_cte(attr_def.source, params)
+        cte_parts.append(attr_cte)
+
         cte_parts.append(
             f"""base AS (
-            SELECT
-                {attr_val_expr} AS attr_val,
-                u.kakutei_chakujun,
-                u.umaban,
-                u.race_code
-            FROM umagoto_race_joho u
-            JOIN race_joho r ON u.race_code = r.race_code
-            {attr_join_sql}
-            WHERE {where_clause}
-        )"""
+        SELECT
+            attr_agg.attr_val,
+            th.kakutei_chakujun,
+            th.umaban,
+            th.race_code
+        FROM target_horses th
+        {attr_join_sql}
+    )"""
         )
 
         case_when = _build_case_when(attr_def.rows, params)
         order_by = _build_order_by(attr_def.rows, params)
         cte_parts.append(
             f"""grouped AS (
-            SELECT
-                {case_when} AS grp,
-                kakutei_chakujun,
-                umaban,
-                race_code
-            FROM base
-        )"""
+        SELECT
+            {case_when} AS grp,
+            kakutei_chakujun,
+            umaban,
+            race_code
+        FROM base
+    )"""
         )
 
         sql = f"""
@@ -124,146 +192,205 @@ def analyze_entry_attr_chakudo(
         return ChakudoResult(success=False, error=str(e))
 
 
-def _build_attr_sql(
+def _build_attr_cte(
     source: AttrSource,
     params: list[Any],
-) -> tuple[str, str, str]:
-    """source.type に応じた属性値CTE・JOIN句・attr_val式を生成する.
+) -> tuple[str, str]:
+    """source.type に応じた attr_agg CTE と base への JOIN 句を返す.
+
+    target_horses / horse_hist CTE が事前定義済みであることを前提とする。
 
     Args:
         source (AttrSource): 属性算出方法の定義
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
-        str: CTE SQL文字列（不要な場合は空文字）
-        str: JOIN句（不要な場合は空文字）
-        str: attr_val を表すSQL式
+        str: attr_agg CTE SQL
+        str: base CTE への JOIN 句
 
     Raises:
         ValueError: source.type が未対応の場合
     """
     if source.type == "past_finish_count":
-        return _build_past_finish_count_sql(source, params)
+        return _build_past_finish_count_cte(source, params)
     if source.type == "career_count":
-        return _build_career_count_sql()
+        return _build_career_count_cte()
     if source.type == "prev_race_name":
-        return _build_prev_race_name_sql()
+        return _build_prev_race_name_cte()
     if source.type == "debut_venue":
-        return _build_debut_venue_sql()
+        return _build_debut_venue_cte(source, params)
     if source.type == "jockey_continuity":
-        return _build_jockey_continuity_sql()
+        return _build_jockey_continuity_cte()
     if source.type == "sire_condition_finisher":
-        return _build_sire_condition_finisher_sql(source, params)
+        return _build_sire_condition_finisher_cte(source, params)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
-def _build_past_finish_count_sql(
+def _build_past_finish_count_cte(
     source: AttrSource,
     params: list[Any],
-) -> tuple[str, str, str]:
-    """past_finish_count 用のattr_val式を生成する（対象レース以前に限定）."""
-    where_parts = [
-        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
-        "(r2.kaisai_nen || r2.kaisai_tsuki_nichi) < (r.kaisai_nen || r.kaisai_tsuki_nichi)",
-        "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
-        "u2.kakutei_chakujun != '00'",
-        "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
+) -> tuple[str, str]:
+    """past_finish_count 用の attr_agg CTE を生成する.
+
+    horse_hist から対象レース以前の入着回数を集計する。
+    """
+    hist_filter_parts = [
+        "h.hist_chakujun ~ '^[0-9]{2}$'",
+        "h.hist_chakujun != '00'",
+        "CAST(h.hist_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
     params.append(int(source.top_n))
     if source.grade_codes:
-        where_parts.append("r2.grade_code = ANY(%s)")
+        hist_filter_parts.append("h.hist_grade_code = ANY(%s)")
         params.append(source.grade_codes)
     if source.keibajo_code:
-        where_parts.append("r2.keibajo_code = %s")
+        hist_filter_parts.append("h.hist_keibajo_code = %s")
         params.append(source.keibajo_code)
     if source.kyori:
-        where_parts.append("r2.kyori = %s")
-        params.append(source.kyori)
-    where_sql = "\n              AND ".join(where_parts)
-    attr_val_expr = f"""(
-            SELECT COUNT(*)
-            FROM umagoto_race_joho u2
-            JOIN race_joho r2 ON u2.race_code = r2.race_code
-            WHERE {where_sql}
-        )"""
-    return "", "", attr_val_expr
-
-
-def _build_career_count_sql() -> tuple[str, str, str]:
-    """career_count 用のattr_val式を生成する（対象レース以前に限定）."""
-    attr_val_expr = """(
-            SELECT COUNT(*)
-            FROM umagoto_race_joho u2
-            JOIN race_joho r2 ON u2.race_code = r2.race_code
-            WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango
-              AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi) < (r.kaisai_nen || r.kaisai_tsuki_nichi)
-              AND u2.kakutei_chakujun ~ '^[0-9]{2}$'
-              AND u2.kakutei_chakujun != '00'
-        )"""
-    return "", "", attr_val_expr
-
-
-def _build_prev_race_name_sql() -> tuple[str, str, str]:
-    """prev_race_name 用のattr_val式を生成する."""
-    attr_val_expr = """(
-            SELECT r2.race_name
-            FROM umagoto_race_joho u2
-            JOIN race_joho r2 ON u2.race_code = r2.race_code
-            WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango
-              AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi)
-                  < (r.kaisai_nen || r.kaisai_tsuki_nichi)
-            ORDER BY r2.kaisai_nen DESC, r2.kaisai_tsuki_nichi DESC
-            LIMIT 1
-        )"""
-    return "", "", attr_val_expr
-
-
-def _build_debut_venue_sql() -> tuple[str, str, str]:
-    """debut_venue 用のattr_val式を生成する."""
-    attr_val_expr = """(
-            SELECT r2.keibajo_code
-            FROM umagoto_race_joho u2
-            JOIN race_joho r2 ON u2.race_code = r2.race_code
-            WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango
-            ORDER BY r2.kaisai_nen, r2.kaisai_tsuki_nichi
-            LIMIT 1
-        )"""
-    return "", "", attr_val_expr
-
-
-def _build_jockey_continuity_sql() -> tuple[str, str, str]:
-    """jockey_continuity 用のattr_val式を生成する."""
-    prev_sql = (
-        "(SELECT u2.kishu_code"
-        " FROM umagoto_race_joho u2"
-        " JOIN race_joho r2 ON u2.race_code = r2.race_code"
-        " WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango"
-        "   AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi)"
-        "       < (r.kaisai_nen || r.kaisai_tsuki_nichi)"
-        " ORDER BY r2.kaisai_nen DESC, r2.kaisai_tsuki_nichi DESC"
-        " LIMIT 1)"
+        hist_filter_parts.append("h.hist_kyori = %s")
+        params.append(int(source.kyori))
+    hist_filter = "\n            AND ".join(hist_filter_parts)
+    cte = f"""attr_agg AS (
+        SELECT t.ketto_toroku_bango, t.race_code,
+               COUNT(h.hist_nen) AS attr_val
+        FROM target_horses t
+        LEFT JOIN horse_hist h
+            ON h.ketto_toroku_bango = t.ketto_toroku_bango
+           AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+           AND {hist_filter}
+        GROUP BY t.ketto_toroku_bango, t.race_code
+    )"""
+    join = (
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
-    past_sql = (
-        "(SELECT u2.kishu_code"
-        " FROM umagoto_race_joho u2"
-        " JOIN race_joho r2 ON u2.race_code = r2.race_code"
-        " WHERE u2.ketto_toroku_bango = u.ketto_toroku_bango"
-        "   AND (r2.kaisai_nen || r2.kaisai_tsuki_nichi)"
-        "       < (r.kaisai_nen || r.kaisai_tsuki_nichi))"
-    )
-    attr_val_expr = (
-        f"CASE WHEN u.kishu_code = {prev_sql} THEN '継続'"
-        f" WHEN u.kishu_code IN {past_sql} THEN '乗り戻り'"
-        " ELSE 'テン乗り' END"
-    )
-    return "", "", attr_val_expr
+    return cte, join
 
 
-def _build_sire_condition_finisher_sql(
+def _build_career_count_cte() -> tuple[str, str]:
+    """career_count 用の attr_agg CTE を生成する.
+
+    horse_hist から対象レース以前の出走回数を集計する。
+    """
+    cte = """attr_agg AS (
+        SELECT t.ketto_toroku_bango, t.race_code,
+               COUNT(h.hist_nen) AS attr_val
+        FROM target_horses t
+        LEFT JOIN horse_hist h
+            ON h.ketto_toroku_bango = t.ketto_toroku_bango
+           AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+           AND h.hist_chakujun ~ '^[0-9]{2}$'
+           AND h.hist_chakujun != '00'
+        GROUP BY t.ketto_toroku_bango, t.race_code
+    )"""
+    join = (
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
+    )
+    return cte, join
+
+
+def _build_prev_race_name_cte() -> tuple[str, str]:
+    """prev_race_name 用の attr_agg CTE を生成する.
+
+    horse_hist から対象レース直前のレース名を取得する。
+    """
+    cte = """attr_agg AS (
+        SELECT DISTINCT ON (t.ketto_toroku_bango, t.race_code)
+            t.ketto_toroku_bango, t.race_code,
+            h.hist_race_name AS attr_val
+        FROM target_horses t
+        JOIN horse_hist h
+            ON h.ketto_toroku_bango = t.ketto_toroku_bango
+           AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+           AND h.hist_race_name IS NOT NULL
+           AND TRIM(h.hist_race_name) != ''
+        ORDER BY t.ketto_toroku_bango, t.race_code, h.hist_nen DESC, h.hist_gappi DESC
+    )"""
+    join = (
+        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
+    )
+    return cte, join
+
+
+def _build_debut_venue_cte(source: AttrSource, params: list[Any]) -> tuple[str, str]:
+    """debut_venue 用の attr_agg CTE を生成する.
+
+    horse_hist からデビュー戦の競馬場コードを取得する。
+    source.allowed_values が指定されている場合はその競馬場コードのみ対象とする。
+    """
+    where_parts = [
+        "hist_chakujun ~ '^[0-9]{2}$'",
+        "hist_chakujun != '00'",
+    ]
+    if source.allowed_values:
+        where_parts.append("hist_keibajo_code = ANY(%s)")
+        params.append(source.allowed_values)
+    where = "\n          AND ".join(where_parts)
+    cte = f"""attr_agg AS (
+        SELECT DISTINCT ON (ketto_toroku_bango)
+            ketto_toroku_bango,
+            hist_keibajo_code AS attr_val
+        FROM horse_hist
+        WHERE {where}
+        ORDER BY ketto_toroku_bango, hist_nen, hist_gappi
+    )"""
+    join = (
+        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+    )
+    return cte, join
+
+
+def _build_jockey_continuity_cte() -> tuple[str, str]:
+    """jockey_continuity 用の attr_agg CTE を生成する.
+
+    直前の騎手と過去騎手一覧を horse_hist から取得し、継続/乗り戻り/テン乗りを判定する。
+    """
+    cte = """prev_jockey AS (
+        SELECT DISTINCT ON (t.ketto_toroku_bango, t.race_code)
+            t.ketto_toroku_bango, t.race_code,
+            h.hist_kishu_code AS prev_kishu_code
+        FROM target_horses t
+        JOIN horse_hist h
+            ON h.ketto_toroku_bango = t.ketto_toroku_bango
+           AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+        ORDER BY t.ketto_toroku_bango, t.race_code, h.hist_nen DESC, h.hist_gappi DESC
+    ), past_jockeys AS (
+        SELECT t.ketto_toroku_bango, t.race_code,
+               array_agg(h.hist_kishu_code) AS kishu_codes
+        FROM target_horses t
+        JOIN horse_hist h
+            ON h.ketto_toroku_bango = t.ketto_toroku_bango
+           AND (h.hist_nen || h.hist_gappi) < (t.kaisai_nen || t.kaisai_gappi)
+        GROUP BY t.ketto_toroku_bango, t.race_code
+    ), attr_agg AS (
+        SELECT t.ketto_toroku_bango, t.race_code,
+               CASE
+                   WHEN t.kishu_code = pj.prev_kishu_code THEN '継続'
+                   WHEN t.kishu_code = ANY(paj.kishu_codes) THEN '乗り戻り'
+                   ELSE 'テン乗り'
+               END AS attr_val
+        FROM target_horses t
+        LEFT JOIN prev_jockey pj
+            ON pj.ketto_toroku_bango = t.ketto_toroku_bango
+           AND pj.race_code = t.race_code
+        LEFT JOIN past_jockeys paj
+            ON paj.ketto_toroku_bango = t.ketto_toroku_bango
+           AND paj.race_code = t.race_code
+    )"""
+    join = (
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
+    )
+    return cte, join
+
+
+def _build_sire_condition_finisher_cte(
     source: AttrSource,
     params: list[Any],
-) -> tuple[str, str, str]:
-    """sire_condition_finisher 用のattr_val式を生成する."""
+) -> tuple[str, str]:
+    """sire_condition_finisher 用の attr_agg CTE を生成する."""
     cond_parts: list[str] = [
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
@@ -273,28 +400,40 @@ def _build_sire_condition_finisher_sql(
     if source.condition is not None:
         cond_parts.extend(build_race_condition_where(source.condition, params, race_alias="r2"))
     cond_where = "\n                  AND ".join(cond_parts)
-    attr_val_expr = (
-        "CASE WHEN km2.ketto1_bamei IN (\n"
-        "                SELECT u2.bamei\n"
-        "                FROM umagoto_race_joho u2\n"
-        "                JOIN race_joho r2 ON u2.race_code = r2.race_code\n"
-        f"                WHERE {cond_where}\n"
-        "            ) THEN 1 ELSE 0 END"
+    cte = f"""finisher_sires AS (
+        SELECT DISTINCT km2.ketto1_bamei AS sire_name
+        FROM umagoto_race_joho u2
+        JOIN race_shosai r2 ON u2.race_code = r2.race_code
+        JOIN kyosoba_master2 km2 ON u2.ketto_toroku_bango = km2.ketto_toroku_bango
+        WHERE {cond_where}
+    ), attr_agg AS (
+        SELECT u.ketto_toroku_bango, u.race_code,
+               CASE WHEN km2.ketto1_bamei IN (SELECT sire_name FROM finisher_sires)
+                    THEN 1 ELSE 0 END AS attr_val
+        FROM target_horses u
+        JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango
+    )"""
+    join = (
+        "JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
+        " AND attr_agg.race_code = th.race_code"
     )
-    join_sql = "JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango"
-    return "", join_sql, attr_val_expr
+    return cte, join
 
 
 def _build_case_when(rows: RowsDef, params: list[Any]) -> str:
     """rowsからCASE WHEN式を生成する.
+
+    rowsが空の場合（dynamic type）はattr_valをそのまま返す。
 
     Args:
         rows (RowsDef): グループ定義辞書
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
-        str: CASE WHEN式
+        str: CASE WHEN式またはattr_val式
     """
+    if not rows:
+        return "attr_val::text"
     cases = []
     for label, cond in rows.items():
         if isinstance(cond, tuple):
@@ -313,6 +452,8 @@ def _build_case_when(rows: RowsDef, params: list[Any]) -> str:
 def _build_order_by(rows: RowsDef, params: list[Any]) -> str:
     """rows定義順でソートするORDER BY式を生成する.
 
+    rowsが空の場合（dynamic type）はgrpでソートする。
+
     Args:
         rows (RowsDef): グループ定義辞書
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
@@ -320,6 +461,8 @@ def _build_order_by(rows: RowsDef, params: list[Any]) -> str:
     Returns:
         str: ORDER BY式
     """
+    if not rows:
+        return "grp"
     cases = []
     for idx, label in enumerate(rows.keys()):
         cases.append(f"WHEN %s THEN {idx}")

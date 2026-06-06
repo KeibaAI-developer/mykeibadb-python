@@ -74,7 +74,7 @@ def _get_chokyo_by_race(
             SELECT u.ketto_toroku_bango,
                    r.kaisai_nen || r.kaisai_gappi AS race_date
             FROM umagoto_race_joho u
-            JOIN race_joho r ON u.race_code = r.race_code
+            JOIN race_shosai r ON u.race_code = r.race_code
             WHERE u.race_code = %s
               AND u.umaban = %s
         """
@@ -89,7 +89,7 @@ def _get_chokyo_by_race(
         prev_sql = """
             SELECT r2.kaisai_nen || r2.kaisai_gappi AS prev_race_date
             FROM umagoto_race_joho u2
-            JOIN race_joho r2 ON u2.race_code = r2.race_code
+            JOIN race_shosai r2 ON u2.race_code = r2.race_code
             WHERE u2.ketto_toroku_bango = %s
               AND (r2.kaisai_nen || r2.kaisai_gappi) < %s
               AND u2.kakutei_chakujun ~ '^[0-9]{2}$'
@@ -412,7 +412,7 @@ def analyze_chokyo_seiseki(
                               AND {_HANRO_VALID}
                         ) AS has_hanro
                     FROM umagoto_race_joho u
-                    JOIN race_joho r ON u.race_code = r.race_code
+                    JOIN race_shosai r ON u.race_code = r.race_code
                     WHERE {where_clause}
                 ) sq
             )

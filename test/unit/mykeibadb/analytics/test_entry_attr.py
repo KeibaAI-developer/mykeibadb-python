@@ -43,7 +43,7 @@ def test_analyze_entry_attr_past_finish_count_returns_success(mocker: MockerFixt
 
 
 def test_analyze_entry_attr_past_finish_count_sql_contains_subquery(mocker: MockerFixture) -> None:
-    """past_finish_count 指定時に相関サブクエリが SQL に含まれ、過去レース限定条件がある."""
+    """past_finish_count 指定時に horse_hist CTE と COUNT が SQL に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -55,13 +55,15 @@ def test_analyze_entry_attr_past_finish_count_sql_contains_subquery(mocker: Mock
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "SELECT COUNT(*)" in sql
-    assert "kaisai_tsuki_nichi" in sql
-    assert 3 in params  # top_n がパラメータでバインドされている
+    assert "horse_hist" in sql
+    assert "COUNT(h.hist_nen)" in sql
+    assert 3 in params
+    assert ["A"] in params
+    assert "SELECT race_code FROM race_shosai" in sql
 
 
 def test_analyze_entry_attr_career_count_sql_contains_subquery(mocker: MockerFixture) -> None:
-    """career_count 指定時に相関サブクエリが SQL に含まれ、過去レース限定条件がある."""
+    """career_count 指定時に horse_hist CTE と COUNT が SQL に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -72,12 +74,12 @@ def test_analyze_entry_attr_career_count_sql_contains_subquery(mocker: MockerFix
     analyze_entry_attr_chakudo(manager, attr_def)
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "SELECT COUNT(*)" in sql
-    assert "kaisai_tsuki_nichi" in sql
+    assert "horse_hist" in sql
+    assert "COUNT(h.hist_nen)" in sql
 
 
 def test_analyze_entry_attr_prev_race_name_sql_contains_subquery(mocker: MockerFixture) -> None:
-    """prev_race_name 指定時にサブクエリが SQL に含まれる."""
+    """prev_race_name 指定時に hist_race_name と DISTINCT ON が SQL に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_result_row()])
 
@@ -88,8 +90,8 @@ def test_analyze_entry_attr_prev_race_name_sql_contains_subquery(mocker: MockerF
     analyze_entry_attr_chakudo(manager, attr_def)
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "r2.race_name" in sql
-    assert "kaisai_tsuki_nichi" in sql
+    assert "hist_race_name" in sql
+    assert "DISTINCT ON" in sql
 
 
 def test_analyze_entry_attr_debut_venue_sql_contains_subquery(mocker: MockerFixture) -> None:
@@ -104,7 +106,40 @@ def test_analyze_entry_attr_debut_venue_sql_contains_subquery(mocker: MockerFixt
     analyze_entry_attr_chakudo(manager, attr_def)
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "r2.keibajo_code" in sql
+    assert "hist_keibajo_code" in sql
+
+
+def test_analyze_entry_attr_debut_venue_allowed_values_filters_sql(mocker: MockerFixture) -> None:
+    """debut_venue で allowed_values 指定時に ANY(%s) が SQL に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_result_row("05")])
+
+    attr_def = EntryAttrDef(
+        source=AttrSource(type="debut_venue", allowed_values=["01", "05"]),
+        rows={"東京": "05"},
+    )
+    analyze_entry_attr_chakudo(manager, attr_def)
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "hist_keibajo_code = ANY(%s)" in sql
+    assert ["01", "05"] in params
+
+
+def test_analyze_entry_attr_prev_race_name_filters_empty_race_name(mocker: MockerFixture) -> None:
+    """prev_race_name 指定時に空レース名をフィルタする条件が SQL に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_result_row("有馬記念")])
+
+    attr_def = EntryAttrDef(
+        source=AttrSource(type="prev_race_name"),
+        rows={"有馬記念": "有馬記念"},
+    )
+    analyze_entry_attr_chakudo(manager, attr_def)
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "hist_race_name IS NOT NULL" in sql
+    assert "TRIM(h.hist_race_name) != ''" in sql
 
 
 def test_analyze_entry_attr_jockey_continuity_sql(mocker: MockerFixture) -> None:
@@ -121,8 +156,8 @@ def test_analyze_entry_attr_jockey_continuity_sql(mocker: MockerFixture) -> None
     assert result.success is True
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "kishu_code" in sql
-    assert "SELECT u2.kishu_code" in sql
-    assert "LIMIT 1" in sql
+    assert "hist_kishu_code" in sql
+    assert "DISTINCT ON" in sql
     assert "継続" in sql
     assert "乗り戻り" in sql
     assert "テン乗り" in sql
@@ -148,7 +183,7 @@ def test_analyze_entry_attr_sire_condition_finisher_sql(mocker: MockerFixture) -
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert "kyosoba_master2" in sql
     assert "ketto1_bamei" in sql
-    assert "r2.kyori = %s" in sql
+    assert "TRIM(r2.kyori)::INTEGER = %s" in sql
     assert 2400 in params
 
 

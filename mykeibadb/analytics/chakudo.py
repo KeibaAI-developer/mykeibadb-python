@@ -198,7 +198,7 @@ def _run_chakudo_sql(
                 u.umaban,
                 u.race_code
             FROM umagoto_race_joho u
-            JOIN race_joho r ON u.race_code = r.race_code
+            JOIN race_shosai r ON u.race_code = r.race_code
             {join_sql}
             {extra_join}
             WHERE {where_clause}
