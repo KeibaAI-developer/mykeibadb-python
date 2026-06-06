@@ -21,6 +21,11 @@ def analyze_chakudo(
 ) -> ChakudoResult:
     """グループ別着度数・勝率・回収率を集計する.
 
+    umagoto_race_joho(u) と race_shosai(r) の列のみで完結するグループ化に使用する。
+    枠番・人気・脚質など u.* / r.* の列をそのまま group_expr に渡せばよい場合が対象。
+    kyosoba_master2 JOIN が必要な主体（種牡馬・生産者等）や name/code フィルタが
+    必要な場合は analyze_subject_chakudo を使用すること。
+
     Args:
         manager (ConnectionManager): DB接続マネージャ
         group_expr (str): GROUP BY に使用するSQL式
@@ -57,6 +62,10 @@ def analyze_subject_chakudo(
 
     主体名でグループ化し、name（部分一致）またはcode（完全一致）でフィルタする。
     code指定時はcodeを優先する。種牡馬/生産者はcode非対応のためnameのみ。
+
+    種牡馬・生産者など kyosoba_master2 JOIN が必要な主体、または騎手・調教師など
+    name/code フィルタが必要な場合に使用する。u.* / r.* のみで完結するグループ化
+    （枠番・人気・脚質等）は analyze_chakudo を使用すること。
 
     Args:
         manager (ConnectionManager): DB接続マネージャ

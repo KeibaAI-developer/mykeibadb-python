@@ -162,7 +162,16 @@ class RaceCondition:
 
 
 class Subject(Enum):
-    """着度数集計の主体."""
+    """着度数集計の主体.
+
+    Attributes:
+        UMA (str): 馬
+        KISHU (str): 騎手
+        CHOKYOSHI (str): 調教師
+        BANUSHI (str): 馬主
+        SIRE (str): 父馬
+        SEISANSHA (str): 生産者
+    """
 
     UMA = "uma"
     KISHU = "kishu"
