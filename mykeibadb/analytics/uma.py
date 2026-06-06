@@ -83,7 +83,15 @@ def get_uma_rekisen(
 
 
 def _row_to_rekisen_dict(r: "pd.Series[Any]") -> dict[str, Any]:
-    """競走成績DataFrameの1行をdict変換する."""
+    """競走成績DataFrameの1行をdict変換する.
+
+    Args:
+        r (pd.Series[Any]): umagoto_race_joho と race_shosai を JOIN した1行
+
+    Returns:
+        dict[str, Any]: ketto_toroku_bango, bamei, race_date, keibajo_code,
+            race_code, umaban, kakutei_chakujun, kyori, track_code, grade_code
+    """
     return {
         "ketto_toroku_bango": str(r["ketto_toroku_bango"]),
         "bamei": str(r["bamei"]),

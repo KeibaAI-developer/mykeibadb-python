@@ -190,7 +190,18 @@ def _get_chokyo_by_race(
     race_code: str,
     horse_num: int,
 ) -> dict[str, Any]:
-    """レースコード・馬番から調教データを取得する."""
+    """レースコード・馬番から調教データを取得する.
+
+    Args:
+        manager (ConnectionManager): DB接続マネージャ
+        race_code (str): レースコード
+        horse_num (int): 馬番
+
+    Returns:
+        dict[str, Any]: success フラグと調教データのリスト。
+            キー: success, race_date, ketto_toroku_bango,
+                  wood_records（list）, hanro_records（list）
+    """
     try:
         umaban_str = f"{horse_num:02}"
         info_sql = """
@@ -293,7 +304,19 @@ def _get_chokyo_by_ketto(
     date_from: str | None,
     date_to: str | None,
 ) -> dict[str, Any]:
-    """血統登録番号から調教データを取得する."""
+    """血統登録番号から調教データを取得する.
+
+    Args:
+        manager (ConnectionManager): DB接続マネージャ
+        ketto_toroku_bango (str): 血統登録番号
+        date_from (str | None): 調教日下限（yyyymmdd）
+        date_to (str | None): 調教日上限（yyyymmdd）
+
+    Returns:
+        dict[str, Any]: success フラグと調教データのリスト。
+            キー: success, race_date, ketto_toroku_bango,
+                  wood_records（list）, hanro_records（list）
+    """
     try:
         wood_parts: list[str] = ["w.ketto_toroku_bango = %s", _WOOD_VALID]
         wood_params: list[Any] = [ketto_toroku_bango]
@@ -349,7 +372,14 @@ def _get_chokyo_by_ketto(
 
 
 def _row_to_wood_record(r: "pd.Series[Any]") -> dict[str, Any]:
-    """ウッドチップ調教DataFrameの1行をdict変換する."""
+    """ウッドチップ調教DataFrameの1行をdict変換する.
+
+    Args:
+        r (pd.Series[Any]): woodchip_chokyo の1行
+
+    Returns:
+        dict[str, Any]: course_type, tracen, date, jikoku, time_6f/5f/4f, lap_1f/2f/3f
+    """
     tracen = "美浦" if str(r["tracen_kubun"]) == "0" else "栗東"
     return {
         "course_type": "ウッドチップ",
@@ -366,7 +396,14 @@ def _row_to_wood_record(r: "pd.Series[Any]") -> dict[str, Any]:
 
 
 def _row_to_hanro_record(r: "pd.Series[Any]") -> dict[str, Any]:
-    """坂路調教DataFrameの1行をdict変換する."""
+    """坂路調教DataFrameの1行をdict変換する.
+
+    Args:
+        r (pd.Series[Any]): hanro_chokyo の1行
+
+    Returns:
+        dict[str, Any]: course_type, tracen, date, jikoku, time_4f, lap_1f/2f/3f/4f
+    """
     tracen = "美浦" if str(r["tracen_kubun"]) == "0" else "栗東"
     return {
         "course_type": "坂路",

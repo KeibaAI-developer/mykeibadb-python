@@ -265,7 +265,16 @@ def _build_debut_venue_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """debut_venue HistoryFilter のサブクエリを生成する."""
+    """debut_venue HistoryFilter のサブクエリを生成する.
+
+    Args:
+        source (AttrSource): 属性算出方法（debut_venue）
+        cond (tuple[int, int] | int | str): デビュー競馬場コードへの比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     hist_valid = "\n                  AND ".join(_HIST_VALID_PARTS)
     debut_info_sq = (
         f"SELECT DISTINCT ON (u2.ketto_toroku_bango)\n"
@@ -297,7 +306,16 @@ def _build_past_finish_count_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """past_finish_count HistoryFilter のサブクエリを生成する."""
+    """past_finish_count HistoryFilter のサブクエリを生成する.
+
+    Args:
+        source (AttrSource): 属性算出方法（past_finish_count）
+        cond (tuple[int, int] | int | str): 過去N着以内回数への比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     hist_valid_parts = [
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
@@ -339,7 +357,15 @@ def _build_career_count_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """career_count HistoryFilter のサブクエリを生成する."""
+    """career_count HistoryFilter のサブクエリを生成する.
+
+    Args:
+        cond (tuple[int, int] | int | str): キャリア戦数への比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     hist_parts = [
         "u2.ketto_toroku_bango = u.ketto_toroku_bango",
         "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
@@ -368,7 +394,15 @@ def _build_prev_race_name_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """prev_race_name HistoryFilter のサブクエリを生成する."""
+    """prev_race_name HistoryFilter のサブクエリを生成する.
+
+    Args:
+        cond (tuple[int, int] | int | str): 前走レース名への比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     hist_parts = [
         "u2.ketto_toroku_bango = u.ketto_toroku_bango",
         "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
@@ -400,7 +434,15 @@ def _build_jockey_continuity_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """jockey_continuity HistoryFilter のサブクエリを生成する."""
+    """jockey_continuity HistoryFilter のサブクエリを生成する.
+
+    Args:
+        cond (tuple[int, int] | int | str): 騎手継続性ラベルへの比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     prev_hist_parts = [
         "u2.ketto_toroku_bango = u.ketto_toroku_bango",
         "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
@@ -443,7 +485,16 @@ def _build_sire_condition_finisher_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
 ) -> str:
-    """sire_condition_finisher HistoryFilter のサブクエリを生成する."""
+    """sire_condition_finisher HistoryFilter のサブクエリを生成する.
+
+    Args:
+        source (AttrSource): 属性算出方法（sire_condition_finisher）
+        cond (tuple[int, int] | int | str): 父馬の条件戦好走有無（0/1）への比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
     sire_cond_parts = [
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
