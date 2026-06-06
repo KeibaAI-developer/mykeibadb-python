@@ -111,8 +111,13 @@ def build_subject_filter_subquery(f: SubjectFilter, params: list[Any]) -> str:
 
     Raises:
         ValueError: code非対応の主体にcodeを指定した場合
+        ValueError: code と name の両方が None の場合
     """
     mapping = SUBJECT_MAP[f.subject]
+    if f.code is None and f.name is None:
+        raise ValueError(
+            "SubjectFilter には code または name のどちらかを指定してください。"
+        )
     if f.code is not None and mapping.code_col is None:
         raise ValueError(
             f"{f.subject.value} はコード指定に対応していません。name を使用してください。"
