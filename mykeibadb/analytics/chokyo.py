@@ -47,9 +47,7 @@ def get_uma_chokyo(
     use_race = race_code is not None or horse_num is not None
     use_ketto = ketto_toroku_bango is not None
     if use_race and use_ketto:
-        raise ValueError(
-            "race_code+horse_num と ketto_toroku_bango は同時に指定できません。"
-        )
+        raise ValueError("race_code+horse_num と ketto_toroku_bango は同時に指定できません。")
     if use_race:
         if race_code is None or horse_num is None:
             raise ValueError("race_code と horse_num は両方同時に指定してください。")
@@ -57,9 +55,135 @@ def get_uma_chokyo(
     if use_ketto:
         assert ketto_toroku_bango is not None
         return _get_chokyo_by_ketto(manager, ketto_toroku_bango, date_from, date_to)
-    raise ValueError(
-        "race_code+horse_num または ketto_toroku_bango のいずれかを指定してください。"
-    )
+    raise ValueError("race_code+horse_num または ketto_toroku_bango のいずれかを指定してください。")
+
+
+def analyze_chokyo_debut_seiseki(
+    manager: ConnectionManager,
+    debut_date_from: str,
+    debut_date_to: str,
+    condition: ChokyoCondition,
+) -> dict[str, Any]:
+    """デビュー前調教条件を満たした馬のデビュー後勝利率を集計する.
+
+    指定期間にデビューした馬のうち、デビュー前の調教データが ChokyoCondition を
+    満たす馬を抽出し、同期間内の勝利率を集計する。
+
+    Args:
+        manager (ConnectionManager): DB接続マネージャ
+        debut_date_from (str): デビュー期間開始日（yyyymmdd形式）
+        debut_date_to (str): デビュー期間終了日（yyyymmdd形式）
+        condition (ChokyoCondition): 調教閾値条件のリスト
+
+    Returns:
+        dict[str, Any]: success フラグと集計結果。
+            キー: success, debut_date_from, debut_date_to, total, winners, win_rate
+
+    Raises:
+        ValueError: condition内に未対応の course または metric が含まれる場合、もしくは furlong が正の整数でない場合
+
+    Note:
+        condition が空リストの場合はデビュー期間の全馬を対象として集計する。
+    """
+    for t in condition:
+        resolve_threshold_col(t)
+
+    wood_thresholds = [t for t in condition if t.course == "wood"]
+    hanro_thresholds = [t for t in condition if t.course == "hanro"]
+    use_wood = bool(wood_thresholds)
+    use_hanro = bool(hanro_thresholds)
+
+    try:
+        cte_parts: list[str] = []
+        sql_params: list[Any] = []
+
+        cte_parts.append("""
+    debut_horses AS (
+        SELECT ketto_toroku_bango,
+               MIN(kaisai_nen || kaisai_gappi) AS debut_date
+        FROM umagoto_race_joho
+        WHERE kakutei_chakujun ~ '^[0-9]{2}$'
+          AND kakutei_chakujun != '00'
+        GROUP BY ketto_toroku_bango
+        HAVING MIN(kaisai_nen || kaisai_gappi) BETWEEN %s AND %s
+    )""")
+        sql_params.extend([debut_date_from, debut_date_to])
+
+        if use_wood:
+            wood_conds: list[str] = []
+            for t in wood_thresholds:
+                wood_conds.extend(build_threshold_where(t, "w", sql_params))
+            wood_where = " AND ".join(wood_conds)
+            cte_parts.append(f"""
+    wood_qualified AS (
+        SELECT DISTINCT w.ketto_toroku_bango
+        FROM woodchip_chokyo w
+        JOIN debut_horses d ON w.ketto_toroku_bango = d.ketto_toroku_bango
+        WHERE w.chokyo_nengappi < d.debut_date
+          AND {wood_where}
+    )""")
+
+        if use_hanro:
+            hanro_conds: list[str] = []
+            for t in hanro_thresholds:
+                hanro_conds.extend(build_threshold_where(t, "h", sql_params))
+            hanro_where = " AND ".join(hanro_conds)
+            cte_parts.append(f"""
+    hanro_qualified AS (
+        SELECT DISTINCT h.ketto_toroku_bango
+        FROM hanro_chokyo h
+        JOIN debut_horses d ON h.ketto_toroku_bango = d.ketto_toroku_bango
+        WHERE h.chokyo_nengappi < d.debut_date
+          AND {hanro_where}
+    )""")
+
+        cte_parts.append("""
+    winners AS (
+        SELECT DISTINCT ketto_toroku_bango
+        FROM umagoto_race_joho
+        WHERE kakutei_chakujun = '01'
+          AND kaisai_nen || kaisai_gappi BETWEEN %s AND %s
+    )""")
+        sql_params.extend([debut_date_from, debut_date_to])
+
+        if use_wood and use_hanro:
+            qualified_from = (
+                "(SELECT ketto_toroku_bango FROM wood_qualified "
+                "INTERSECT "
+                "SELECT ketto_toroku_bango FROM hanro_qualified) qualified"
+            )
+        elif use_wood:
+            qualified_from = "wood_qualified qualified"
+        elif use_hanro:
+            qualified_from = "hanro_qualified qualified"
+        else:
+            qualified_from = "debut_horses qualified"
+
+        cte_sql = ",".join(cte_parts)
+        sql = f"""
+    WITH {cte_sql}
+    SELECT
+        COUNT(DISTINCT qualified.ketto_toroku_bango) AS total,
+        COUNT(DISTINCT CASE WHEN winners.ketto_toroku_bango IS NOT NULL
+            THEN qualified.ketto_toroku_bango END) AS winners
+    FROM {qualified_from}
+    LEFT JOIN winners ON qualified.ketto_toroku_bango = winners.ketto_toroku_bango
+        """
+
+        df = manager.fetch_dataframe(sql, params=tuple(sql_params))
+        row = df.iloc[0]
+        total = int(row["total"])
+        win_count = int(row["winners"])
+        return {
+            "success": True,
+            "debut_date_from": debut_date_from,
+            "debut_date_to": debut_date_to,
+            "total": total,
+            "winners": win_count,
+            "win_rate": round(win_count / total * 100, 1) if total > 0 else 0.0,
+        }
+    except MykeibaDBError as e:
+        return {"success": False, "error": str(e)}
 
 
 def _get_chokyo_by_race(
@@ -80,8 +204,13 @@ def _get_chokyo_by_race(
         """
         info_df = manager.fetch_dataframe(info_sql, params=(race_code, umaban_str))
         if info_df.empty:
-            return {"success": True, "race_date": None, "ketto_toroku_bango": None,
-                    "wood_records": [], "hanro_records": []}
+            return {
+                "success": True,
+                "race_date": None,
+                "ketto_toroku_bango": None,
+                "wood_records": [],
+                "hanro_records": [],
+            }
 
         ketto = str(info_df.iloc[0]["ketto_toroku_bango"])
         race_date = str(info_df.iloc[0]["race_date"])
