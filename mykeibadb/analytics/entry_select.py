@@ -410,9 +410,11 @@ def _build_fixed_group_label_expr(
     Returns:
         str: CASE WHEN式
     """
-    attr_expr = _build_attr_value_expr(source, params)
+    attr_params: list[Any] = []
+    attr_expr = _build_attr_value_expr(source, attr_params)
     when_clauses: list[str] = []
     for label, cond in rows.items():
+        params.extend(attr_params)
         if isinstance(cond, tuple):
             min_val, max_val = cond
             params.extend([int(min_val), int(max_val)])

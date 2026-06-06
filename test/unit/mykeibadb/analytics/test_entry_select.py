@@ -313,6 +313,28 @@ def test_select_entries_group_by_fixed_generates_case_when(mocker: MockerFixture
     assert "2〜5戦" in params
 
 
+def test_select_entries_group_by_fixed_past_finish_count_repeats_params(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_finish_count) で各WHEN句に attr params が重複して渡される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_finish_count", top_n=3),
+            rows={"0回": 0, "1回": 1, "2回以上": (2, 9999)},
+        ),
+    )
+
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    top_n_count = sum(1 for p in params if p == 3)
+    assert top_n_count == 3, f"top_n=3 は3回（WHEN句の数だけ）paramsに含まれるべき: {params}"
+
+
 def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
     mocker: MockerFixture,
 ) -> None:
