@@ -488,3 +488,84 @@ def test_select_entries_course_week_params_order(mocker: MockerFixture) -> None:
     course_kubun_idx = params.index("C")
     year_idx = params.index("2022")
     assert keibajo_idx < course_kubun_idx < year_idx
+
+
+# prev_race_col
+def test_select_entries_prev_race_col_fixed_uses_cte(mocker: MockerFixture) -> None:
+    """prev_race_col + fixed でCTE（target_horses/horse_hist/attr_agg）が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
+            rows={"逃げ": "1", "先行": "2", "差し": "3", "追込": "4"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "kyakushitsu_hantei" in sql
+
+
+def test_select_entries_prev_race_col_kyori_uses_kyori_int(mocker: MockerFixture) -> None:
+    """column=kyori 指定時に attr_agg が kyori_int を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyori"),
+            rows={"距離延長": (0, 1599), "同距離": 1600, "距離短縮": (1601, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyori_int" in sql
+
+
+def test_select_entries_prev_race_col_invalid_column_raises(mocker: MockerFixture) -> None:
+    """許可リスト外の column を指定すると ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="column"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(type="prev_race_col", column="kakutei_chakujun"),
+                rows={"1着": 1},
+            ),
+        )
+
+
+def test_horse_hist_cte_includes_kyakushitsu_hantei_and_kaisai_nen(
+    mocker: MockerFixture,
+) -> None:
+    """horse_hist CTE に kyakushitsu_hantei と target_kaisai_nen が含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
+            rows={"逃げ": "1"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyakushitsu_hantei" in sql
+    assert "target_kaisai_nen" in sql
