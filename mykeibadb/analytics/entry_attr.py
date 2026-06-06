@@ -66,24 +66,21 @@ def analyze_entry_attr_chakudo(
             target_where_parts.extend(build_race_condition_where(condition, params))
         target_where = "\n          AND ".join(target_where_parts)
 
-        cte_parts.append(
-            f"""target_horses AS MATERIALIZED (
+        cte_parts.append(f"""target_horses AS MATERIALIZED (
         SELECT DISTINCT u.ketto_toroku_bango, u.race_code,
                r.kaisai_nen, r.kaisai_gappi, u.kishu_code,
                u.kakutei_chakujun, u.umaban
         FROM umagoto_race_joho u
         JOIN race_shosai r ON u.race_code = r.race_code
         WHERE {target_where}
-    )"""
-        )
+    )""")
 
         cte_parts.append(_build_horse_hist_cte(attr_def.source, params))
 
         attr_cte, attr_join_sql = _build_attr_cte(attr_def.source, params)
         cte_parts.append(attr_cte)
 
-        cte_parts.append(
-            f"""base AS (
+        cte_parts.append(f"""base AS (
         SELECT
             attr_agg.attr_val,
             th.kakutei_chakujun,
@@ -91,21 +88,18 @@ def analyze_entry_attr_chakudo(
             th.race_code
         FROM target_horses th
         {attr_join_sql}
-    )"""
-        )
+    )""")
 
         case_when = _build_case_when(attr_def.rows, params)
         order_by = _build_order_by(attr_def.rows, params)
-        cte_parts.append(
-            f"""grouped AS (
+        cte_parts.append(f"""grouped AS (
         SELECT
             {case_when} AS grp,
             kakutei_chakujun,
             umaban,
             race_code
         FROM base
-    )"""
-        )
+    )""")
 
         sql = f"""
             WITH RECURSIVE {", ".join(cte_parts)}
@@ -334,9 +328,7 @@ def _build_debut_venue_cte(source: AttrSource, params: list[Any]) -> tuple[str, 
         WHERE {where}
         ORDER BY ketto_toroku_bango, hist_nen, hist_gappi
     )"""
-    join = (
-        "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
-    )
+    join = "LEFT JOIN attr_agg ON attr_agg.ketto_toroku_bango = th.ketto_toroku_bango"
     return cte, join
 
 

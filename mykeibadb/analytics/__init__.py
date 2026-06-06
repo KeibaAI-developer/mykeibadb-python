@@ -10,13 +10,13 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     Subject,
 )
-from mykeibadb.analytics.chakudo import analyze_chakudo, analyze_subject_chakudo
+from mykeibadb.analytics.chakudo import analyze_race_col_chakudo, analyze_subject_chakudo
 from mykeibadb.analytics.chokyo import analyze_chokyo_debut_seiseki, get_uma_chokyo
 from mykeibadb.analytics.entry_attr import analyze_entry_attr_chakudo
 from mykeibadb.analytics.uma import get_uma_rekisen
 
 __all__ = [
-    "analyze_chakudo",
+    "analyze_race_col_chakudo",
     "analyze_subject_chakudo",
     "analyze_entry_attr_chakudo",
     "get_uma_chokyo",
