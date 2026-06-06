@@ -35,6 +35,7 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
         "prev_race_name",
         "jockey_continuity",
         "prev_race_col",
+        "same_race_prev_year_finish",
     }
 )
 _PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset({"kyakushitsu_hantei", "kyori"})
@@ -442,6 +443,8 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
         return [_attr_agg_jockey_continuity()]
     if source.type == "prev_race_col":
         return [_attr_agg_prev_race_col(source)]
+    if source.type == "same_race_prev_year_finish":
+        return [_attr_agg_same_race_prev_year_finish(source, params)]
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -528,7 +531,9 @@ def _attr_agg_prev_race_name() -> str:
     return (
         "attr_agg AS (\n"
         "        SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        "               ketto_toroku_bango, target_race_code, kyosomei_hondai AS attr_val\n"
+        "               ketto_toroku_bango, target_race_code,\n"
+        "               kyosomei_hondai AS attr_val,\n"
+        "               keibajo_code !~ '^[0-9]' AS is_overseas\n"
         "        FROM horse_hist\n"
         "        WHERE kyosomei_hondai != ''\n"
         "        ORDER BY ketto_toroku_bango, target_race_code,\n"
@@ -596,6 +601,38 @@ def _attr_agg_prev_race_col(source: AttrSource) -> str:
     )
 
 
+def _attr_agg_same_race_prev_year_finish(source: AttrSource, params: list[Any]) -> str:
+    """same_race_prev_year_finish 用 attr_agg CTE を返す.
+
+    Args:
+        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango 必須）
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: attr_agg CTE 文字列
+
+    Raises:
+        ValueError: source.tokubetsu_kyoso_bango が None の場合
+    """
+    if source.tokubetsu_kyoso_bango is None:
+        raise ValueError(
+            "same_race_prev_year_finish には tokubetsu_kyoso_bango の指定が必要です。"
+        )
+    params.append(source.tokubetsu_kyoso_bango)
+    hist_valid = " AND ".join(_HIST_VALID_PARTS)
+    return (
+        f"attr_agg AS (\n"
+        f"        SELECT ketto_toroku_bango, target_race_code,\n"
+        f"               MIN(CAST(kakutei_chakujun AS INTEGER)) AS attr_val\n"
+        f"        FROM horse_hist\n"
+        f"        WHERE tokubetsu_kyoso_bango = %s\n"
+        f"          AND CAST(kaisai_nen AS INTEGER) = CAST(target_kaisai_nen AS INTEGER) - 1\n"
+        f"          AND {hist_valid}\n"
+        f"        GROUP BY ketto_toroku_bango, target_race_code\n"
+        f"    )"
+    )
+
+
 def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
     """history/fixed kind の group_label SQL 式を返す（attr_agg.attr_val を参照）.
 
@@ -611,6 +648,13 @@ def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
         ValueError: group_by.kind='fixed' で rows が None の場合
     """
     if group_by.kind == "history":
+        source = group_by.source
+        if source is not None and source.type == "same_race_prev_year_finish":
+            params.append(source.absent_label)
+            return "COALESCE(attr_agg.attr_val::TEXT, %s)"
+        if source is not None and source.overseas_label is not None:
+            params.append(source.overseas_label)
+            return "CASE WHEN attr_agg.is_overseas THEN %s ELSE attr_agg.attr_val::TEXT END"
         return "attr_agg.attr_val::TEXT"
 
     if group_by.kind == "fixed":
