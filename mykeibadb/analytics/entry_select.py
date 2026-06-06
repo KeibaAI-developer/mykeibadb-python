@@ -7,7 +7,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_course_week_cte,
     build_race_condition_where,
 )
-from mykeibadb.analytics._entry_filters import build_filter_subquery
+from mykeibadb.analytics._entry_filters import _validate_sql_expr, build_filter_subquery
 from mykeibadb.analytics._models import (
     AttrSource,
     Entry,
@@ -168,6 +168,7 @@ def _build_group_label_expr(
     if group_by.kind == "race_col":
         if group_by.column is None:
             raise ValueError("GroupBy.kind='race_col' には column が必要です。")
+        _validate_sql_expr(group_by.column, "GroupBy.column")
         return f"{group_by.column}::TEXT", []
 
     if group_by.kind == "subject":
