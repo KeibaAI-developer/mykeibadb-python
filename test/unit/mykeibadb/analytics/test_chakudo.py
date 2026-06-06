@@ -1,10 +1,10 @@
-"""analyze_chakudo の単体テスト."""
+"""analyze_race_col_chakudo の単体テスト."""
 
 import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import ChakudoRow, RaceCondition, analyze_chakudo
+from mykeibadb.analytics import ChakudoRow, RaceCondition, analyze_race_col_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -14,7 +14,7 @@ def _make_df(rows: list[dict[str, object]]) -> pd.DataFrame:
 
 
 # 正常系
-def test_analyze_chakudo_returns_success(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_returns_success(mocker: MockerFixture) -> None:
     """正常なDBレスポンスで success=True / ChakudoRow のリストが返る."""
     mock_df = _make_df([
         {
@@ -27,7 +27,7 @@ def test_analyze_chakudo_returns_success(mocker: MockerFixture) -> None:
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = mock_df
 
-    result = analyze_chakudo(manager, "grp_expr", "sort_expr")
+    result = analyze_race_col_chakudo(manager, "grp_expr", "sort_expr")
 
     assert result.success is True
     assert result.error is None
@@ -40,7 +40,7 @@ def test_analyze_chakudo_returns_success(mocker: MockerFixture) -> None:
     assert row.win_rate == 30.0
 
 
-def test_analyze_chakudo_with_condition_passes_params(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_with_condition_passes_params(mocker: MockerFixture) -> None:
     """RaceCondition のフィルタ引数が SQL パラメータとして渡される."""
     mock_df = _make_df([
         {
@@ -53,7 +53,7 @@ def test_analyze_chakudo_with_condition_passes_params(mocker: MockerFixture) -> 
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = mock_df
 
-    analyze_chakudo(
+    analyze_race_col_chakudo(
         manager, "grp_expr", "sort_expr",
         condition=RaceCondition(
             keibajo_code="06",
@@ -75,18 +75,18 @@ def test_analyze_chakudo_with_condition_passes_params(mocker: MockerFixture) -> 
     assert "r.keibajo_code = %s" in sql
 
 
-def test_analyze_chakudo_empty_result(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_empty_result(mocker: MockerFixture) -> None:
     """空のDataFrameで success=True / rows=[] が返る."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = pd.DataFrame()
 
-    result = analyze_chakudo(manager, "grp_expr", "sort_expr")
+    result = analyze_race_col_chakudo(manager, "grp_expr", "sort_expr")
 
     assert result.success is True
     assert result.rows == []
 
 
-def test_analyze_chakudo_nan_rates_default_to_zero(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_nan_rates_default_to_zero(mocker: MockerFixture) -> None:
     """win_rate等がNaNの場合は0.0になる."""
     mock_df = _make_df([
         {
@@ -99,7 +99,7 @@ def test_analyze_chakudo_nan_rates_default_to_zero(mocker: MockerFixture) -> Non
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = mock_df
 
-    result = analyze_chakudo(manager, "grp_expr", "sort_expr")
+    result = analyze_race_col_chakudo(manager, "grp_expr", "sort_expr")
 
     row = result.rows[0]
     assert row.win_rate == 0.0
@@ -108,7 +108,7 @@ def test_analyze_chakudo_nan_rates_default_to_zero(mocker: MockerFixture) -> Non
     assert row.fukusho_kaishuu == 0.0
 
 
-def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
     """condition.course_kubun + condition.week_in_course 指定時に CTE が SQL に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([
@@ -120,7 +120,7 @@ def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
         },
     ])
 
-    analyze_chakudo(
+    analyze_race_col_chakudo(
         manager, "grp_expr", "sort_expr",
         condition=RaceCondition(keibajo_code="05", course_kubun="C", week_in_course=2),
     )
@@ -130,7 +130,7 @@ def test_analyze_chakudo_with_course_week_filter(mocker: MockerFixture) -> None:
     assert "r.keibajo_code = %s" not in sql
 
 
-def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> None:
     """course_week指定なしの場合、keibajo_code が WHERE 句に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([
@@ -142,7 +142,7 @@ def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> N
         },
     ])
 
-    analyze_chakudo(
+    analyze_race_col_chakudo(
         manager, "grp_expr", "sort_expr",
         condition=RaceCondition(keibajo_code="05"),
     )
@@ -154,32 +154,32 @@ def test_analyze_chakudo_keibajo_in_where_without_cw(mocker: MockerFixture) -> N
 
 
 # 準正常系
-def test_analyze_chakudo_raises_on_only_course_kubun(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_raises_on_only_course_kubun(mocker: MockerFixture) -> None:
     """condition.course_kubun のみ指定で ValueError が発生する."""
     manager = mocker.MagicMock()
     with pytest.raises(ValueError):
-        analyze_chakudo(
+        analyze_race_col_chakudo(
             manager, "grp_expr", "sort_expr",
             condition=RaceCondition(course_kubun="C"),
         )
 
 
-def test_analyze_chakudo_raises_on_only_week_in_course(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_raises_on_only_week_in_course(mocker: MockerFixture) -> None:
     """condition.week_in_course のみ指定で ValueError が発生する."""
     manager = mocker.MagicMock()
     with pytest.raises(ValueError):
-        analyze_chakudo(
+        analyze_race_col_chakudo(
             manager, "grp_expr", "sort_expr",
             condition=RaceCondition(week_in_course=1),
         )
 
 
-def test_analyze_chakudo_returns_error_on_db_failure(mocker: MockerFixture) -> None:
+def test_analyze_race_col_chakudo_returns_error_on_db_failure(mocker: MockerFixture) -> None:
     """DBエラーで success=False / error が設定される."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.side_effect = QueryExecutionError("DB接続失敗")
 
-    result = analyze_chakudo(manager, "grp_expr", "sort_expr")
+    result = analyze_race_col_chakudo(manager, "grp_expr", "sort_expr")
 
     assert result.success is False
     assert result.error is not None

@@ -13,7 +13,7 @@ from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
 
-def analyze_chakudo(
+def analyze_race_col_chakudo(
     manager: ConnectionManager,
     group_expr: str,
     sort_expr: str,
@@ -65,7 +65,7 @@ def analyze_subject_chakudo(
 
     種牡馬・生産者など kyosoba_master2 JOIN が必要な主体、または騎手・調教師など
     name/code フィルタが必要な場合に使用する。u.* / r.* のみで完結するグループ化
-    （枠番・人気・脚質等）は analyze_chakudo を使用すること。
+    （枠番・人気・脚質等）は analyze_race_col_chakudo を使用すること。
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
