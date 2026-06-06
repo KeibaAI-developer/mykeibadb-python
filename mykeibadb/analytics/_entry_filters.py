@@ -178,7 +178,12 @@ def build_chokyo_filter_subquery(f: ChokyoFilter, params: list[Any]) -> str:
 
     Returns:
         str: (ketto_toroku_bango, race_code) を返すSELECT文
+
+    Raises:
+        ValueError: f.condition が空リストの場合
     """
+    if not f.condition:
+        raise ValueError("ChokyoFilter.condition に空リストは指定できません。")
     wood_thresholds = [t for t in f.condition if t.course == "wood"]
     hanro_thresholds = [t for t in f.condition if t.course == "hanro"]
 
