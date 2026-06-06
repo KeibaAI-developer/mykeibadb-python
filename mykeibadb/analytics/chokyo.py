@@ -25,7 +25,7 @@ def get_uma_chokyo(
     """馬の調教データを取得する.
 
     指定方法は2通り（排他）:
-      - race_code + horse_num: レース起点。前走〜当日の調教窓を自動設定
+      - race_code + horse_num: 指定レースより前かつ前走よりあとの調教データを取得
       - ketto_toroku_bango: 血統登録番号で直接指定。date_from/date_toで窓指定
 
     Args:
