@@ -260,6 +260,145 @@ class AttrSource:
 
 
 @dataclass
+class RaceColFilter:
+    """対象レースにおける馬の列値で絞り込む（枠・人気・脚質等）.
+
+    u.* / r.* の列に対する IN もしくは数値範囲の述語。
+
+    Attributes:
+        column (str): 絞り込む列名（例: "u.wakuban"）
+        values (list[str] | None): IN 条件（例: ["1","2","3"]）
+        min_value (int | None): 範囲下限（以上）
+        max_value (int | None): 範囲上限（以下）
+    """
+
+    column: str
+    values: list[str] | None = None
+    min_value: int | None = None
+    max_value: int | None = None
+
+
+@dataclass
+class SubjectFilter:
+    """主体の一致で絞り込む（種牡馬・騎手・調教師・馬主・生産者）.
+
+    Attributes:
+        subject (Subject): 絞り込む主体
+        name (str | None): 主体名（部分一致）
+        code (str | None): 主体コード（完全一致。code対応主体のみ）
+    """
+
+    subject: Subject
+    name: str | None = None
+    code: str | None = None
+
+
+@dataclass
+class HistoryFilter:
+    """馬の過去履歴で絞り込む（旧 AttrSource）.
+
+    source で算出した属性値が cond を満たす馬×レースのみ通す。
+
+    Attributes:
+        source (AttrSource): 属性算出方法の定義
+        cond (tuple[int, int] | int | str): 絞り込み条件。
+            (min, max) の場合は範囲一致、int/str の場合は完全一致。
+    """
+
+    source: AttrSource
+    cond: tuple[int, int] | int | str
+
+
+@dataclass
+class ChokyoFilter:
+    """対象レース直前の調教で絞り込む（旧 ChokyoCondition）.
+
+    対象レース日より前の最新調教窓が全閾値を満たす馬×レースのみ通す。
+
+    Attributes:
+        condition (ChokyoCondition): 調教閾値条件リスト
+    """
+
+    condition: ChokyoCondition
+
+
+EntryFilter = RaceColFilter | SubjectFilter | HistoryFilter | ChokyoFilter
+
+
+@dataclass
+class GroupBy:
+    """集計のグループ分け軸.
+
+    kind と各種パラメータで「何でグループ化するか」を表す。
+
+    Attributes:
+        kind (str): グループ軸の種別。以下のいずれか:
+            "race_col": column のDISTINCT値（枠別・人気別）
+            "subject": subject の名称（騎手別・種牡馬別）
+            "history": source の属性値（デビュー地別・前走名別）
+            "fixed": rows 定義に従う固定ビン
+        column (str | None): "race_col" 時の列名
+        subject (Subject | None): "subject" 時の主体
+        source (AttrSource | None): "history" 時の属性算出定義
+        rows (RowsDef | None): "fixed" 時のグループ定義
+    """
+
+    kind: str
+    column: str | None = None
+    subject: Subject | None = None
+    source: AttrSource | None = None
+    rows: RowsDef | None = None
+
+
+@dataclass
+class Entry:
+    """絞り込み後の1エントリ（馬×レース）.
+
+    Attributes:
+        ketto_toroku_bango (str): 血統登録番号
+        race_code (str): レースコード
+        umaban (str): 馬番
+        group_label (str): グループラベル（GroupBy未指定時は "全体"）
+    """
+
+    ketto_toroku_bango: str
+    race_code: str
+    umaban: str
+    group_label: str
+
+
+EntrySet = list[Entry]
+
+
+@dataclass
+class GroupTally:
+    """グループ別の着順カウント・払戻合計（フェーズ2出力）.
+
+    Attributes:
+        group (str): グループラベル
+        total (int): 出走総数
+        wins (int): 1着数
+        second (int): 2着数
+        third (int): 3着数
+        chakugai (int): 着外数
+        tansho_payout_sum (int): 単勝払戻合計
+        fukusho_payout_sum (int): 複勝払戻合計
+    """
+
+    group: str
+    total: int
+    wins: int
+    second: int
+    third: int
+    chakugai: int
+    tansho_payout_sum: int
+    fukusho_payout_sum: int
+
+
+ChakudoTally = list[GroupTally]
+
+
+@dataclass
 class EntryAttrDef:
     """出走馬属性集計の条件定義.
 
