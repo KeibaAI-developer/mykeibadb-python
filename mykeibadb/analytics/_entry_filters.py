@@ -26,20 +26,6 @@ _HANRO_VALID = "lh.time_gokei_4furlong NOT IN ('0000', '9999')"
 _DANGEROUS_TOKENS = (";", "--", "/*")
 
 
-def _validate_sql_expr(expr: str, label: str) -> None:
-    """SQL式に危険なトークンが含まれていないか検証する.
-
-    Args:
-        expr (str): 検証するSQL式
-        label (str): エラーメッセージ用のラベル
-
-    Raises:
-        ValueError: 危険なSQLトークンが含まれる場合
-    """
-    if any(tok in expr for tok in _DANGEROUS_TOKENS):
-        raise ValueError(f"{label} に危険なSQLトークンが含まれています: {expr!r}")
-
-
 def build_filter_subquery(f: EntryFilter, params: list[Any]) -> str:
     """EntryFilter の種別に応じた (ketto_toroku_bango, race_code) サブクエリを返す.
 
@@ -232,6 +218,20 @@ def build_chokyo_filter_subquery(f: ChokyoFilter, params: list[Any]) -> str:
         FROM umagoto_race_joho u
         JOIN race_shosai r ON u.race_code = r.race_code
         WHERE {where}"""
+
+
+def _validate_sql_expr(expr: str, label: str) -> None:
+    """SQL式に危険なトークンが含まれていないか検証する.
+
+    Args:
+        expr (str): 検証するSQL式
+        label (str): エラーメッセージ用のラベル
+
+    Raises:
+        ValueError: 危険なSQLトークンが含まれる場合
+    """
+    if any(tok in expr for tok in _DANGEROUS_TOKENS):
+        raise ValueError(f"{label} に危険なSQLトークンが含まれています: {expr!r}")
 
 
 def _apply_cond(
