@@ -253,10 +253,10 @@ def test_select_entries_entry_fields_are_mapped_correctly(mocker: MockerFixture)
 
 
 # group_by history/fixed
-def test_select_entries_group_by_history_includes_correlated_subquery(
+def test_select_entries_group_by_history_uses_cte(
     mocker: MockerFixture,
 ) -> None:
-    """group_by=history で相関サブクエリが group_label 式としてSQLに含まれる."""
+    """group_by=history(career_count) で CTE 方式の SQL が生成される."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
@@ -267,9 +267,11 @@ def test_select_entries_group_by_history_includes_correlated_subquery(
     )
 
     sql = manager.fetch_dataframe.call_args[0][0]
-    assert "COUNT(*)" in sql
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
     assert "group_label" in sql
-    assert "ketto_toroku_bango = u.ketto_toroku_bango" in sql
+    assert "COUNT(*)" in sql
 
 
 def test_select_entries_group_by_history_debut_venue_includes_keibajo(
@@ -313,10 +315,10 @@ def test_select_entries_group_by_fixed_generates_case_when(mocker: MockerFixture
     assert "2〜5戦" in params
 
 
-def test_select_entries_group_by_fixed_past_finish_count_repeats_params(
+def test_select_entries_group_by_fixed_past_finish_count_cte_params(
     mocker: MockerFixture,
 ) -> None:
-    """group_by=fixed(past_finish_count) で各WHEN句に attr params が重複して渡される."""
+    """group_by=fixed(past_finish_count) で CTE 方式では top_n が1回だけ params に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
@@ -332,7 +334,7 @@ def test_select_entries_group_by_fixed_past_finish_count_repeats_params(
 
     params = manager.fetch_dataframe.call_args[1]["params"]
     top_n_count = sum(1 for p in params if p == 3)
-    assert top_n_count == 3, f"top_n=3 は3回（WHEN句の数だけ）paramsに含まれるべき: {params}"
+    assert top_n_count == 1, f"CTE 方式では top_n=3 は1回だけ params に含まれるべき: {params}"
 
 
 def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
@@ -354,6 +356,91 @@ def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "kyosoba_master2" in sql
     assert "ketto1_bamei" in sql
+
+
+# CTE 方式（history/fixed 各 source.type）
+def test_select_entries_group_by_history_prev_race_name_uses_cte(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=history(prev_race_name) で CTE 方式の SQL が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="history", source=AttrSource(type="prev_race_name")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "kyosomei_hondai" in sql
+
+
+def test_select_entries_group_by_fixed_jockey_continuity_uses_cte(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(jockey_continuity) で CTE 方式の SQL が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="jockey_continuity"),
+            rows={"継続": "継続", "乗り戻り": "乗り戻り", "テン乗り": "テン乗り"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "ARRAY_AGG" in sql
+
+
+def test_select_entries_hist_cte_where_uses_target_horses(
+    mocker: MockerFixture,
+) -> None:
+    """CTE 方式では最終 SELECT の WHERE が target_horses を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_code="05"),
+        group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "SELECT ketto_toroku_bango, race_code FROM target_horses" in sql
+
+
+def test_select_entries_hist_cte_condition_in_target_horses(
+    mocker: MockerFixture,
+) -> None:
+    """CTE 方式では condition の keibajo_code が target_horses の WHERE に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_code="05", year_from="2020"),
+        group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "target_horses" in sql
+    assert "keibajo_code = %s" in sql
+    assert "05" in params
+    assert "2020" in params
 
 
 # course_week CTE
