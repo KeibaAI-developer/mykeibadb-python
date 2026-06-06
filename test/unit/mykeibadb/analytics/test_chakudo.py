@@ -3,8 +3,7 @@
 import pandas as pd
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import RaceCondition, analyze_chakudo
-from mykeibadb.analytics._models import RaceColFilter
+from mykeibadb.analytics import RaceColFilter, RaceCondition, analyze_chakudo
 from mykeibadb.exceptions import QueryExecutionError
 
 

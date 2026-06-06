@@ -30,6 +30,11 @@ def analyze_chakudo(
     Raises:
         ValueError: condition.course_kubun と week_in_course のどちらか一方のみ指定した場合
         ValueError: group_by.kind が未対応の場合
+
+    Note:
+        RaceColFilter.column および GroupBy.column は SQL に直接埋め込まれるため、
+        必ず信頼済みの列名を渡すこと。危険トークン（';', '--', '/*'）は検証するが、
+        完全な SQLインジェクション防御ではない。
     """
     try:
         entries = select_entries(manager, filters, condition, group_by)
