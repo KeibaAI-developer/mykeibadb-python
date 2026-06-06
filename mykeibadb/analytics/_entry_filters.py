@@ -23,6 +23,21 @@ _HIST_VALID_PARTS = [
 ]
 _WOOD_VALID = "lw.time_gokei_6furlong NOT IN ('0000', '9999')"
 _HANRO_VALID = "lh.time_gokei_4furlong NOT IN ('0000', '9999')"
+_DANGEROUS_TOKENS = (";", "--", "/*")
+
+
+def _validate_sql_expr(expr: str, label: str) -> None:
+    """SQL式に危険なトークンが含まれていないか検証する.
+
+    Args:
+        expr (str): 検証するSQL式
+        label (str): エラーメッセージ用のラベル
+
+    Raises:
+        ValueError: 危険なSQLトークンが含まれる場合
+    """
+    if any(tok in expr for tok in _DANGEROUS_TOKENS):
+        raise ValueError(f"{label} に危険なSQLトークンが含まれています: {expr!r}")
 
 
 def build_filter_subquery(f: EntryFilter, params: list[Any]) -> str:
@@ -58,9 +73,16 @@ def build_race_col_filter_subquery(f: RaceColFilter, params: list[Any]) -> str:
 
     Returns:
         str: (ketto_toroku_bango, race_code) を返すSELECT文
+
+    Raises:
+        ValueError: f.column に危険なSQLトークンが含まれる場合
+        ValueError: f.values が空リストの場合
     """
+    _validate_sql_expr(f.column, "RaceColFilter.column")
     where_parts = list(_ENTRY_VALID_PARTS)
     if f.values is not None:
+        if not f.values:
+            raise ValueError("RaceColFilter.values に空リストは指定できません。")
         placeholders = ", ".join(["%s"] * len(f.values))
         where_parts.append(f"{f.column} IN ({placeholders})")
         params.extend(f.values)
