@@ -34,8 +34,10 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
         "debut_venue",
         "prev_race_name",
         "jockey_continuity",
+        "prev_race_col",
     }
 )
+_PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset({"kyakushitsu_hantei", "kyori"})
 
 
 def select_entries(
@@ -395,14 +397,17 @@ def _build_horse_hist_cte() -> str:
         "            th.ketto_toroku_bango,\n"
         "            th.race_code              AS target_race_code,\n"
         "            th.kishu_code             AS target_kishu_code,\n"
+        "            th.kaisai_nen             AS target_kaisai_nen,\n"
         "            u2.kishu_code,\n"
         "            r2.keibajo_code,\n"
         "            r2.kaisai_nen,\n"
         "            r2.kaisai_gappi,\n"
         "            u2.kakutei_chakujun,\n"
+        "            u2.kyakushitsu_hantei,\n"
         "            TRIM(r2.kyosomei_hondai)  AS kyosomei_hondai,\n"
         "            r2.grade_code,\n"
-        "            TRIM(r2.kyori)::INTEGER   AS kyori_int\n"
+        "            TRIM(r2.kyori)::INTEGER   AS kyori_int,\n"
+        "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango\n"
         "        FROM target_horses th\n"
         "        JOIN umagoto_race_joho u2\n"
         "            ON u2.ketto_toroku_bango = th.ketto_toroku_bango\n"
@@ -435,6 +440,8 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
         return [_attr_agg_prev_race_name()]
     if source.type == "jockey_continuity":
         return [_attr_agg_jockey_continuity()]
+    if source.type == "prev_race_col":
+        return [_attr_agg_prev_race_col(source)]
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -554,6 +561,37 @@ def _attr_agg_jockey_continuity() -> str:
         f"        FROM horse_hist\n"
         f"        WHERE {hist_valid}\n"
         f"        GROUP BY ketto_toroku_bango, target_race_code, target_kishu_code\n"
+        f"    )"
+    )
+
+
+def _attr_agg_prev_race_col(source: AttrSource) -> str:
+    """prev_race_col 用 attr_agg CTE を返す.
+
+    Args:
+        source (AttrSource): 属性算出方法（column 必須）
+
+    Returns:
+        str: attr_agg CTE 文字列
+
+    Raises:
+        ValueError: source.column が None または許可リスト外の場合
+    """
+    if source.column not in _PREV_RACE_COL_ALLOWED:
+        raise ValueError(
+            f"prev_race_col の column は {set(_PREV_RACE_COL_ALLOWED)} のいずれかで指定してください。"
+            f" 指定値: {source.column!r}"
+        )
+    hist_valid = " AND ".join(_HIST_VALID_PARTS)
+    attr_col = "kyori_int" if source.column == "kyori" else source.column
+    return (
+        f"attr_agg AS (\n"
+        f"        SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
+        f"               ketto_toroku_bango, target_race_code, {attr_col} AS attr_val\n"
+        f"        FROM horse_hist\n"
+        f"        WHERE {hist_valid}\n"
+        f"        ORDER BY ketto_toroku_bango, target_race_code,\n"
+        f"                 kaisai_nen DESC, kaisai_gappi DESC\n"
         f"    )"
     )
 
