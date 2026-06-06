@@ -217,12 +217,18 @@ class AttrSource:
             "debut_venue": デビュー競馬場コード
             "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
             "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
+            "prev_race_col": 前走の任意列値（column で対象列を指定）
+            "same_race_prev_year_finish": 前年同特別競走番号レースでの確定着順
         top_n (int): 何着以内を入着とみなすか（"past_finish_count"/"sire_condition_finisher"用）
         grade_codes (list[str] | None): 対象グレードコードリスト
         keibajo_code (str | None): 対象競馬場コード
         kyori (int | None): 対象距離
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
+        column (str | None): 前走列名（"prev_race_col"用）
+        overseas_label (str | None): 海外開催集約ラベル（"prev_race_name"用）
+        tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"same_race_prev_year_finish"用）
+        absent_label (str): 不出走ラベル（"same_race_prev_year_finish"用）
     """
 
     type: str
@@ -232,6 +238,10 @@ class AttrSource:
     kyori: int | None = None
     condition: RaceCondition | None = None
     allowed_values: list[str] | None = None
+    column: str | None = None
+    overseas_label: str | None = None
+    tokubetsu_kyoso_bango: str | None = None
+    absent_label: str = "出走無し"
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "AttrSource":
@@ -256,6 +266,10 @@ class AttrSource:
             kyori=int(raw_kyori) if raw_kyori is not None else None,
             condition=condition,
             allowed_values=d.get("allowed_values"),
+            column=d.get("column"),
+            overseas_label=d.get("overseas_label"),
+            tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
+            absent_label=d.get("absent_label", "出走無し"),
         )
 
 
