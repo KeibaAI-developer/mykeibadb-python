@@ -569,3 +569,94 @@ def test_horse_hist_cte_includes_kyakushitsu_hantei_and_kaisai_nen(
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "kyakushitsu_hantei" in sql
     assert "target_kaisai_nen" in sql
+
+
+# prev_race_name 海外集約
+def test_select_entries_prev_race_name_overseas_label_uses_case_when(
+    mocker: MockerFixture,
+) -> None:
+    """overseas_label 指定時に group_label が CASE WHEN is_overseas 式になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(type="prev_race_name", overseas_label="海外"),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "is_overseas" in sql
+    assert "海外" in params
+
+
+def test_select_entries_prev_race_name_without_overseas_label_uses_attr_val(
+    mocker: MockerFixture,
+) -> None:
+    """overseas_label 未指定時は group_label が attr_val::TEXT になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(type="prev_race_name"),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "attr_agg.attr_val::TEXT AS group_label" in sql
+    assert "CASE WHEN attr_agg.is_overseas" not in sql
+
+
+# same_race_prev_year_finish（リピーター）
+def test_select_entries_same_race_prev_year_finish_uses_coalesce(
+    mocker: MockerFixture,
+) -> None:
+    """same_race_prev_year_finish の group_label が COALESCE + absent_label になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="same_race_prev_year_finish",
+                tokubetsu_kyoso_bango="0010",
+                absent_label="前年出走無し",
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "COALESCE" in sql
+    assert "target_kaisai_nen" in sql
+    assert "0010" in params
+    assert "前年出走無し" in params
+
+
+def test_select_entries_same_race_prev_year_finish_no_tokubetsu_raises(
+    mocker: MockerFixture,
+) -> None:
+    """tokubetsu_kyoso_bango が None のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="tokubetsu_kyoso_bango"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="same_race_prev_year_finish"),
+            ),
+        )
