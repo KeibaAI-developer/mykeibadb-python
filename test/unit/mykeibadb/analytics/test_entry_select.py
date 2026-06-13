@@ -799,6 +799,93 @@ def test_select_entries_prev_race_col_kyori_uses_kyori_int(mocker: MockerFixture
     assert "kyori_int" in sql
 
 
+def test_select_entries_prev_race_col_grade_code_uses_grade_code(mocker: MockerFixture) -> None:
+    """column=grade_code 指定時に attr_agg が grade_code を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="grade_code"),
+            rows={"G1": "A", "G2": "B", "G3": "C"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "grade_code" in sql
+
+
+def test_select_entries_prev_race_col_kakutei_chakujun_uses_cast_integer(
+    mocker: MockerFixture,
+) -> None:
+    """column=kakutei_chakujun 指定時に attr_agg が CAST(...AS INTEGER) を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kakutei_chakujun"),
+            rows={"1着": 1},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CAST(kakutei_chakujun AS INTEGER)" in sql
+
+
+def test_select_entries_prev_race_col_filters_adds_case_when(mocker: MockerFixture) -> None:
+    """filters指定時、attr_valがCASE WHEN ... ELSE NULL ENDになり該当列がSELECTされる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="prev_race_col",
+                column="kakutei_chakujun",
+                filters=[{"column": "grade_code", "op": "in", "value": ["A", "B", "C"]}],
+            ),
+            rows={"1着": 1},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CASE WHEN grade_code IN" in sql
+    assert "ELSE NULL END AS attr_val" in sql
+
+
+def test_select_entries_prev_race_col_kohan_3f_jun_with_filters_raises(
+    mocker: MockerFixture,
+) -> None:
+    """column=kohan_3f_jun かつ filters指定時はValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="kohan_3f_jun"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="prev_race_col",
+                    column="kohan_3f_jun",
+                    filters=[{"column": "grade_code", "op": "in", "value": ["A"]}],
+                ),
+                rows={"1位": 1},
+            ),
+        )
+
+
 def test_select_entries_prev_race_col_invalid_column_raises(mocker: MockerFixture) -> None:
     """許可リスト外の column を指定すると ValueError が発生する."""
     manager = mocker.MagicMock()
@@ -810,7 +897,7 @@ def test_select_entries_prev_race_col_invalid_column_raises(mocker: MockerFixtur
             filters=[],
             group_by=GroupBy(
                 kind="fixed",
-                source=AttrSource(type="prev_race_col", column="kakutei_chakujun"),
+                source=AttrSource(type="prev_race_col", column="hoge"),
                 rows={"1着": 1},
             ),
         )

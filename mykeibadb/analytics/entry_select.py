@@ -39,7 +39,19 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
         "same_race_prev_year_finish",
     }
 )
-_PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset({"kyakushitsu_hantei", "kyori", "kohan_3f_jun"})
+_PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset(
+    {"kyakushitsu_hantei", "kyori", "kohan_3f_jun", "grade_code", "kakutei_chakujun"}
+)
+
+# prev_race_col の column名 -> SELECTするhorse_histの実列名
+_PREV_RACE_COL_RAW_COLUMN: dict[str, str] = {
+    "kyori": "kyori_int",
+}
+
+# prev_race_col の column名 -> attr_valに使うSQL式（未指定時は_PREV_RACE_COL_RAW_COLUMNの列をそのまま使う）
+_PREV_RACE_COL_VAL_EXPR: dict[str, str] = {
+    "kakutei_chakujun": "CAST(kakutei_chakujun AS INTEGER)",
+}
 
 # past_race_top_n_count の filters で指定可能な horse_hist 列
 # 列名 -> (SQL式, 数値列か)
@@ -451,8 +463,12 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
         return [_attr_agg_jockey_continuity()]
     if source.type == "prev_race_col":
         if source.column == "kohan_3f_jun":
+            if source.filters:
+                raise ValueError(
+                    "prev_race_col の column='kohan_3f_jun' では filters を指定できません。"
+                )
             return _attr_agg_prev_race_col_jun_ctes()
-        return [_attr_agg_prev_race_col(source)]
+        return [_attr_agg_prev_race_col(source, params)]
     if source.type == "same_race_prev_year_finish":
         return [_attr_agg_same_race_prev_year_finish(source, params)]
     raise ValueError(f"未対応の source.type です: {source.type!r}")
@@ -579,11 +595,12 @@ def _attr_agg_jockey_continuity() -> str:
     )
 
 
-def _attr_agg_prev_race_col(source: AttrSource) -> str:
+def _attr_agg_prev_race_col(source: AttrSource, params: list[Any]) -> str:
     """prev_race_col 用 attr_agg CTE を返す.
 
     Args:
         source (AttrSource): 属性算出方法（column 必須）
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
         str: attr_agg CTE 文字列
@@ -597,15 +614,33 @@ def _attr_agg_prev_race_col(source: AttrSource) -> str:
             f" 指定値: {source.column!r}"
         )
     hist_valid = " AND ".join(_HIST_VALID_PARTS)
-    attr_col = "kyori_int" if source.column == "kyori" else source.column
+    raw_col = _PREV_RACE_COL_RAW_COLUMN.get(source.column, source.column)
+    attr_col = _PREV_RACE_COL_VAL_EXPR.get(source.column, raw_col)
+
+    select_cols = {raw_col}
+    filter_exprs = []
+    for filt in source.filters or []:
+        filter_exprs.append(build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS))
+        select_cols.add(filt["column"])
+
+    if filter_exprs:
+        condition = " AND ".join(filter_exprs)
+        attr_val_expr = f"CASE WHEN {condition} THEN {attr_col} ELSE NULL END"
+    else:
+        attr_val_expr = attr_col
+
+    select_cols_sql = ", ".join(sorted(select_cols))
     return (
         f"attr_agg AS (\n"
-        f"        SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        f"               ketto_toroku_bango, target_race_code, {attr_col} AS attr_val\n"
-        f"        FROM horse_hist\n"
-        f"        WHERE {hist_valid}\n"
-        f"        ORDER BY ketto_toroku_bango, target_race_code,\n"
-        f"                 kaisai_nen DESC, kaisai_gappi DESC\n"
+        f"        SELECT ketto_toroku_bango, target_race_code, {attr_val_expr} AS attr_val\n"
+        f"        FROM (\n"
+        f"            SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
+        f"                   ketto_toroku_bango, target_race_code, {select_cols_sql}\n"
+        f"            FROM horse_hist\n"
+        f"            WHERE {hist_valid}\n"
+        f"            ORDER BY ketto_toroku_bango, target_race_code,\n"
+        f"                     kaisai_nen DESC, kaisai_gappi DESC\n"
+        f"        ) prev\n"
         f"    )"
     )
 
