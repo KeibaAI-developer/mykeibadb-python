@@ -230,7 +230,6 @@ class AttrSource:
             "past_race_top_n_count" で None の場合は着順で絞り込まない。
         grade_codes (list[str] | None): 対象グレードコードリスト
         keibajo_codes (list[str] | None): 対象競馬場コードリスト（"past_race_top_n_count"用）
-        kyori (int | None): 対象距離
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
         column (str | None): 前走列名（"prev_race_col"用）
@@ -245,7 +244,6 @@ class AttrSource:
     top_n: int | None = 1
     grade_codes: list[str] | None = None
     keibajo_codes: list[str] | None = None
-    kyori: int | None = None
     condition: RaceCondition | None = None
     allowed_values: list[str] | None = None
     column: str | None = None
@@ -267,7 +265,6 @@ class AttrSource:
         Returns:
             AttrSource: 生成したAttrSourceインスタンス
         """
-        raw_kyori = d.get("kyori")
         raw_condition = d.get("condition")
         raw_top_n = d.get("top_n")
         condition: RaceCondition | None = None
@@ -282,7 +279,6 @@ class AttrSource:
             top_n=top_n,
             grade_codes=d.get("grade_codes"),
             keibajo_codes=d.get("keibajo_codes"),
-            kyori=int(raw_kyori) if raw_kyori is not None else None,
             condition=condition,
             allowed_values=d.get("allowed_values"),
             column=d.get("column"),

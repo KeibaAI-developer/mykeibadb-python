@@ -3,7 +3,11 @@
 from typing import Any
 
 from mykeibadb.analytics._chokyo_helpers import build_threshold_where
-from mykeibadb.analytics._cte_helpers import SUBJECT_MAP, build_race_condition_where
+from mykeibadb.analytics._cte_helpers import (
+    SUBJECT_MAP,
+    build_past_race_top_n_filter_clause,
+    build_race_condition_where,
+)
 from mykeibadb.analytics._models import (
     AttrSource,
     ChokyoFilter,
@@ -24,6 +28,16 @@ _HIST_VALID_PARTS = [
 _WOOD_VALID = "lw.time_gokei_6furlong NOT IN ('0000', '9999')"
 _HANRO_VALID = "lh.time_gokei_4furlong NOT IN ('0000', '9999')"
 _DANGEROUS_TOKENS = (";", "--", "/*")
+
+# past_race_top_n_count の filters で指定可能な列（u2/r2 エイリアス基準）
+_HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
+    "kakutei_chakujun": ("CAST(u2.kakutei_chakujun AS INTEGER)", True),
+    "grade_code": ("r2.grade_code", False),
+    "keibajo_code": ("r2.keibajo_code", False),
+    "kyori_int": ("TRIM(r2.kyori)::INTEGER", True),
+    "kyakushitsu_hantei": ("u2.kyakushitsu_hantei", False),
+    "tokubetsu_kyoso_bango": ("TRIM(r2.tokubetsu_kyoso_bango)", False),
+}
 
 
 def build_filter_subquery(f: EntryFilter, params: list[Any]) -> str:
@@ -140,6 +154,8 @@ def build_history_filter_subquery(f: HistoryFilter, params: list[Any]) -> str:
     source = f.source
     if source.type == "debut_venue":
         return _build_debut_venue_filter(source, f.cond, params)
+    if source.type == "past_race_top_n_count":
+        return _build_past_race_top_n_count_filter(source, f.cond, params)
     if source.type == "career_count":
         return _build_career_count_filter(f.cond, params)
     if source.type == "prev_race_name":
@@ -296,6 +312,56 @@ def _build_debut_venue_filter(
         f"            ) debut_info\n"
         f"            WHERE {cond_pred}\n"
         f"          )"
+    )
+
+
+def _build_past_race_top_n_count_filter(
+    source: AttrSource,
+    cond: tuple[int, int] | int | str,
+    params: list[Any],
+) -> str:
+    """past_race_top_n_count HistoryFilter のサブクエリを生成する.
+
+    Args:
+        source (AttrSource): 属性算出方法（past_race_top_n_count）
+        cond (tuple[int, int] | int | str): 集計回数への比較条件
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: (ketto_toroku_bango, race_code) を返すSELECT文
+    """
+    hist_parts = [
+        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
+        "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
+    ] + list(_HIST_VALID_PARTS)
+    if source.top_n is not None:
+        hist_parts.append("CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s")
+        params.append(int(source.top_n))
+    if source.grade_codes:
+        hist_parts.append("r2.grade_code = ANY(%s)")
+        params.append(source.grade_codes)
+    if source.keibajo_codes:
+        hist_parts.append("r2.keibajo_code = ANY(%s)")
+        params.append(source.keibajo_codes)
+    for filt in source.filters or []:
+        hist_parts.append(
+            build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS)
+        )
+    hist_where = "\n                  AND ".join(hist_parts)
+    count_expr = (
+        f"SELECT COUNT(*)\n"
+        f"              FROM umagoto_race_joho u2\n"
+        f"              JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
+        f"              WHERE {hist_where}"
+    )
+    cond_pred = _apply_cond(count_expr, cond, params)
+    base_valid = "\n              AND ".join(_ENTRY_VALID_PARTS)
+    return (
+        f"SELECT u.ketto_toroku_bango, u.race_code\n"
+        f"        FROM umagoto_race_joho u\n"
+        f"        JOIN race_shosai r ON u.race_code = r.race_code\n"
+        f"        WHERE {base_valid}\n"
+        f"          AND {cond_pred}"
     )
 
 

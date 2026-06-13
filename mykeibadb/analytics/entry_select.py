@@ -5,6 +5,7 @@ from typing import Any
 from mykeibadb.analytics._cte_helpers import (
     SUBJECT_MAP,
     build_course_week_cte,
+    build_past_race_top_n_filter_clause,
     build_race_condition_where,
 )
 from mykeibadb.analytics._entry_filters import _validate_sql_expr, build_filter_subquery
@@ -50,7 +51,6 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "kyakushitsu_hantei": ("kyakushitsu_hantei", False),
     "tokubetsu_kyoso_bango": ("tokubetsu_kyoso_bango", False),
 }
-_HIST_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
 
 
 def select_entries(
@@ -496,7 +496,9 @@ def _attr_agg_past_race_top_n_count(source: AttrSource, params: list[Any]) -> st
         filter_parts.append("keibajo_code = ANY(%s)")
         params.append(source.keibajo_codes)
     for filt in source.filters or []:
-        filter_parts.append(_build_hist_filter_clause(filt, params))
+        filter_parts.append(
+            build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS)
+        )
     filter_clause = "\n                AND ".join(filter_parts)
     return (
         f"attr_agg AS (\n"
@@ -508,40 +510,6 @@ def _attr_agg_past_race_top_n_count(source: AttrSource, params: list[Any]) -> st
         f"        GROUP BY ketto_toroku_bango, target_race_code\n"
         f"    )"
     )
-
-
-def _build_hist_filter_clause(filt: dict[str, Any], params: list[Any]) -> str:
-    """past_race_top_n_count の filters 1要素から horse_hist 列に対するWHERE句を返す.
-
-    Args:
-        filt (dict[str, Any]): {"column": str, "op": str, "value": Any} 形式のフィルタ定義
-        params (list[Any]): SQLパラメータリスト（末尾に追加される）
-
-    Returns:
-        str: WHERE句に使える比較述語
-
-    Raises:
-        ValueError: column が _HIST_FILTER_COLUMNS に存在しない場合
-        ValueError: op が _HIST_FILTER_OPS に存在しない場合
-        ValueError: op が in/not_in で value が空リストの場合
-    """
-    column = filt["column"]
-    op = filt["op"]
-    value = filt["value"]
-    if column not in _HIST_FILTER_COLUMNS:
-        raise ValueError(f"past_race_top_n_count の filters で未対応の column です: {column!r}")
-    if op not in _HIST_FILTER_OPS:
-        raise ValueError(f"past_race_top_n_count の filters で未対応の op です: {op!r}")
-    sql_expr, is_numeric = _HIST_FILTER_COLUMNS[column]
-    if op in ("in", "not_in"):
-        if not value:
-            raise ValueError("past_race_top_n_count の filters: in/not_in に空リストは指定できません")
-        placeholders = ", ".join(["%s"] * len(value))
-        params.extend(int(v) if is_numeric else str(v) for v in value)
-        return f"{sql_expr} {'IN' if op == 'in' else 'NOT IN'} ({placeholders})"
-    sql_op = "=" if op == "==" else op
-    params.append(int(value) if is_numeric else str(value))
-    return f"{sql_expr} {sql_op} %s"
 
 
 def _attr_agg_debut_venue() -> str:

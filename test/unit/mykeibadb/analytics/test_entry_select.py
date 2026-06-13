@@ -197,6 +197,58 @@ def test_select_entries_history_filter_career_count(mocker: MockerFixture) -> No
     assert "BETWEEN" in sql
 
 
+def test_select_entries_history_filter_past_race_top_n_count(mocker: MockerFixture) -> None:
+    """HistoryFilter(past_race_top_n_count) 指定時に相関サブクエリがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=1,
+                    grade_codes=["A", "B", "C"],
+                    keibajo_codes=["05"],
+                ),
+                cond=(1, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "COUNT(*)" in sql
+    assert "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" in sql
+    assert "r2.grade_code = ANY(%s)" in sql
+    assert "r2.keibajo_code = ANY(%s)" in sql
+    assert 1 in params
+    assert ["A", "B", "C"] in params
+    assert ["05"] in params
+
+
+def test_select_entries_history_filter_past_race_top_n_count_no_top_n(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(past_race_top_n_count) で top_n 未指定時はBETWEEN条件が含まれない."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(type="past_race_top_n_count", top_n=None),
+                cond=(0, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" not in sql
+
+
 # DBエラー
 def test_select_entries_raises_on_db_error(mocker: MockerFixture) -> None:
     """DBエラーで例外が送出される."""
@@ -523,6 +575,29 @@ def test_select_entries_group_by_fixed_past_race_top_n_count_filters_empty_in(
                     type="past_race_top_n_count",
                     top_n=None,
                     filters=[{"column": "grade_code", "op": "in", "value": []}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_in_non_list(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が in で value がリスト・タプル以外の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="空リスト"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "grade_code", "op": "in", "value": "A"}],
                 ),
                 rows={"0回": 0, "1回以上": (1, 9999)},
             ),
