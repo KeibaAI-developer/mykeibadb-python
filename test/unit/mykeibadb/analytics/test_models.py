@@ -85,10 +85,10 @@ def test_race_condition_from_dict_kaisai_nichime() -> None:
     assert cond.kaisai_nichime == [4]
 
 
-def test_race_condition_from_dict_baba() -> None:
-    """baba フィールドが from_dict で正しく読み取れる。"""
-    cond = RaceCondition.from_dict({"baba": ["良"]})
-    assert cond.baba == ["良"]
+def test_race_condition_from_dict_babajotai_code() -> None:
+    """babajotai_code フィールドが from_dict で正しく読み取れる。"""
+    cond = RaceCondition.from_dict({"babajotai_code": ["良"]})
+    assert cond.babajotai_code == ["良"]
 
 
 def test_race_condition_from_dict_new_fields_none_by_default() -> None:
@@ -96,4 +96,4 @@ def test_race_condition_from_dict_new_fields_none_by_default() -> None:
     cond = RaceCondition.from_dict({})
     assert cond.keibajo_codes is None
     assert cond.kaisai_nichime is None
-    assert cond.baba is None
+    assert cond.babajotai_code is None

@@ -86,7 +86,7 @@ def test_get_uma_rekisen_with_condition(mocker: MockerFixture) -> None:
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([_make_rekisen_row()])
 
-    condition = RaceCondition(keibajo_code="05")
+    condition = RaceCondition(keibajo_codes=["05"])
     get_uma_rekisen(manager, uma_name="ディープ", condition=condition)
 
     sql = manager.fetch_dataframe.call_args[0][0]

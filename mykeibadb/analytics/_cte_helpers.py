@@ -103,7 +103,6 @@ def _babajotai_code_expr(race_alias: str) -> str:
 def build_race_condition_where(
     condition: RaceCondition,
     params: list[Any],
-    include_keibajo_code: bool = True,
     race_alias: str = "r",
 ) -> list[str]:
     """RaceConditionからWHERE句のpartsリストを生成する.
@@ -114,20 +113,16 @@ def build_race_condition_where(
     Args:
         condition (RaceCondition): レースフィルタ条件
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
-        include_keibajo_code (bool): keibajo_codeをWHERE句に含めるかどうか
         race_alias (str): race_johoテーブルのSQLエイリアス（デフォルト: "r"）
 
     Returns:
         list[str]: WHERE句のpartsリスト
 
     Raises:
-        ValueError: race_shubetsu / shiba_da / sayuu / baba に未対応の値が指定された場合
+        ValueError: race_shubetsu / shiba_da / sayuu / babajotai_code に未対応の値が指定された場合
     """
     a = race_alias
     where_parts: list[str] = []
-    if include_keibajo_code and condition.keibajo_code:
-        where_parts.append(f"{a}.keibajo_code = %s")
-        params.append(condition.keibajo_code)
     if condition.keibajo_codes:
         where_parts.append(f"{a}.keibajo_code = ANY(%s::TEXT[])")
         params.append(list(condition.keibajo_codes))
@@ -171,9 +166,6 @@ def build_race_condition_where(
             where_parts.append(f"TRIM({a}.track_code) BETWEEN '23' AND '29'")
         else:
             raise ValueError(f"未対応の shiba_da です: {condition.shiba_da!r}")
-    if condition.babajotai_code:
-        where_parts.append(f"{_babajotai_code_expr(a)} = %s")
-        params.append(condition.babajotai_code)
     if condition.sayuu:
         codes = _SAYUU_TRACK_CODES.get(condition.sayuu)
         if codes is None:
@@ -190,12 +182,12 @@ def build_race_condition_where(
     if condition.kaisai_nichime:
         where_parts.append(f"{a}.kaisai_nichime::INTEGER = ANY(%s::INTEGER[])")
         params.append([int(v) for v in condition.kaisai_nichime])
-    if condition.baba:
+    if condition.babajotai_code:
         baba_codes: list[str] = []
-        for name in condition.baba:
+        for name in condition.babajotai_code:
             code = _BABA_NAME_TO_CODE.get(name)
             if code is None:
-                raise ValueError(f"未対応の baba です: {name!r}")
+                raise ValueError(f"未対応の babajotai_code です: {name!r}")
             baba_codes.append(code)
         where_parts.append(f"{_babajotai_code_expr(a)} = ANY(%s::TEXT[])")
         params.append(baba_codes)
@@ -203,7 +195,7 @@ def build_race_condition_where(
 
 
 def build_course_week_cte(
-    keibajo_code: str | None,
+    keibajo_codes: list[str] | None,
     course_kubun: str,
     week_in_course: int,
     cte_params: list[Any],
@@ -215,7 +207,8 @@ def build_course_week_cte(
     3日間開催にも対応する。
 
     Args:
-        keibajo_code (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
+        keibajo_codes (list[str] | None): 競馬場コードフィルタ（複数指定可）。
+            Noneまたは空リストの場合は全競馬場が対象。
         course_kubun (str): コース区分（例: 'C'）
         week_in_course (int): コース使用開始からの週番号（1以上の整数）
         cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
@@ -229,9 +222,9 @@ def build_course_week_cte(
     """
     if week_in_course < 1:
         raise ValueError(f"week_in_course は1以上の整数を指定してください: {week_in_course!r}")
-    keibajo_filter = "AND keibajo_code = %s" if keibajo_code else ""
-    if keibajo_code:
-        cte_params.append(keibajo_code)
+    keibajo_filter = "AND keibajo_code = ANY(%s::TEXT[])" if keibajo_codes else ""
+    if keibajo_codes:
+        cte_params.append(list(keibajo_codes))
     cte_params.extend([course_kubun, week_in_course])
 
     cte_sql = f"""
