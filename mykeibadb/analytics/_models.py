@@ -224,7 +224,8 @@ class AttrSource:
             "debut_venue": デビュー競馬場コード
             "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
             "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
-            "prev_race_col": 前走の任意列値（column で対象列を指定）
+            "prev_race_col": 前走の任意列値（column で対象列を指定。filtersで前走の別列を
+                条件に絞り込み、条件を満たさない場合はNULL（fixedの全行から除外）にできる）
             "same_race_prev_year_finish": 前年同特別競走番号レースでの確定着順
         top_n (int | None): 何着以内を入着とみなすか（"sire_condition_finisher"用は既定1）。
             "past_race_top_n_count" で None の場合は着順で絞り込まない。
