@@ -30,7 +30,7 @@ _HIST_VALID_PARTS = [
 _HIST_CTE_SOURCE_TYPES = frozenset(
     {
         "career_count",
-        "past_finish_count",
+        "past_race_top_n_count",
         "debut_venue",
         "prev_race_name",
         "jockey_continuity",
@@ -39,6 +39,18 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
     }
 )
 _PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset({"kyakushitsu_hantei", "kyori", "kohan_3f_jun"})
+
+# past_race_top_n_count の filters で指定可能な horse_hist 列
+# 列名 -> (SQL式, 数値列か)
+_HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
+    "kakutei_chakujun": ("CAST(kakutei_chakujun AS INTEGER)", True),
+    "grade_code": ("grade_code", False),
+    "keibajo_code": ("keibajo_code", False),
+    "kyori_int": ("kyori_int", True),
+    "kyakushitsu_hantei": ("kyakushitsu_hantei", False),
+    "tokubetsu_kyoso_bango": ("tokubetsu_kyoso_bango", False),
+}
+_HIST_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
 
 
 def select_entries(
@@ -295,7 +307,7 @@ def _sire_condition_finisher_expr(source: AttrSource, params: list[Any]) -> str:
         "u2.kakutei_chakujun != '00'",
         "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
-    params.append(int(source.top_n))
+    params.append(int(source.top_n) if source.top_n is not None else 1)
     if source.condition is not None:
         tmp: list[Any] = []
         sire_parts.extend(build_race_condition_where(source.condition, tmp, race_alias="r2"))
@@ -429,8 +441,8 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
     """
     if source.type == "career_count":
         return [_attr_agg_career_count()]
-    if source.type == "past_finish_count":
-        return [_attr_agg_past_finish_count(source, params)]
+    if source.type == "past_race_top_n_count":
+        return [_attr_agg_past_race_top_n_count(source, params)]
     if source.type == "debut_venue":
         return [_attr_agg_debut_venue()]
     if source.type == "prev_race_name":
@@ -463,8 +475,8 @@ def _attr_agg_career_count() -> str:
     )
 
 
-def _attr_agg_past_finish_count(source: AttrSource, params: list[Any]) -> str:
-    """past_finish_count 用 attr_agg CTE を返す.
+def _attr_agg_past_race_top_n_count(source: AttrSource, params: list[Any]) -> str:
+    """past_race_top_n_count 用 attr_agg CTE を返す.
 
     Args:
         source (AttrSource): 属性算出方法
@@ -473,21 +485,18 @@ def _attr_agg_past_finish_count(source: AttrSource, params: list[Any]) -> str:
     Returns:
         str: attr_agg CTE 文字列
     """
-    hist_valid = " AND ".join(_HIST_VALID_PARTS)
-    filter_parts = [
-        hist_valid,
-        "CAST(kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
-    ]
-    params.append(int(source.top_n))
+    filter_parts = list(_HIST_VALID_PARTS)
+    if source.top_n is not None:
+        filter_parts.append("CAST(kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s")
+        params.append(int(source.top_n))
     if source.grade_codes:
         filter_parts.append("grade_code = ANY(%s)")
         params.append(source.grade_codes)
-    if source.keibajo_code:
-        filter_parts.append("keibajo_code = %s")
-        params.append(source.keibajo_code)
-    if source.kyori:
-        filter_parts.append("kyori_int = %s")
-        params.append(int(source.kyori))
+    if source.keibajo_codes:
+        filter_parts.append("keibajo_code = ANY(%s)")
+        params.append(source.keibajo_codes)
+    for filt in source.filters or []:
+        filter_parts.append(_build_hist_filter_clause(filt, params))
     filter_clause = "\n                AND ".join(filter_parts)
     return (
         f"attr_agg AS (\n"
@@ -499,6 +508,40 @@ def _attr_agg_past_finish_count(source: AttrSource, params: list[Any]) -> str:
         f"        GROUP BY ketto_toroku_bango, target_race_code\n"
         f"    )"
     )
+
+
+def _build_hist_filter_clause(filt: dict[str, Any], params: list[Any]) -> str:
+    """past_race_top_n_count の filters 1要素から horse_hist 列に対するWHERE句を返す.
+
+    Args:
+        filt (dict[str, Any]): {"column": str, "op": str, "value": Any} 形式のフィルタ定義
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: WHERE句に使える比較述語
+
+    Raises:
+        ValueError: column が _HIST_FILTER_COLUMNS に存在しない場合
+        ValueError: op が _HIST_FILTER_OPS に存在しない場合
+        ValueError: op が in/not_in で value が空リストの場合
+    """
+    column = filt["column"]
+    op = filt["op"]
+    value = filt["value"]
+    if column not in _HIST_FILTER_COLUMNS:
+        raise ValueError(f"past_race_top_n_count の filters で未対応の column です: {column!r}")
+    if op not in _HIST_FILTER_OPS:
+        raise ValueError(f"past_race_top_n_count の filters で未対応の op です: {op!r}")
+    sql_expr, is_numeric = _HIST_FILTER_COLUMNS[column]
+    if op in ("in", "not_in"):
+        if not value:
+            raise ValueError("past_race_top_n_count の filters: in/not_in に空リストは指定できません")
+        placeholders = ", ".join(["%s"] * len(value))
+        params.extend(int(v) if is_numeric else str(v) for v in value)
+        return f"{sql_expr} {'IN' if op == 'in' else 'NOT IN'} ({placeholders})"
+    sql_op = "=" if op == "==" else op
+    params.append(int(value) if is_numeric else str(value))
+    return f"{sql_expr} {sql_op} %s"
 
 
 def _attr_agg_debut_venue() -> str:

@@ -140,8 +140,6 @@ def build_history_filter_subquery(f: HistoryFilter, params: list[Any]) -> str:
     source = f.source
     if source.type == "debut_venue":
         return _build_debut_venue_filter(source, f.cond, params)
-    if source.type == "past_finish_count":
-        return _build_past_finish_count_filter(source, f.cond, params)
     if source.type == "career_count":
         return _build_career_count_filter(f.cond, params)
     if source.type == "prev_race_name":
@@ -301,58 +299,6 @@ def _build_debut_venue_filter(
     )
 
 
-def _build_past_finish_count_filter(
-    source: AttrSource,
-    cond: tuple[int, int] | int | str,
-    params: list[Any],
-) -> str:
-    """past_finish_count HistoryFilter のサブクエリを生成する.
-
-    Args:
-        source (AttrSource): 属性算出方法（past_finish_count）
-        cond (tuple[int, int] | int | str): 過去N着以内回数への比較条件
-        params (list[Any]): SQLパラメータリスト（末尾に追加される）
-
-    Returns:
-        str: (ketto_toroku_bango, race_code) を返すSELECT文
-    """
-    hist_valid_parts = [
-        "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
-        "u2.kakutei_chakujun != '00'",
-        "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
-    ]
-    params.append(int(source.top_n))
-    all_hist_parts = [
-        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
-        "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
-    ] + hist_valid_parts
-    if source.grade_codes:
-        all_hist_parts.append("r2.grade_code = ANY(%s)")
-        params.append(source.grade_codes)
-    if source.keibajo_code:
-        all_hist_parts.append("r2.keibajo_code = %s")
-        params.append(source.keibajo_code)
-    if source.kyori:
-        all_hist_parts.append("TRIM(r2.kyori)::INTEGER = %s")
-        params.append(int(source.kyori))
-    hist_where = "\n                  AND ".join(all_hist_parts)
-    count_expr = (
-        f"SELECT COUNT(*)\n"
-        f"              FROM umagoto_race_joho u2\n"
-        f"              JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
-        f"              WHERE {hist_where}"
-    )
-    cond_pred = _apply_cond(count_expr, cond, params)
-    base_valid = "\n              AND ".join(_ENTRY_VALID_PARTS)
-    return (
-        f"SELECT u.ketto_toroku_bango, u.race_code\n"
-        f"        FROM umagoto_race_joho u\n"
-        f"        JOIN race_shosai r ON u.race_code = r.race_code\n"
-        f"        WHERE {base_valid}\n"
-        f"          AND {cond_pred}"
-    )
-
-
 def _build_career_count_filter(
     cond: tuple[int, int] | int | str,
     params: list[Any],
@@ -500,7 +446,7 @@ def _build_sire_condition_finisher_filter(
         "u2.kakutei_chakujun != '00'",
         "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
-    params.append(int(source.top_n))
+    params.append(int(source.top_n) if source.top_n is not None else 1)
     if source.condition is not None:
         tmp: list[Any] = []
         sire_cond_parts.extend(build_race_condition_where(source.condition, tmp, race_alias="r2"))

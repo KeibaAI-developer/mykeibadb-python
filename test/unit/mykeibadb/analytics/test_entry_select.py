@@ -315,10 +315,10 @@ def test_select_entries_group_by_fixed_generates_case_when(mocker: MockerFixture
     assert "2〜5戦" in params
 
 
-def test_select_entries_group_by_fixed_past_finish_count_cte_params(
+def test_select_entries_group_by_fixed_past_race_top_n_count_cte_params(
     mocker: MockerFixture,
 ) -> None:
-    """group_by=fixed(past_finish_count) で CTE 方式では top_n が1回だけ params に含まれる."""
+    """group_by=fixed(past_race_top_n_count) で CTE 方式では top_n が1回だけ params に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
@@ -327,7 +327,7 @@ def test_select_entries_group_by_fixed_past_finish_count_cte_params(
         filters=[],
         group_by=GroupBy(
             kind="fixed",
-            source=AttrSource(type="past_finish_count", top_n=3),
+            source=AttrSource(type="past_race_top_n_count", top_n=3),
             rows={"0回": 0, "1回": 1, "2回以上": (2, 9999)},
         ),
     )
@@ -335,6 +335,198 @@ def test_select_entries_group_by_fixed_past_finish_count_cte_params(
     params = manager.fetch_dataframe.call_args[1]["params"]
     top_n_count = sum(1 for p in params if p == 3)
     assert top_n_count == 1, f"CTE 方式では top_n=3 は1回だけ params に含まれるべき: {params}"
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_no_top_n(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で top_n 未指定時はBETWEEN条件が含まれない."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=None),
+            rows={"0回": 0, "1回": 1, "2回以上": (2, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "BETWEEN %s AND %s) AS attr_val" not in sql
+    assert "CAST(kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" not in sql
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_grade_codes(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で grade_codes が grade_code = ANY(%s) に反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=1, grade_codes=["A", "B", "C"]),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "grade_code = ANY(%s)" in sql
+    assert ["A", "B", "C"] in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_keibajo_codes(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で keibajo_codes が keibajo_code = ANY(%s) に反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=1, keibajo_codes=["05"]),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "keibajo_code = ANY(%s)" in sql
+    assert ["05"] in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_eq(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の == 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "kyori_int", "op": "==", "value": 2000}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "kyori_int = %s" in sql
+    assert 2000 in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_in(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の in 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "grade_code", "op": "in", "value": ["A", "B"]}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "grade_code IN (%s, %s)" in sql
+    assert "A" in params
+    assert "B" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_column(
+    mocker: MockerFixture,
+) -> None:
+    """filters.column が未対応の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="column"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "umaban", "op": "==", "value": 1}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_op(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が未対応の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="op"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "kyori_int", "op": "between", "value": 2000}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_empty_in(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が in で value が空リストの場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="空リスト"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "grade_code", "op": "in", "value": []}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
 
 
 def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
