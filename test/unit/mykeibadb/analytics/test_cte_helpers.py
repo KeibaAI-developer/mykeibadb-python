@@ -244,3 +244,45 @@ def test_build_race_condition_where_invalid_sayuu() -> None:
     """未対応のsayuuでValueErrorが発生する."""
     with pytest.raises(ValueError, match="sayuu"):
         build_race_condition_where(RaceCondition(sayuu="斜め"), [])
+
+
+# build_race_condition_where keibajo_codes/kaisai_nichime/baba 正常系
+def test_build_race_condition_where_keibajo_codes() -> None:
+    """keibajo_codes指定でkeibajo_code = ANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(keibajo_codes=["09", "08"]), params)
+    assert any("keibajo_code = ANY(%s::TEXT[])" in p for p in parts)
+    assert params == [["09", "08"]]
+
+
+def test_build_race_condition_where_keibajo_codes_excluded_when_include_false() -> None:
+    """include_keibajo_code=Falseの場合keibajo_codesのWHERE句が生成されない."""
+    params: list[object] = []
+    parts = build_race_condition_where(
+        RaceCondition(keibajo_codes=["09"]), params, include_keibajo_code=False
+    )
+    assert not any("keibajo_code = ANY" in p for p in parts)
+
+
+def test_build_race_condition_where_kaisai_nichime() -> None:
+    """kaisai_nichime指定でkaisai_nichime = ANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(kaisai_nichime=[4]), params)
+    assert any("kaisai_nichime::INTEGER = ANY(%s::INTEGER[])" in p for p in parts)
+    assert params == [[4]]
+
+
+def test_build_race_condition_where_baba() -> None:
+    """baba指定で馬場状態コードへ変換しANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(baba=["良", "稍重"]), params)
+    combined = " ".join(parts)
+    assert "shiba_babajotai_code" in combined
+    assert "dirt_babajotai_code" in combined
+    assert params == [["1", "2"]]
+
+
+def test_build_race_condition_where_invalid_baba() -> None:
+    """未対応のbabaでValueErrorが発生する."""
+    with pytest.raises(ValueError, match="baba"):
+        build_race_condition_where(RaceCondition(baba=["晴れ"]), [])

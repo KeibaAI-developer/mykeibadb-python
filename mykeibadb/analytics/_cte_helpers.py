@@ -70,6 +70,14 @@ _SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {
     "直": ("10", "29"),
 }
 
+# 馬場状態名 → 馬場状態コード のマッピング
+_BABA_NAME_TO_CODE: dict[str, str] = {
+    "良": "1",
+    "稍重": "2",
+    "重": "3",
+    "不良": "4",
+}
+
 
 def build_race_condition_where(
     condition: RaceCondition,
@@ -92,13 +100,16 @@ def build_race_condition_where(
         list[str]: WHERE句のpartsリスト
 
     Raises:
-        ValueError: race_shubetsu / shiba_da / sayuu に未対応の値が指定された場合
+        ValueError: race_shubetsu / shiba_da / sayuu / baba に未対応の値が指定された場合
     """
     a = race_alias
     where_parts: list[str] = []
     if include_keibajo_code and condition.keibajo_code:
         where_parts.append(f"{a}.keibajo_code = %s")
         params.append(condition.keibajo_code)
+    if include_keibajo_code and condition.keibajo_codes:
+        where_parts.append(f"{a}.keibajo_code = ANY(%s::TEXT[])")
+        params.append(list(condition.keibajo_codes))
     if condition.kyori:
         where_parts.append(f"TRIM({a}.kyori)::INTEGER = %s")
         params.append(int(condition.kyori))
@@ -160,6 +171,23 @@ def build_race_condition_where(
     if condition.tokubetsu_kyoso_bango:
         where_parts.append(f"TRIM({a}.tokubetsu_kyoso_bango) = %s")
         params.append(condition.tokubetsu_kyoso_bango)
+    if condition.kaisai_nichime:
+        where_parts.append(f"{a}.kaisai_nichime::INTEGER = ANY(%s::INTEGER[])")
+        params.append([int(v) for v in condition.kaisai_nichime])
+    if condition.baba:
+        baba_codes: list[str] = []
+        for name in condition.baba:
+            code = _BABA_NAME_TO_CODE.get(name)
+            if code is None:
+                raise ValueError(f"未対応の baba です: {name!r}")
+            baba_codes.append(code)
+        where_parts.append(
+            "COALESCE("
+            f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
+            f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
+            ") = ANY(%s::TEXT[])"
+        )
+        params.append(baba_codes)
     return where_parts
 
 
