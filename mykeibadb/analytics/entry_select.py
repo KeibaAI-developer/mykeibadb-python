@@ -618,11 +618,9 @@ def _attr_agg_prev_race_col(source: AttrSource, params: list[Any]) -> str:
     attr_col = _PREV_RACE_COL_VAL_EXPR.get(source.column, raw_col)
 
     select_cols = {raw_col}
-    filter_exprs = [
-        build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS)
-        for filt in source.filters or []
-    ]
+    filter_exprs = []
     for filt in source.filters or []:
+        filter_exprs.append(build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS))
         select_cols.add(filt["column"])
 
     if filter_exprs:
