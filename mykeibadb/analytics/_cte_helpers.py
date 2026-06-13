@@ -312,3 +312,47 @@ def build_payout_ctes() -> str:
             FROM haraimodoshi WHERE TRIM(tansho1_haraimodoshikin) ~ '^[0-9]+$'
               AND TRIM(tansho1_haraimodoshikin)::INTEGER > 0
         )"""
+
+
+PAST_RACE_TOP_N_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
+
+
+def build_past_race_top_n_filter_clause(
+    filt: dict[str, Any],
+    params: list[Any],
+    column_map: dict[str, tuple[str, bool]],
+) -> str:
+    """past_race_top_n_count の filters 1要素からWHERE句を返す.
+
+    Args:
+        filt (dict[str, Any]): {"column": str, "op": str, "value": Any} 形式のフィルタ定義
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        column_map (dict[str, tuple[str, bool]]): 列名 -> (SQL式, 数値列か) のマップ
+
+    Returns:
+        str: WHERE句に使える比較述語
+
+    Raises:
+        ValueError: column が column_map に存在しない場合
+        ValueError: op が PAST_RACE_TOP_N_FILTER_OPS に存在しない場合
+        ValueError: op が in/not_in で value が空でないリスト・タプル以外の場合
+    """
+    column = filt["column"]
+    op = filt["op"]
+    value = filt["value"]
+    if column not in column_map:
+        raise ValueError(f"past_race_top_n_count の filters で未対応の column です: {column!r}")
+    if op not in PAST_RACE_TOP_N_FILTER_OPS:
+        raise ValueError(f"past_race_top_n_count の filters で未対応の op です: {op!r}")
+    sql_expr, is_numeric = column_map[column]
+    if op in ("in", "not_in"):
+        if not isinstance(value, (list, tuple)) or not value:
+            raise ValueError(
+                "past_race_top_n_count の filters: in/not_inには空リストではないリストかタプルを指定してください"
+            )
+        placeholders = ", ".join(["%s"] * len(value))
+        params.extend(int(v) if is_numeric else str(v) for v in value)
+        return f"{sql_expr} {'IN' if op == 'in' else 'NOT IN'} ({placeholders})"
+    sql_op = "=" if op == "==" else op
+    params.append(int(value) if is_numeric else str(value))
+    return f"{sql_expr} {sql_op} %s"

@@ -61,6 +61,40 @@ def test_attrsource_from_dict_new_fields_none_by_default() -> None:
     assert src.tokubetsu_kyoso_bango is None
 
 
+def test_attrsource_from_dict_past_race_top_n_count_top_n_none() -> None:
+    """past_race_top_n_count で top_n 未指定時は None。"""
+    src = AttrSource.from_dict({"type": "past_race_top_n_count"})
+    assert src.top_n is None
+
+
+def test_attrsource_from_dict_past_race_top_n_count_top_n_specified() -> None:
+    """past_race_top_n_count で top_n 指定時はそのint値。"""
+    src = AttrSource.from_dict({"type": "past_race_top_n_count", "top_n": 1})
+    assert src.top_n == 1
+
+
+def test_attrsource_from_dict_other_type_top_n_default() -> None:
+    """past_race_top_n_count 以外で top_n 未指定時は既定値1。"""
+    src = AttrSource.from_dict({"type": "sire_condition_finisher"})
+    assert src.top_n == 1
+
+
+def test_attrsource_from_dict_past_race_top_n_count_keibajo_codes_and_filters() -> None:
+    """keibajo_codes / filters / grade_codes フィールドが正しく読み取れる。"""
+    src = AttrSource.from_dict(
+        {
+            "type": "past_race_top_n_count",
+            "top_n": 1,
+            "grade_codes": ["A", "B", "C"],
+            "keibajo_codes": ["05"],
+            "filters": [{"column": "kyori_int", "op": "==", "value": 2000}],
+        }
+    )
+    assert src.grade_codes == ["A", "B", "C"]
+    assert src.keibajo_codes == ["05"]
+    assert src.filters == [{"column": "kyori_int", "op": "==", "value": 2000}]
+
+
 # ---------------------------------------------------------------------------
 # 準正常系
 # ---------------------------------------------------------------------------

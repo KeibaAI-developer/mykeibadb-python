@@ -218,7 +218,7 @@ class AttrSource:
 
     Attributes:
         type (str): 属性算出種別。以下のいずれか:
-            "past_finish_count": 過去N着以内の回数（grade_codes/keibajo_code/kyoriでフィルタ可）
+            "past_race_top_n_count": 過去レースの集計（top_n/grade_codes/keibajo_codes/filtersでフィルタ可）
             "career_count": キャリア戦数
             "prev_race_name": 前走レース名
             "debut_venue": デビュー競馬場コード
@@ -226,33 +226,38 @@ class AttrSource:
             "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
             "prev_race_col": 前走の任意列値（column で対象列を指定）
             "same_race_prev_year_finish": 前年同特別競走番号レースでの確定着順
-        top_n (int): 何着以内を入着とみなすか（"past_finish_count"/"sire_condition_finisher"用）
+        top_n (int | None): 何着以内を入着とみなすか（"sire_condition_finisher"用は既定1）。
+            "past_race_top_n_count" で None の場合は着順で絞り込まない。
         grade_codes (list[str] | None): 対象グレードコードリスト
-        keibajo_code (str | None): 対象競馬場コード
-        kyori (int | None): 対象距離
+        keibajo_codes (list[str] | None): 対象競馬場コードリスト（"past_race_top_n_count"用）
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
         column (str | None): 前走列名（"prev_race_col"用）
         overseas_label (str | None): 海外開催集約ラベル（"prev_race_name"用）
         tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"same_race_prev_year_finish"用）
         absent_label (str): 不出走ラベル（"same_race_prev_year_finish"用）
+        filters (list[dict[str, Any]] | None): 汎用フィルタ（"past_race_top_n_count"用）。
+            各要素は {"column": horse_histの列名, "op": 演算子, "value": 比較値} の形式。
     """
 
     type: str
-    top_n: int = 1
+    top_n: int | None = 1
     grade_codes: list[str] | None = None
-    keibajo_code: str | None = None
-    kyori: int | None = None
+    keibajo_codes: list[str] | None = None
     condition: RaceCondition | None = None
     allowed_values: list[str] | None = None
     column: str | None = None
     overseas_label: str | None = None
     tokubetsu_kyoso_bango: str | None = None
     absent_label: str = "出走無し"
+    filters: list[dict[str, Any]] | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "AttrSource":
         """辞書からAttrSourceを生成する.
+
+        "past_race_top_n_count" で top_n 未指定時は None（着順で絞り込まない）。
+        それ以外の type で top_n 未指定時は既定値 1。
 
         Args:
             d (dict[str, Any]): 属性辞書
@@ -260,23 +265,27 @@ class AttrSource:
         Returns:
             AttrSource: 生成したAttrSourceインスタンス
         """
-        raw_kyori = d.get("kyori")
         raw_condition = d.get("condition")
+        raw_top_n = d.get("top_n")
         condition: RaceCondition | None = None
         if raw_condition is not None:
             condition = RaceCondition.from_dict(raw_condition)
+        if raw_top_n is None and d["type"] == "past_race_top_n_count":
+            top_n: int | None = None
+        else:
+            top_n = int(raw_top_n) if raw_top_n is not None else 1
         return AttrSource(
             type=d["type"],
-            top_n=int(d.get("top_n", 1)),
+            top_n=top_n,
             grade_codes=d.get("grade_codes"),
-            keibajo_code=d.get("keibajo_code"),
-            kyori=int(raw_kyori) if raw_kyori is not None else None,
+            keibajo_codes=d.get("keibajo_codes"),
             condition=condition,
             allowed_values=d.get("allowed_values"),
             column=d.get("column"),
             overseas_label=d.get("overseas_label"),
             tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
             absent_label=d.get("absent_label", "出走無し"),
+            filters=d.get("filters"),
         )
 
 
