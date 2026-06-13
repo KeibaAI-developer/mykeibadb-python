@@ -79,6 +79,27 @@ _BABA_NAME_TO_CODE: dict[str, str] = {
 }
 
 
+def _babajotai_code_expr(race_alias: str) -> str:
+    """有効な馬場状態コードを取得するSQL式を返す.
+
+    shiba_babajotai_code / dirt_babajotai_code のうち、空文字・'0'を除いた
+    有効な方の値を返す。
+
+    Args:
+        race_alias (str): race_johoテーブルのSQLエイリアス
+
+    Returns:
+        str: COALESCEによる馬場状態コード取得式
+    """
+    a = race_alias
+    return (
+        "COALESCE("
+        f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
+        f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
+        ")"
+    )
+
+
 def build_race_condition_where(
     condition: RaceCondition,
     params: list[Any],
@@ -151,12 +172,7 @@ def build_race_condition_where(
         else:
             raise ValueError(f"未対応の shiba_da です: {condition.shiba_da!r}")
     if condition.babajotai_code:
-        where_parts.append(
-            "COALESCE("
-            f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
-            f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
-            ") = %s"
-        )
+        where_parts.append(f"{_babajotai_code_expr(a)} = %s")
         params.append(condition.babajotai_code)
     if condition.sayuu:
         codes = _SAYUU_TRACK_CODES.get(condition.sayuu)
@@ -181,12 +197,7 @@ def build_race_condition_where(
             if code is None:
                 raise ValueError(f"未対応の baba です: {name!r}")
             baba_codes.append(code)
-        where_parts.append(
-            "COALESCE("
-            f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
-            f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
-            ") = ANY(%s::TEXT[])"
-        )
+        where_parts.append(f"{_babajotai_code_expr(a)} = ANY(%s::TEXT[])")
         params.append(baba_codes)
     return where_parts
 

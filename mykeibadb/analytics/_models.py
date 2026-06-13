@@ -119,6 +119,8 @@ class RaceCondition:
         kaisai_nichime (list[int] | None): 開催日目フィルタ（複数指定可）。
         baba (list[str] | None): 馬場状態フィルタ（複数指定可）。「良」「稍重」「重」「不良」。
             shiba_babajotai_code / dirt_babajotai_code のうち有効な方と比較する。
+            babajotai_code と同時指定すると同一列に対するAND条件となり、
+            矛盾する組み合わせでは0件になるため同時指定しないこと。
     """
 
     keibajo_code: str | None = None
