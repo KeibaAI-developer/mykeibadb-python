@@ -128,7 +128,7 @@ def build_race_condition_where(
     if include_keibajo_code and condition.keibajo_code:
         where_parts.append(f"{a}.keibajo_code = %s")
         params.append(condition.keibajo_code)
-    if include_keibajo_code and condition.keibajo_codes:
+    if condition.keibajo_codes:
         where_parts.append(f"{a}.keibajo_code = ANY(%s::TEXT[])")
         params.append(list(condition.keibajo_codes))
     if condition.kyori:

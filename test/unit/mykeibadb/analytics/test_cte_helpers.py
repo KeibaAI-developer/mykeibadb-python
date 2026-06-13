@@ -255,13 +255,18 @@ def test_build_race_condition_where_keibajo_codes() -> None:
     assert params == [["09", "08"]]
 
 
-def test_build_race_condition_where_keibajo_codes_excluded_when_include_false() -> None:
-    """include_keibajo_code=Falseの場合keibajo_codesのWHERE句が生成されない."""
+def test_build_race_condition_where_keibajo_codes_kept_when_include_false() -> None:
+    """include_keibajo_code=Falseでもkeibajo_codesのWHERE句は生成される.
+
+    course_kubun + week_in_course のCTE処理では単数のkeibajo_codeのみCTEに
+    渡されるため、複数指定のkeibajo_codesはWHERE句側で維持する必要がある。
+    """
     params: list[object] = []
     parts = build_race_condition_where(
         RaceCondition(keibajo_codes=["09"]), params, include_keibajo_code=False
     )
-    assert not any("keibajo_code = ANY" in p for p in parts)
+    assert any("keibajo_code = ANY(%s::TEXT[])" in p for p in parts)
+    assert params == [["09"]]
 
 
 def test_build_race_condition_where_kaisai_nichime() -> None:
