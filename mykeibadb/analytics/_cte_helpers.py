@@ -70,13 +70,8 @@ _SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {
     "直": ("10", "29"),
 }
 
-# 馬場状態名 → 馬場状態コード のマッピング
-_BABA_NAME_TO_CODE: dict[str, str] = {
-    "良": "1",
-    "稍重": "2",
-    "重": "3",
-    "不良": "4",
-}
+# 馬場状態コードの有効値（「1」=良、「2」=稍重、「3」=重、「4」=不良）
+_VALID_BABAJOTAI_CODES: frozenset[str] = frozenset({"1", "2", "3", "4"})
 
 
 def _babajotai_code_expr(race_alias: str) -> str:
@@ -119,7 +114,7 @@ def build_race_condition_where(
         list[str]: WHERE句のpartsリスト
 
     Raises:
-        ValueError: race_shubetsu / shiba_da / sayuu / babajotai_code に未対応の値が指定された場合
+        ValueError: race_shubetsu / shiba_da / sayuu / babajotai_codes に未対応の値が指定された場合
     """
     a = race_alias
     where_parts: list[str] = []
@@ -182,15 +177,12 @@ def build_race_condition_where(
     if condition.kaisai_nichime:
         where_parts.append(f"{a}.kaisai_nichime::INTEGER = ANY(%s::INTEGER[])")
         params.append([int(v) for v in condition.kaisai_nichime])
-    if condition.babajotai_code:
-        baba_codes: list[str] = []
-        for name in condition.babajotai_code:
-            code = _BABA_NAME_TO_CODE.get(name)
-            if code is None:
-                raise ValueError(f"未対応の babajotai_code です: {name!r}")
-            baba_codes.append(code)
+    if condition.babajotai_codes:
+        for code in condition.babajotai_codes:
+            if code not in _VALID_BABAJOTAI_CODES:
+                raise ValueError(f"未対応の babajotai_codes です: {code!r}")
         where_parts.append(f"{_babajotai_code_expr(a)} = ANY(%s::TEXT[])")
-        params.append(baba_codes)
+        params.append(list(condition.babajotai_codes))
     return where_parts
 
 

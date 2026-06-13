@@ -178,10 +178,10 @@ def test_build_race_condition_where_shiba_da_da() -> None:
     assert any("BETWEEN '23' AND '29'" in p for p in parts)
 
 
-def test_build_race_condition_where_babajotai_code() -> None:
-    """babajotai_code指定でCOALESCE(shiba_babajotai_code, dirt_babajotai_code)のANY(...)が生成される."""
+def test_build_race_condition_where_babajotai_codes() -> None:
+    """babajotai_codes指定でCOALESCE(shiba_babajotai_code, dirt_babajotai_code)のANY(...)が生成される."""
     params: list[object] = []
-    parts = build_race_condition_where(RaceCondition(babajotai_code=["良"]), params)
+    parts = build_race_condition_where(RaceCondition(babajotai_codes=["1"]), params)
     combined = " ".join(parts)
     assert "shiba_babajotai_code" in combined
     assert "dirt_babajotai_code" in combined
@@ -263,17 +263,17 @@ def test_build_race_condition_where_kaisai_nichime() -> None:
     assert params == [[4]]
 
 
-def test_build_race_condition_where_babajotai_code_multiple() -> None:
-    """babajotai_code複数指定で馬場状態コードへ変換しANY(...)のWHERE句が生成される."""
+def test_build_race_condition_where_babajotai_codes_multiple() -> None:
+    """babajotai_codes複数指定でANY(...)のWHERE句が生成される."""
     params: list[object] = []
-    parts = build_race_condition_where(RaceCondition(babajotai_code=["良", "稍重"]), params)
+    parts = build_race_condition_where(RaceCondition(babajotai_codes=["1", "2"]), params)
     combined = " ".join(parts)
     assert "shiba_babajotai_code" in combined
     assert "dirt_babajotai_code" in combined
     assert params == [["1", "2"]]
 
 
-def test_build_race_condition_where_invalid_babajotai_code() -> None:
-    """未対応のbabajotai_codeでValueErrorが発生する."""
-    with pytest.raises(ValueError, match="babajotai_code"):
-        build_race_condition_where(RaceCondition(babajotai_code=["晴れ"]), [])
+def test_build_race_condition_where_invalid_babajotai_codes() -> None:
+    """未対応のbabajotai_codesでValueErrorが発生する."""
+    with pytest.raises(ValueError, match="babajotai_codes"):
+        build_race_condition_where(RaceCondition(babajotai_codes=["晴れ"]), [])

@@ -103,7 +103,8 @@ class RaceCondition:
             track_code から導出する。
         shiba_da (str | None): 芝ダフィルタ。「芝」または「ダ」。
             track_code から導出する。
-        babajotai_code (list[str] | None): 馬場状態フィルタ（複数指定可）。「良」「稍重」「重」「不良」。
+        babajotai_codes (list[str] | None): 馬場状態コードフィルタ（複数指定可）。
+            「1」=良、「2」=稍重、「3」=重、「4」=不良。
             shiba_babajotai_code / dirt_babajotai_code のうち有効な方と比較する。
         sayuu (str | None): 回り方向フィルタ。「左」「右」「直」。
             track_code から導出する。
@@ -124,7 +125,7 @@ class RaceCondition:
     kyoso_joken_codes: list[str] | None = None
     race_shubetsu: str | None = None
     shiba_da: str | None = None
-    babajotai_code: list[str] | None = None
+    babajotai_codes: list[str] | None = None
     sayuu: str | None = None
     course_kubun: str | None = None
     week_in_course: int | None = None
@@ -155,7 +156,7 @@ class RaceCondition:
             kyoso_joken_codes=d.get("kyoso_joken_codes"),
             race_shubetsu=d.get("race_shubetsu"),
             shiba_da=d.get("shiba_da"),
-            babajotai_code=d.get("babajotai_code"),
+            babajotai_codes=d.get("babajotai_codes"),
             sayuu=d.get("sayuu"),
             course_kubun=d.get("course_kubun"),
             week_in_course=int(raw_week) if raw_week is not None else None,
