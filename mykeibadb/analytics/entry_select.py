@@ -67,7 +67,6 @@ def select_entries(
     cte_parts: list[str] = []
     extra_joins: list[str] = []
     cw_join_sql = ""
-    using_cw = False
 
     _validate_course_week(condition)
 
@@ -77,13 +76,12 @@ def select_entries(
         and condition.week_in_course is not None
     ):
         cte_sql, cw_join_sql = build_course_week_cte(
-            condition.keibajo_code,
+            condition.keibajo_codes,
             condition.course_kubun,
             condition.week_in_course,
             params,
         )
         cte_parts.append(cte_sql)
-        using_cw = True
 
     use_hist_cte = (
         group_by is not None
@@ -95,9 +93,7 @@ def select_entries(
     if use_hist_cte:
         th_where_parts = list(_ENTRY_VALID_PARTS)
         if condition is not None:
-            th_where_parts.extend(
-                build_race_condition_where(condition, params, include_keibajo_code=not using_cw)
-            )
+            th_where_parts.extend(build_race_condition_where(condition, params))
         if filters:
             filter_subqs = [build_filter_subquery(f, params) for f in filters]
             intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
@@ -129,9 +125,7 @@ def select_entries(
 
         where_parts = list(_ENTRY_VALID_PARTS)
         if condition is not None:
-            where_parts.extend(
-                build_race_condition_where(condition, params, include_keibajo_code=not using_cw)
-            )
+            where_parts.extend(build_race_condition_where(condition, params))
         if filters:
             filter_subqs = [build_filter_subquery(f, params) for f in filters]
             intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)

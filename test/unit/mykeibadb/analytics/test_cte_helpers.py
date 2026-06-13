@@ -15,11 +15,11 @@ from mykeibadb.analytics._models import RaceCondition, Subject
 def test_build_course_week_cte_returns_cte_and_join_sql() -> None:
     """keibajo指定ありでCTE SQLとJOIN句が返る."""
     params: list[object] = []
-    cte_sql, join_sql = build_course_week_cte("05", "C", 1, params)
+    cte_sql, join_sql = build_course_week_cte(["05"], "C", 1, params)
     assert "cw_target" in cte_sql
     assert "week_in_course" in cte_sql
     assert "JOIN cw_target" in join_sql
-    assert params == ["05", "C", 1]
+    assert params == [["05"], "C", 1]
 
 
 def test_build_course_week_cte_without_keibajo() -> None:
@@ -34,7 +34,7 @@ def test_build_course_week_cte_without_keibajo() -> None:
 def test_build_course_week_cte_appends_to_existing_params() -> None:
     """既存パラメータリストの末尾にパラメータが追加される."""
     params: list[object] = ["existing"]
-    build_course_week_cte("05", "A", 3, params)
+    build_course_week_cte(["05"], "A", 3, params)
     assert params[0] == "existing"
     assert params[-1] == 3
 
@@ -178,14 +178,14 @@ def test_build_race_condition_where_shiba_da_da() -> None:
     assert any("BETWEEN '23' AND '29'" in p for p in parts)
 
 
-def test_build_race_condition_where_babajotai_code() -> None:
-    """babajotai_code指定でCOALESCE(shiba_babajotai_code, dirt_babajotai_code)=?が生成される."""
+def test_build_race_condition_where_babajotai_codes() -> None:
+    """babajotai_codes指定でCOALESCE(shiba_babajotai_code, dirt_babajotai_code)のANY(...)が生成される."""
     params: list[object] = []
-    parts = build_race_condition_where(RaceCondition(babajotai_code="1"), params)
+    parts = build_race_condition_where(RaceCondition(babajotai_codes=["1"]), params)
     combined = " ".join(parts)
     assert "shiba_babajotai_code" in combined
     assert "dirt_babajotai_code" in combined
-    assert "1" in params
+    assert params == [["1"]]
 
 
 @pytest.mark.parametrize(
@@ -244,3 +244,36 @@ def test_build_race_condition_where_invalid_sayuu() -> None:
     """未対応のsayuuでValueErrorが発生する."""
     with pytest.raises(ValueError, match="sayuu"):
         build_race_condition_where(RaceCondition(sayuu="斜め"), [])
+
+
+# build_race_condition_where keibajo_codes/kaisai_nichime/babajotai_code 正常系
+def test_build_race_condition_where_keibajo_codes() -> None:
+    """keibajo_codes指定でkeibajo_code = ANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(keibajo_codes=["09", "08"]), params)
+    assert any("keibajo_code = ANY(%s::TEXT[])" in p for p in parts)
+    assert params == [["09", "08"]]
+
+
+def test_build_race_condition_where_kaisai_nichime() -> None:
+    """kaisai_nichime指定でkaisai_nichime = ANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(kaisai_nichime=[4]), params)
+    assert any("kaisai_nichime::INTEGER = ANY(%s::INTEGER[])" in p for p in parts)
+    assert params == [[4]]
+
+
+def test_build_race_condition_where_babajotai_codes_multiple() -> None:
+    """babajotai_codes複数指定でANY(...)のWHERE句が生成される."""
+    params: list[object] = []
+    parts = build_race_condition_where(RaceCondition(babajotai_codes=["1", "2"]), params)
+    combined = " ".join(parts)
+    assert "shiba_babajotai_code" in combined
+    assert "dirt_babajotai_code" in combined
+    assert params == [["1", "2"]]
+
+
+def test_build_race_condition_where_invalid_babajotai_codes() -> None:
+    """未対応のbabajotai_codesでValueErrorが発生する."""
+    with pytest.raises(ValueError, match="babajotai_codes"):
+        build_race_condition_where(RaceCondition(babajotai_codes=["晴れ"]), [])

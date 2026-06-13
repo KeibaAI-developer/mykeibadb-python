@@ -132,21 +132,21 @@ def test_select_entries_group_by_subject_includes_join(mocker: MockerFixture) ->
 
 # condition 指定
 def test_select_entries_condition_keibajo_code_in_sql(mocker: MockerFixture) -> None:
-    """condition でkeibajo_codeフィルタがSQLに含まれる."""
+    """condition でkeibajo_codesフィルタがSQLに含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
     select_entries(
         manager,
         filters=[],
-        condition=RaceCondition(keibajo_code="05", year_from="2020"),
+        condition=RaceCondition(keibajo_codes=["05"], year_from="2020"),
     )
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "keibajo_code = %s" in sql
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
     assert "kaisai_nen >= %s" in sql
-    assert "05" in params
+    assert ["05"] in params
     assert "2020" in params
 
 
@@ -413,7 +413,7 @@ def test_select_entries_hist_cte_where_uses_target_horses(
     select_entries(
         manager,
         filters=[],
-        condition=RaceCondition(keibajo_code="05"),
+        condition=RaceCondition(keibajo_codes=["05"]),
         group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
     )
 
@@ -424,45 +424,45 @@ def test_select_entries_hist_cte_where_uses_target_horses(
 def test_select_entries_hist_cte_condition_in_target_horses(
     mocker: MockerFixture,
 ) -> None:
-    """CTE 方式では condition の keibajo_code が target_horses の WHERE に含まれる."""
+    """CTE 方式では condition の keibajo_codes が target_horses の WHERE に含まれる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
     select_entries(
         manager,
         filters=[],
-        condition=RaceCondition(keibajo_code="05", year_from="2020"),
+        condition=RaceCondition(keibajo_codes=["05"], year_from="2020"),
         group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
     )
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert "target_horses" in sql
-    assert "keibajo_code = %s" in sql
-    assert "05" in params
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
+    assert ["05"] in params
     assert "2020" in params
 
 
 # course_week CTE
-def test_select_entries_course_week_uses_cte_and_excludes_keibajo_from_where(
+def test_select_entries_course_week_uses_cte_and_keeps_keibajo_in_where(
     mocker: MockerFixture,
 ) -> None:
-    """course_kubun+week_in_course 指定時にCTEが生成され、keibajo_codeがWHEREから除外される."""
+    """course_kubun+week_in_course 指定時にCTEが生成され、keibajo_codesはWHEREにも残る."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
     select_entries(
         manager,
         filters=[],
-        condition=RaceCondition(keibajo_code="05", course_kubun="C", week_in_course=1),
+        condition=RaceCondition(keibajo_codes=["05"], course_kubun="C", week_in_course=1),
     )
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
     assert "WITH RECURSIVE" in sql
     assert "cw_target" in sql
-    assert "cw_target" in sql
-    assert "05" in params
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
+    assert ["05"] in params
     assert "C" in params
     assert 1 in params
 
@@ -476,7 +476,7 @@ def test_select_entries_course_week_params_order(mocker: MockerFixture) -> None:
         manager,
         filters=[],
         condition=RaceCondition(
-            keibajo_code="05",
+            keibajo_codes=["05"],
             course_kubun="C",
             week_in_course=2,
             year_from="2022",
@@ -484,7 +484,7 @@ def test_select_entries_course_week_params_order(mocker: MockerFixture) -> None:
     )
 
     params = list(manager.fetch_dataframe.call_args[1]["params"])
-    keibajo_idx = params.index("05")
+    keibajo_idx = params.index(["05"])
     course_kubun_idx = params.index("C")
     year_idx = params.index("2022")
     assert keibajo_idx < course_kubun_idx < year_idx

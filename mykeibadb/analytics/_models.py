@@ -93,7 +93,6 @@ class RaceCondition:
     """レースの絞り込み条件.
 
     Attributes:
-        keibajo_code (str | None): 競馬場コードフィルタ
         kyori (int | None): 距離フィルタ
         year_from (str | None): 集計開始年（YYYY形式）
         year_to (str | None): 集計終了年（YYYY形式）
@@ -104,7 +103,8 @@ class RaceCondition:
             track_code から導出する。
         shiba_da (str | None): 芝ダフィルタ。「芝」または「ダ」。
             track_code から導出する。
-        babajotai_code (str | None): 馬場状態コードフィルタ。「1」=良、「2」=稍重、「3」=重、「4」=不良。
+        babajotai_codes (list[str] | None): 馬場状態コードフィルタ（複数指定可）。
+            「1」=良、「2」=稍重、「3」=重、「4」=不良。
             shiba_babajotai_code / dirt_babajotai_code のうち有効な方と比較する。
         sayuu (str | None): 回り方向フィルタ。「左」「右」「直」。
             track_code から導出する。
@@ -114,9 +114,10 @@ class RaceCondition:
             course_kubun と必ず同時に指定すること。
         tokubetsu_kyoso_bango (str | None): 特別競走番号フィルタ。race_shosai の
             tokubetsu_kyoso_bango と完全一致で比較する。
+        keibajo_codes (list[str] | None): 競馬場コードフィルタ（複数指定可）。
+        kaisai_nichime (list[int] | None): 開催日目フィルタ（複数指定可）。
     """
 
-    keibajo_code: str | None = None
     kyori: int | None = None
     year_from: str | None = None
     year_to: str | None = None
@@ -124,17 +125,19 @@ class RaceCondition:
     kyoso_joken_codes: list[str] | None = None
     race_shubetsu: str | None = None
     shiba_da: str | None = None
-    babajotai_code: str | None = None
+    babajotai_codes: list[str] | None = None
     sayuu: str | None = None
     course_kubun: str | None = None
     week_in_course: int | None = None
     tokubetsu_kyoso_bango: str | None = None
+    keibajo_codes: list[str] | None = None
+    kaisai_nichime: list[int] | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> "RaceCondition":
         """辞書からRaceConditionを生成する.
 
-        kyori / week_in_course は int に変換する。
+        kyori / week_in_course / kaisai_nichime は int に変換する。
 
         Args:
             d (dict[str, Any]): 条件辞書
@@ -144,8 +147,8 @@ class RaceCondition:
         """
         raw_kyori = d.get("kyori")
         raw_week = d.get("week_in_course")
+        raw_kaisai_nichime = d.get("kaisai_nichime")
         return RaceCondition(
-            keibajo_code=d.get("keibajo_code"),
             kyori=int(raw_kyori) if raw_kyori is not None else None,
             year_from=d.get("year_from"),
             year_to=d.get("year_to"),
@@ -153,11 +156,15 @@ class RaceCondition:
             kyoso_joken_codes=d.get("kyoso_joken_codes"),
             race_shubetsu=d.get("race_shubetsu"),
             shiba_da=d.get("shiba_da"),
-            babajotai_code=d.get("babajotai_code"),
+            babajotai_codes=d.get("babajotai_codes"),
             sayuu=d.get("sayuu"),
             course_kubun=d.get("course_kubun"),
             week_in_course=int(raw_week) if raw_week is not None else None,
             tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
+            keibajo_codes=d.get("keibajo_codes"),
+            kaisai_nichime=(
+                [int(v) for v in raw_kaisai_nichime] if raw_kaisai_nichime is not None else None
+            ),
         )
 
 

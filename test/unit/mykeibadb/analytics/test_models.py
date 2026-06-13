@@ -1,8 +1,9 @@
-"""AttrSource の from_dict テスト。"""
+"""AttrSource / RaceCondition の from_dict テスト。"""
 
 import pytest
 
 from mykeibadb.analytics import AttrSource
+from mykeibadb.analytics._models import RaceCondition
 
 
 # ---------------------------------------------------------------------------
@@ -67,3 +68,32 @@ def test_attrsource_from_dict_missing_type_raises() -> None:
     """type キーが存在しない場合に KeyError が発生する。"""
     with pytest.raises(KeyError):
         AttrSource.from_dict({"column": "kyori"})
+
+
+# ---------------------------------------------------------------------------
+# RaceCondition.from_dict 正常系
+# ---------------------------------------------------------------------------
+def test_race_condition_from_dict_keibajo_codes() -> None:
+    """keibajo_codes フィールドが from_dict で正しく読み取れる。"""
+    cond = RaceCondition.from_dict({"keibajo_codes": ["09", "08"]})
+    assert cond.keibajo_codes == ["09", "08"]
+
+
+def test_race_condition_from_dict_kaisai_nichime() -> None:
+    """kaisai_nichime フィールドが from_dict で int リストに変換される。"""
+    cond = RaceCondition.from_dict({"kaisai_nichime": ["4"]})
+    assert cond.kaisai_nichime == [4]
+
+
+def test_race_condition_from_dict_babajotai_codes() -> None:
+    """babajotai_codes フィールドが from_dict で正しく読み取れる。"""
+    cond = RaceCondition.from_dict({"babajotai_codes": ["1"]})
+    assert cond.babajotai_codes == ["1"]
+
+
+def test_race_condition_from_dict_new_fields_none_by_default() -> None:
+    """新フィールドを省略した場合はすべて None。"""
+    cond = RaceCondition.from_dict({})
+    assert cond.keibajo_codes is None
+    assert cond.kaisai_nichime is None
+    assert cond.babajotai_codes is None

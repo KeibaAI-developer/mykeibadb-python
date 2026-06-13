@@ -70,11 +70,34 @@ _SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {
     "直": ("10", "29"),
 }
 
+# 馬場状態コードの有効値（「1」=良、「2」=稍重、「3」=重、「4」=不良）
+_VALID_BABAJOTAI_CODES: frozenset[str] = frozenset({"1", "2", "3", "4"})
+
+
+def _babajotai_code_expr(race_alias: str) -> str:
+    """有効な馬場状態コードを取得するSQL式を返す.
+
+    shiba_babajotai_code / dirt_babajotai_code のうち、空文字・'0'を除いた
+    有効な方の値を返す。
+
+    Args:
+        race_alias (str): race_johoテーブルのSQLエイリアス
+
+    Returns:
+        str: COALESCEによる馬場状態コード取得式
+    """
+    a = race_alias
+    return (
+        "COALESCE("
+        f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
+        f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
+        ")"
+    )
+
 
 def build_race_condition_where(
     condition: RaceCondition,
     params: list[Any],
-    include_keibajo_code: bool = True,
     race_alias: str = "r",
 ) -> list[str]:
     """RaceConditionからWHERE句のpartsリストを生成する.
@@ -85,20 +108,19 @@ def build_race_condition_where(
     Args:
         condition (RaceCondition): レースフィルタ条件
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
-        include_keibajo_code (bool): keibajo_codeをWHERE句に含めるかどうか
         race_alias (str): race_johoテーブルのSQLエイリアス（デフォルト: "r"）
 
     Returns:
         list[str]: WHERE句のpartsリスト
 
     Raises:
-        ValueError: race_shubetsu / shiba_da / sayuu に未対応の値が指定された場合
+        ValueError: race_shubetsu / shiba_da / sayuu / babajotai_codes に未対応の値が指定された場合
     """
     a = race_alias
     where_parts: list[str] = []
-    if include_keibajo_code and condition.keibajo_code:
-        where_parts.append(f"{a}.keibajo_code = %s")
-        params.append(condition.keibajo_code)
+    if condition.keibajo_codes:
+        where_parts.append(f"{a}.keibajo_code = ANY(%s::TEXT[])")
+        params.append(list(condition.keibajo_codes))
     if condition.kyori:
         where_parts.append(f"TRIM({a}.kyori)::INTEGER = %s")
         params.append(int(condition.kyori))
@@ -139,14 +161,6 @@ def build_race_condition_where(
             where_parts.append(f"TRIM({a}.track_code) BETWEEN '23' AND '29'")
         else:
             raise ValueError(f"未対応の shiba_da です: {condition.shiba_da!r}")
-    if condition.babajotai_code:
-        where_parts.append(
-            "COALESCE("
-            f"NULLIF(NULLIF(TRIM({a}.shiba_babajotai_code), ''), '0'), "
-            f"NULLIF(NULLIF(TRIM({a}.dirt_babajotai_code), ''), '0')"
-            ") = %s"
-        )
-        params.append(condition.babajotai_code)
     if condition.sayuu:
         codes = _SAYUU_TRACK_CODES.get(condition.sayuu)
         if codes is None:
@@ -160,11 +174,20 @@ def build_race_condition_where(
     if condition.tokubetsu_kyoso_bango:
         where_parts.append(f"TRIM({a}.tokubetsu_kyoso_bango) = %s")
         params.append(condition.tokubetsu_kyoso_bango)
+    if condition.kaisai_nichime:
+        where_parts.append(f"{a}.kaisai_nichime::INTEGER = ANY(%s::INTEGER[])")
+        params.append([int(v) for v in condition.kaisai_nichime])
+    if condition.babajotai_codes:
+        for code in condition.babajotai_codes:
+            if code not in _VALID_BABAJOTAI_CODES:
+                raise ValueError(f"未対応の babajotai_codes です: {code!r}")
+        where_parts.append(f"{_babajotai_code_expr(a)} = ANY(%s::TEXT[])")
+        params.append(list(condition.babajotai_codes))
     return where_parts
 
 
 def build_course_week_cte(
-    keibajo_code: str | None,
+    keibajo_codes: list[str] | None,
     course_kubun: str,
     week_in_course: int,
     cte_params: list[Any],
@@ -176,7 +199,8 @@ def build_course_week_cte(
     3日間開催にも対応する。
 
     Args:
-        keibajo_code (str | None): 競馬場コード。Noneの場合は全競馬場が対象。
+        keibajo_codes (list[str] | None): 競馬場コードフィルタ（複数指定可）。
+            Noneまたは空リストの場合は全競馬場が対象。
         course_kubun (str): コース区分（例: 'C'）
         week_in_course (int): コース使用開始からの週番号（1以上の整数）
         cte_params (list[Any]): SQLパラメータリスト（末尾に追加される）
@@ -190,9 +214,9 @@ def build_course_week_cte(
     """
     if week_in_course < 1:
         raise ValueError(f"week_in_course は1以上の整数を指定してください: {week_in_course!r}")
-    keibajo_filter = "AND keibajo_code = %s" if keibajo_code else ""
-    if keibajo_code:
-        cte_params.append(keibajo_code)
+    keibajo_filter = "AND keibajo_code = ANY(%s::TEXT[])" if keibajo_codes else ""
+    if keibajo_codes:
+        cte_params.append(list(keibajo_codes))
     cte_params.extend([course_kubun, week_in_course])
 
     cte_sql = f"""

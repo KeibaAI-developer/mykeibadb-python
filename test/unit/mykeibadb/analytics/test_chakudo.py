@@ -117,12 +117,12 @@ def test_analyze_chakudo_with_condition(mocker: MockerFixture) -> None:
     analyze_chakudo(
         manager,
         filters=[],
-        condition=RaceCondition(keibajo_code="05"),
+        condition=RaceCondition(keibajo_codes=["05"]),
     )
 
     sql = manager.fetch_dataframe.call_args_list[0][0][0]
     params = manager.fetch_dataframe.call_args_list[0][1]["params"]
-    assert "05" in params
+    assert ["05"] in params
     assert "keibajo_code" in sql
 
 
