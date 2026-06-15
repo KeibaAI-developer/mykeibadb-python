@@ -208,6 +208,28 @@ class ChokyoThreshold:
     min_value: int | None = None
     tracen_kubun: str | None = None
 
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> "ChokyoThreshold":
+        """辞書からChokyoThresholdを生成する.
+
+        Args:
+            d (dict[str, Any]): 閾値条件辞書。"course"・"metric"・"furlong"
+                キーが必須。"max_value"・"min_value"・"tracen_kubun"は任意。
+
+        Returns:
+            ChokyoThreshold: 生成したChokyoThresholdインスタンス
+        """
+        raw_max = d.get("max_value")
+        raw_min = d.get("min_value")
+        return ChokyoThreshold(
+            course=d["course"],
+            metric=d["metric"],
+            furlong=int(d["furlong"]),
+            max_value=int(raw_max) if raw_max is not None else None,
+            min_value=int(raw_min) if raw_min is not None else None,
+            tracen_kubun=d.get("tracen_kubun"),
+        )
+
 
 ChokyoCondition = list[ChokyoThreshold]
 
@@ -380,6 +402,45 @@ class GroupBy:
     source: AttrSource | None = None
     rows: RowsDef | None = None
 
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> "GroupBy":
+        """辞書からGroupByを生成する.
+
+        Args:
+            d (dict[str, Any]): グループ分け軸の辞書。"kind"キーが必須。
+                kind に応じて以下のキーが必須:
+                "race_col" -> "column"、"subject" -> "subject"、
+                "history" -> "source"、"fixed" -> "source"・"rows"
+
+        Returns:
+            GroupBy: 生成したGroupByインスタンス
+
+        Raises:
+            ValueError: kind が未対応、または kind に必要なキーが欠落した場合
+        """
+        kind = d["kind"]
+        if kind == "race_col":
+            if "column" not in d:
+                raise ValueError("GroupBy.kind='race_col' には column が必要です。")
+            return GroupBy(kind=kind, column=d["column"])
+        if kind == "subject":
+            if "subject" not in d:
+                raise ValueError("GroupBy.kind='subject' には subject が必要です。")
+            return GroupBy(kind=kind, subject=Subject(d["subject"]))
+        if kind == "history":
+            if "source" not in d:
+                raise ValueError("GroupBy.kind='history' には source が必要です。")
+            return GroupBy(kind=kind, source=AttrSource.from_dict(d["source"]))
+        if kind == "fixed":
+            if "source" not in d or "rows" not in d:
+                raise ValueError("GroupBy.kind='fixed' には source と rows が必要です。")
+            return GroupBy(
+                kind=kind,
+                source=AttrSource.from_dict(d["source"]),
+                rows=parse_rows_def(d["rows"]),
+            )
+        raise ValueError(f"未対応の kind です: {kind!r}")
+
 
 @dataclass
 class Entry:
@@ -429,6 +490,33 @@ class GroupTally:
 ChakudoTally = list[GroupTally]
 
 
+def parse_rows_def(rows: dict[str, Any]) -> RowsDef:
+    """辞書を RowsDef（グループ名→行フィルタ条件）に変換する.
+
+    Args:
+        rows (dict[str, Any]): グループ名→条件の辞書。条件は長さ2のリスト
+            （(min, max) 範囲）、int、str のいずれか。
+
+    Returns:
+        RowsDef: 変換済みのグループ名→行フィルタ条件の辞書
+
+    Raises:
+        ValueError: 値が (min, max) リスト・int・str 以外の場合
+    """
+    result: RowsDef = {}
+    for key, val in rows.items():
+        if isinstance(val, list) and len(val) == 2:
+            result[key] = (int(val[0]), int(val[1]))
+        elif isinstance(val, (int, str)):
+            result[key] = val
+        else:
+            raise ValueError(
+                f"rows['{key}'] の値が無効です: {val!r}。"
+                "(min, max) タプル・int・str のいずれかを指定してください。"
+            )
+    return result
+
+
 @dataclass
 class EntryAttrDef:
     """出走馬属性集計の条件定義.
@@ -455,15 +543,71 @@ class EntryAttrDef:
             ValueError: rows の値が (min, max) タプル・int・str 以外の場合
         """
         source = AttrSource.from_dict(d["source"])
-        rows: RowsDef = {}
-        for key, val in d["rows"].items():
-            if isinstance(val, list) and len(val) == 2:
-                rows[key] = (int(val[0]), int(val[1]))
-            elif isinstance(val, (int, str)):
-                rows[key] = val
-            else:
-                raise ValueError(
-                    f"rows['{key}'] の値が無効です: {val!r}。"
-                    "(min, max) タプル・int・str のいずれかを指定してください。"
-                )
+        rows = parse_rows_def(d["rows"])
         return EntryAttrDef(source=source, rows=rows)
+
+
+def _parse_history_cond(cond: Any) -> tuple[int, int] | int | str:
+    """HistoryFilter.cond の値を変換する.
+
+    Args:
+        cond (Any): 条件値。長さ2のリスト・int・str のいずれか。
+
+    Returns:
+        tuple[int, int] | int | str: 変換済みの条件値
+
+    Raises:
+        ValueError: 長さ2のリスト・int・str 以外の場合
+    """
+    if isinstance(cond, list) and len(cond) == 2:
+        return (int(cond[0]), int(cond[1]))
+    if isinstance(cond, (int, str)):
+        return cond
+    raise ValueError(
+        f"cond の値が無効です: {cond!r}。(min, max) タプル・int・str のいずれかを指定してください。"
+    )
+
+
+def build_entry_filter(d: dict[str, Any]) -> EntryFilter:
+    """辞書からEntryFilterを生成する.
+
+    "type" キーで RaceColFilter / SubjectFilter / HistoryFilter / ChokyoFilter
+    のいずれを生成するかを判定する。
+
+    Args:
+        d (dict[str, Any]): エントリフィルタ辞書。"type"キーが必須。
+            "race_col": "column"・"values"・"min_value"・"max_value"
+            "subject": "subject"・"name"・"code"
+            "history": "source"・"cond"
+            "chokyo": "condition"（ChokyoThreshold辞書のリスト）
+
+    Returns:
+        EntryFilter: 生成したフィルタインスタンス
+
+    Raises:
+        ValueError: type が未対応の場合
+    """
+    filter_type = d["type"]
+    if filter_type == "race_col":
+        return RaceColFilter(
+            column=d["column"],
+            values=d.get("values"),
+            min_value=d.get("min_value"),
+            max_value=d.get("max_value"),
+        )
+    if filter_type == "subject":
+        return SubjectFilter(
+            subject=Subject(d["subject"]),
+            name=d.get("name"),
+            code=d.get("code"),
+        )
+    if filter_type == "history":
+        return HistoryFilter(
+            source=AttrSource.from_dict(d["source"]),
+            cond=_parse_history_cond(d["cond"]),
+        )
+    if filter_type == "chokyo":
+        return ChokyoFilter(
+            condition=[ChokyoThreshold.from_dict(t) for t in d["condition"]],
+        )
+    raise ValueError(f"未対応の type です: {filter_type!r}")
