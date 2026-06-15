@@ -18,6 +18,8 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     Subject,
     SubjectFilter,
+    build_entry_filter,
+    parse_rows_def,
 )
 from mykeibadb.analytics.chakudo import analyze_chakudo
 from mykeibadb.analytics.chokyo import analyze_chokyo_debut_seiseki, get_uma_chokyo
@@ -45,4 +47,6 @@ __all__ = [
     "Subject",
     "ChokyoThreshold",
     "ChokyoCondition",
+    "build_entry_filter",
+    "parse_rows_def",
 ]
