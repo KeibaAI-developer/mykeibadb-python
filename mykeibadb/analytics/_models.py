@@ -547,27 +547,6 @@ class EntryAttrDef:
         return EntryAttrDef(source=source, rows=rows)
 
 
-def _parse_history_cond(cond: Any) -> tuple[int, int] | int | str:
-    """HistoryFilter.cond の値を変換する.
-
-    Args:
-        cond (Any): 条件値。長さ2のリスト・int・str のいずれか。
-
-    Returns:
-        tuple[int, int] | int | str: 変換済みの条件値
-
-    Raises:
-        ValueError: 長さ2のリスト・int・str 以外の場合
-    """
-    if isinstance(cond, list) and len(cond) == 2:
-        return (int(cond[0]), int(cond[1]))
-    if isinstance(cond, (int, str)):
-        return cond
-    raise ValueError(
-        f"cond の値が無効です: {cond!r}。(min, max) タプル・int・str のいずれかを指定してください。"
-    )
-
-
 def build_entry_filter(d: dict[str, Any]) -> EntryFilter:
     """辞書からEntryFilterを生成する.
 
@@ -611,3 +590,24 @@ def build_entry_filter(d: dict[str, Any]) -> EntryFilter:
             condition=[ChokyoThreshold.from_dict(t) for t in d["condition"]],
         )
     raise ValueError(f"未対応の type です: {filter_type!r}")
+
+
+def _parse_history_cond(cond: Any) -> tuple[int, int] | int | str:
+    """HistoryFilter.cond の値を変換する.
+
+    Args:
+        cond (Any): 条件値。長さ2のリスト・int・str のいずれか。
+
+    Returns:
+        tuple[int, int] | int | str: 変換済みの条件値
+
+    Raises:
+        ValueError: 長さ2のリスト・int・str 以外の場合
+    """
+    if isinstance(cond, list) and len(cond) == 2:
+        return (int(cond[0]), int(cond[1]))
+    if isinstance(cond, (int, str)):
+        return cond
+    raise ValueError(
+        f"cond の値が無効です: {cond!r}。(min, max) タプル・int・str のいずれかを指定してください。"
+    )

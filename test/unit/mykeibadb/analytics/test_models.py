@@ -1,5 +1,7 @@
 """AttrSource / RaceCondition / GroupBy / EntryFilter の from_dict テスト。"""
 
+from typing import Any
+
 import pytest
 
 from mykeibadb.analytics import AttrSource, Subject, build_entry_filter, parse_rows_def
@@ -10,6 +12,7 @@ from mykeibadb.analytics._models import (
     HistoryFilter,
     RaceColFilter,
     RaceCondition,
+    RowsDef,
     SubjectFilter,
 )
 
@@ -144,22 +147,17 @@ def test_race_condition_from_dict_new_fields_none_by_default() -> None:
 # ---------------------------------------------------------------------------
 # parse_rows_def 正常系・準正常系
 # ---------------------------------------------------------------------------
-def test_parse_rows_def_range() -> None:
-    """長さ2のリストは (min, max) タプルに変換される。"""
-    rows = parse_rows_def({"上位": [1, 3]})
-    assert rows == {"上位": (1, 3)}
-
-
-def test_parse_rows_def_int() -> None:
-    """int値はそのまま変換される。"""
-    rows = parse_rows_def({"3歳": 3})
-    assert rows == {"3歳": 3}
-
-
-def test_parse_rows_def_str() -> None:
-    """str値はそのまま変換される。"""
-    rows = parse_rows_def({"芝": "芝"})
-    assert rows == {"芝": "芝"}
+@pytest.mark.parametrize(
+    ("input_rows", "expected"),
+    [
+        ({"上位": [1, 3]}, {"上位": (1, 3)}),
+        ({"3歳": 3}, {"3歳": 3}),
+        ({"芝": "芝"}, {"芝": "芝"}),
+    ],
+)
+def test_parse_rows_def(input_rows: dict[str, Any], expected: RowsDef) -> None:
+    """長さ2のリストは (min, max) タプル、int・strはそのまま変換される。"""
+    assert parse_rows_def(input_rows) == expected
 
 
 def test_parse_rows_def_invalid_value_raises() -> None:
@@ -209,23 +207,11 @@ def test_group_by_from_dict_race_col() -> None:
     assert gb.column == "u.wakuban"
 
 
-def test_group_by_from_dict_race_col_missing_column_raises() -> None:
-    """kind='race_col' で column 欠落時に ValueError が発生する。"""
-    with pytest.raises(ValueError):
-        GroupBy.from_dict({"kind": "race_col"})
-
-
 def test_group_by_from_dict_subject() -> None:
     """kind='subject' で subject が Subject に変換される。"""
     gb = GroupBy.from_dict({"kind": "subject", "subject": "kishu"})
     assert gb.kind == "subject"
     assert gb.subject == Subject.KISHU
-
-
-def test_group_by_from_dict_subject_missing_raises() -> None:
-    """kind='subject' で subject 欠落時に ValueError が発生する。"""
-    with pytest.raises(ValueError):
-        GroupBy.from_dict({"kind": "subject"})
 
 
 def test_group_by_from_dict_history() -> None:
@@ -236,12 +222,6 @@ def test_group_by_from_dict_history() -> None:
     assert gb.kind == "history"
     assert gb.source is not None
     assert gb.source.type == "debut_venue"
-
-
-def test_group_by_from_dict_history_missing_source_raises() -> None:
-    """kind='history' で source 欠落時に ValueError が発生する。"""
-    with pytest.raises(ValueError):
-        GroupBy.from_dict({"kind": "history"})
 
 
 def test_group_by_from_dict_fixed() -> None:
@@ -259,16 +239,20 @@ def test_group_by_from_dict_fixed() -> None:
     assert gb.rows == {"初出走": 0, "経験馬": (1, 9999)}
 
 
-def test_group_by_from_dict_fixed_missing_rows_raises() -> None:
-    """kind='fixed' で rows 欠落時に ValueError が発生する。"""
+@pytest.mark.parametrize(
+    "d",
+    [
+        {"kind": "race_col"},
+        {"kind": "subject"},
+        {"kind": "history"},
+        {"kind": "fixed", "source": {"type": "career_count"}},
+        {"kind": "unknown"},
+    ],
+)
+def test_group_by_from_dict_missing_field_or_unsupported_kind_raises(d: dict[str, Any]) -> None:
+    """必須フィールド欠落・未対応 kind で ValueError が発生する。"""
     with pytest.raises(ValueError):
-        GroupBy.from_dict({"kind": "fixed", "source": {"type": "career_count"}})
-
-
-def test_group_by_from_dict_unsupported_kind_raises() -> None:
-    """未対応の kind で ValueError が発生する。"""
-    with pytest.raises(ValueError):
-        GroupBy.from_dict({"kind": "unknown"})
+        GroupBy.from_dict(d)
 
 
 # ---------------------------------------------------------------------------
