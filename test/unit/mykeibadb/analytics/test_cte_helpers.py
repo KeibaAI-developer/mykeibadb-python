@@ -179,7 +179,10 @@ def test_build_race_condition_where_shiba_da_da() -> None:
 
 
 def test_build_race_condition_where_babajotai_codes() -> None:
-    """babajotai_codes指定でCOALESCE(shiba_babajotai_code, dirt_babajotai_code)のANY(...)が生成される."""
+    """babajotai_codes指定でCOALESCEのANY(...)が生成される.
+
+    COALESCE(shiba_babajotai_code, dirt_babajotai_code) を対象とする。
+    """
     params: list[object] = []
     parts = build_race_condition_where(RaceCondition(babajotai_codes=["1"]), params)
     combined = " ".join(parts)

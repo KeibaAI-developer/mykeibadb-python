@@ -48,7 +48,8 @@ _PREV_RACE_COL_RAW_COLUMN: dict[str, str] = {
     "kyori": "kyori_int",
 }
 
-# prev_race_col の column名 -> attr_valに使うSQL式（未指定時は_PREV_RACE_COL_RAW_COLUMNの列をそのまま使う）
+# prev_race_col の column名 -> attr_valに使うSQL式
+# （未指定時は_PREV_RACE_COL_RAW_COLUMNの列をそのまま使う）
 _PREV_RACE_COL_VAL_EXPR: dict[str, str] = {
     "kakutei_chakujun": "CAST(kakutei_chakujun AS INTEGER)",
 }
@@ -610,8 +611,8 @@ def _attr_agg_prev_race_col(source: AttrSource, params: list[Any]) -> str:
     """
     if source.column not in _PREV_RACE_COL_ALLOWED:
         raise ValueError(
-            f"prev_race_col の column は {set(_PREV_RACE_COL_ALLOWED)} のいずれかで指定してください。"
-            f" 指定値: {source.column!r}"
+            f"prev_race_col の column は {set(_PREV_RACE_COL_ALLOWED)} "
+            f"のいずれかで指定してください。 指定値: {source.column!r}"
         )
     hist_valid = " AND ".join(_HIST_VALID_PARTS)
     raw_col = _PREV_RACE_COL_RAW_COLUMN.get(source.column, source.column)

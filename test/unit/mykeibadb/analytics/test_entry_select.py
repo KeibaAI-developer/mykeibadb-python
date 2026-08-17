@@ -437,7 +437,10 @@ def test_select_entries_group_by_fixed_past_race_top_n_count_grade_codes(
 def test_select_entries_group_by_fixed_past_race_top_n_count_keibajo_codes(
     mocker: MockerFixture,
 ) -> None:
-    """group_by=fixed(past_race_top_n_count) で keibajo_codes が keibajo_code = ANY(%s) に反映される."""
+    """group_by=fixed(past_race_top_n_count) の keibajo_codes が反映される.
+
+    keibajo_code = ANY(%s) がSQLに現れることを確認する。
+    """
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
