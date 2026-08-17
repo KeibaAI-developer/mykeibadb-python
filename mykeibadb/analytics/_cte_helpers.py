@@ -348,7 +348,8 @@ def build_past_race_top_n_filter_clause(
     if op in ("in", "not_in"):
         if not isinstance(value, (list, tuple)) or not value:
             raise ValueError(
-                "past_race_top_n_count の filters: in/not_inには空リストではないリストかタプルを指定してください"
+                "past_race_top_n_count の filters: "
+                "in/not_inには空リストではないリストかタプルを指定してください"
             )
         placeholders = ", ".join(["%s"] * len(value))
         params.extend(int(v) if is_numeric else str(v) for v in value)

@@ -240,7 +240,8 @@ class AttrSource:
 
     Attributes:
         type (str): 属性算出種別。以下のいずれか:
-            "past_race_top_n_count": 過去レースの集計（top_n/grade_codes/keibajo_codes/filtersでフィルタ可）
+            "past_race_top_n_count": 過去レースの集計
+                （top_n/grade_codes/keibajo_codes/filtersでフィルタ可）
             "career_count": キャリア戦数
             "prev_race_name": 前走レース名
             "debut_venue": デビュー競馬場コード

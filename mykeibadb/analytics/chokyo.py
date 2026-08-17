@@ -79,7 +79,8 @@ def analyze_chokyo_debut_seiseki(
             キー: success, debut_date_from, debut_date_to, total, winners, win_rate
 
     Raises:
-        ValueError: condition内に未対応の course または metric が含まれる場合、もしくは furlong が正の整数でない場合
+        ValueError: condition内に未対応の course または metric が含まれる場合、
+            もしくは furlong が正の整数でない場合
 
     Note:
         condition が空リストの場合はデビュー期間の全馬を対象として集計する。
