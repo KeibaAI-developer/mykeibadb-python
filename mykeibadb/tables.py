@@ -117,7 +117,9 @@ class TableAccessor:
         """
         self._logger = logger or logging.getLogger(__name__)
         self.connection_manager = connection_manager
-        self._column_type_resolver = ColumnTypeResolver(connection_manager, self._logger)
+        self._column_type_resolver = ColumnTypeResolver(
+            connection_manager, self._logger.getChild("column_type_resolver")
+        )
 
     def get_table_data(
         self,
