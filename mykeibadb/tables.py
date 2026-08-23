@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 
+from mykeibadb.column_types import ColumnTypeResolver
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import InvalidFilterError, TableNotFoundError
 from mykeibadb.utils import is_valid_identifier
@@ -116,6 +117,9 @@ class TableAccessor:
         """
         self._logger = logger or logging.getLogger(__name__)
         self.connection_manager = connection_manager
+        self._column_type_resolver = ColumnTypeResolver(
+            connection_manager, self._logger.getChild("column_type_resolver")
+        )
 
     def get_table_data(
         self,
@@ -143,7 +147,7 @@ class TableAccessor:
         self._validate_table_name(table_name)
         self._validate_filters(filters)
 
-        query, params = _build_query(table_name, filters)
+        query, params = _build_query(table_name, filters, self._column_type_resolver)
         return self.connection_manager.fetch_dataframe(query, params)
 
     def get_table_data_with_period(
@@ -178,7 +182,7 @@ class TableAccessor:
         self._validate_date_column(date_column)
 
         query, params = _build_query_with_date_range(
-            table_name, filters, start_date, end_date, date_column
+            table_name, filters, start_date, end_date, date_column, self._column_type_resolver
         )
         return self.connection_manager.fetch_dataframe(query, params)
 
@@ -214,7 +218,7 @@ class TableAccessor:
         self._validate_date_column(year_column, "年カラム名")
 
         query, params = _build_query_with_year_only_range(
-            table_name, filters, start_date, end_date, year_column
+            table_name, filters, start_date, end_date, year_column, self._column_type_resolver
         )
         return self.connection_manager.fetch_dataframe(query, params)
 
@@ -253,7 +257,13 @@ class TableAccessor:
         self._validate_date_column(date_column, "日付カラム名")
 
         query, params = _build_query_with_composite_date_range(
-            table_name, filters, start_date, end_date, year_column, date_column
+            table_name,
+            filters,
+            start_date,
+            end_date,
+            year_column,
+            date_column,
+            self._column_type_resolver,
         )
         return self.connection_manager.fetch_dataframe(query, params)
 
@@ -345,6 +355,7 @@ def _build_query_with_date_range(
     start_date: date | None,
     end_date: date | None,
     date_column: str,
+    column_type_resolver: ColumnTypeResolver | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """日付範囲フィルタ付きでSQLクエリを構築.
 
@@ -357,11 +368,15 @@ def _build_query_with_date_range(
         start_date (date | None): 開始日
         end_date (date | None): 終了日
         date_column (str): 日付カラム名（検証済み、yyyymmdd形式）
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
+            固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
-    base_query, where_clauses, params = _build_base_query_and_params(table_name, filters)
+    base_query, where_clauses, params = _build_base_query_and_params(
+        table_name, filters, column_type_resolver
+    )
 
     date_column_lower = date_column.lower()
     if start_date:
@@ -380,6 +395,7 @@ def _build_query_with_year_only_range(
     start_date: date | None,
     end_date: date | None,
     year_column: str,
+    column_type_resolver: ColumnTypeResolver | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """年のみの範囲フィルタ付きでSQLクエリを構築.
 
@@ -392,11 +408,15 @@ def _build_query_with_year_only_range(
         start_date (date | None): 開始日（年のみ使用）
         end_date (date | None): 終了日（年のみ使用）
         year_column (str): 年カラム名（検証済み、yyyy形式）
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
+            固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
-    base_query, where_clauses, params = _build_base_query_and_params(table_name, filters)
+    base_query, where_clauses, params = _build_base_query_and_params(
+        table_name, filters, column_type_resolver
+    )
 
     year_column_lower = year_column.lower()
     if start_date:
@@ -416,6 +436,7 @@ def _build_query_with_composite_date_range(
     end_date: date | None,
     year_column: str,
     date_column: str,
+    column_type_resolver: ColumnTypeResolver | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """年月日分離カラムに対して期間フィルタ付きでSQLクエリを構築.
 
@@ -428,12 +449,16 @@ def _build_query_with_composite_date_range(
         start_date (date | None): 開始日
         end_date (date | None): 終了日
         year_column (str): 年カラム名（検証済み、yyyy形式）
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
+            固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
         date_column (str): 月日カラム名（検証済み、mmdd形式）
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
-    base_query, where_clauses, params = _build_base_query_and_params(table_name, filters)
+    base_query, where_clauses, params = _build_base_query_and_params(
+        table_name, filters, column_type_resolver
+    )
 
     year_column_lower = year_column.lower()
     date_column_lower = date_column.lower()
@@ -447,9 +472,50 @@ def _build_query_with_composite_date_range(
     return _finalize_query(base_query, where_clauses, params)
 
 
+def _build_filter_clause(
+    column_lower: str,
+    value: Any,
+    table_name: str,
+    column_type_resolver: ColumnTypeResolver | None,
+) -> tuple[str, list[Any]]:
+    """1カラム分のWHERE句とパラメータを組み立てる.
+
+    固定長文字列（bpchar）の列は`TRIM()`で包まない。PostgreSQLのbpchar比較は末尾空白を
+    無視するため`TRIM()`が不要であり、列を関数で包むとその列のインデックスが使われなく
+    なるため。それ以外の型は末尾空白を持ちうるため`TRIM()`で包む（従来の振る舞い）。
+
+    `TRIM()`は先頭空白も除去するのに対し、bpchar比較が無視するのは末尾空白だけである。
+    そのため先頭空白を含む値は`TRIM()`を外すと一致しなくなる。getterがフィルタへ渡す
+    カラムが固定長文字列である組（テーブル×カラム）151件をすべて調べ、先頭空白を持つ行が
+    存在しないことを確認している。
+
+    `column_type_resolver`がNoneの場合、または型を判定できない場合は`TRIM()`で包む。
+    速度は落ちるが結果は正しくなる。
+
+    Args:
+        column_lower (str): カラム名（小文字、検証済み）
+        value (Any): フィルタ値。リストの場合はIN句になる
+        table_name (str): テーブル名（検証済み）
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ
+
+    Returns:
+        tuple[str, list[Any]]: WHERE句とパラメータのリスト
+    """
+    skip_trim = column_type_resolver is not None and column_type_resolver.is_blank_padded_char(
+        table_name, column_lower
+    )
+    target = column_lower if skip_trim else f"TRIM({column_lower})"
+
+    if isinstance(value, list):
+        placeholders = ", ".join(["%s"] * len(value))
+        return f"{target} IN ({placeholders})", list(value)  # noqa: S608
+    return f"{target} = %s", [value]  # noqa: S608
+
+
 def _build_query(
     table_name: str,
     filters: dict[str, Any] | None = None,
+    column_type_resolver: ColumnTypeResolver | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """SQLクエリを構築.
 
@@ -459,6 +525,8 @@ def _build_query(
     Args:
         table_name (str): テーブル名
         filters (dict[str, Any] | None): フィルタ条件
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
+            固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
@@ -474,20 +542,12 @@ def _build_query(
     params: list[str | int] = []
 
     for column, value in filters.items():
-        # PostgreSQLではカラム名を小文字として扱う
-        column_lower = column.lower()
-        if isinstance(value, list):
-            # IN句を生成
-            placeholders = ", ".join(["%s"] * len(value))
-            # カラム名は_validate_filtersで検証済み
-            # 文字列型の場合はTRIM関数を使って空白を除去して比較
-            where_clauses.append(f"TRIM({column_lower}) IN ({placeholders})")  # noqa: S608
-            params.extend(value)
-        else:
-            # 単一値の等価条件（カラム名は_validate_filtersで検証済み）
-            # 文字列型の場合はTRIM関数を使って空白を除去して比較
-            where_clauses.append(f"TRIM({column_lower}) = %s")  # noqa: S608
-            params.append(value)
+        # PostgreSQLではカラム名を小文字として扱う（カラム名は_validate_filtersで検証済み）
+        clause, clause_params = _build_filter_clause(
+            column.lower(), value, table_name, column_type_resolver
+        )
+        where_clauses.append(clause)
+        params.extend(clause_params)
 
     query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
     return query, tuple(params)
@@ -496,6 +556,7 @@ def _build_query(
 def _build_base_query_and_params(
     table_name: str,
     filters: dict[str, Any] | None = None,
+    column_type_resolver: ColumnTypeResolver | None = None,
 ) -> tuple[str, list[str], list[str | int]]:
     """ベースクエリとWHERE句のパーツを構築.
 
@@ -504,6 +565,8 @@ def _build_base_query_and_params(
     Args:
         table_name (str): テーブル名（検証済み）
         filters (dict[str, Any] | None): フィルタ条件（検証済み）
+        column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
+            固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
 
     Returns:
         tuple[str, list[str], list[str | int]]: ベースクエリ、WHERE句リスト、パラメータリスト
@@ -514,14 +577,11 @@ def _build_base_query_and_params(
 
     if filters:
         for column, value in filters.items():
-            column_lower = column.lower()
-            if isinstance(value, list):
-                placeholders = ", ".join(["%s"] * len(value))
-                where_clauses.append(f"TRIM({column_lower}) IN ({placeholders})")  # noqa: S608
-                params.extend(value)
-            else:
-                where_clauses.append(f"TRIM({column_lower}) = %s")  # noqa: S608
-                params.append(value)
+            clause, clause_params = _build_filter_clause(
+                column.lower(), value, table_name, column_type_resolver
+            )
+            where_clauses.append(clause)
+            params.extend(clause_params)
 
     return base_query, where_clauses, params
 
