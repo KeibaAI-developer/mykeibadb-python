@@ -37,7 +37,11 @@ Execution Time: 0.089 ms
 
 `TRIM()` は先頭と末尾の**両方**の空白を除去するのに対し、`character(n)` の比較が無視するのは**末尾空白だけ**です。したがって先頭空白を含む値は、`TRIM()` を外すと一致しなくなります。
 
-getterがフィルタへ渡すカラム（`RACE_CODE`・`KETTO_TOROKU_BANGO`・`KISHU_CODE` など14種）が固定長文字列である組（テーブル×カラム）151件をすべて調べ、**先頭空白を持つ行が存在しないこと**を確認しています。この前提は `test/integration/test_trim_removal_equivalence.py` で固定しています。
+getterがフィルタへ渡すカラム（`RACE_CODE`・`KETTO_TOROKU_BANGO`・`KISHU_CODE` など14種）が固定長文字列である組（テーブル×カラム）をすべて調べ、**先頭空白を持つ行が存在しないこと**を確認しています。現在の対象は151件です。
+
+この検証は `test/integration/test_trim_removal_equivalence.py::test_no_filter_column_has_leading_space` で行います。対象は `information_schema` から動的に集めるため、テーブルやカラムが増えても検証範囲が自動で広がります。全件を走査するため実行に約2分かかり、`slow` マーカーを付けています。
+
+利用側は `filters` へ任意のカラムを渡せます。上記14種以外のカラムをフィルタに使う場合は、そのカラムに先頭空白がないことを別途確認してください。
 
 ### 可変長文字列を対象外にした理由
 

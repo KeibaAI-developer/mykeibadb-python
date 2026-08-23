@@ -16,7 +16,27 @@ from mykeibadb.tables import TableAccessor, _build_query
 
 from .conftest import get_sample_data
 
-# テーブル名とフィルタ対象の固定長文字列カラム
+# getterがfiltersへ渡すカラム。先頭空白の検証はこの14種を対象に、
+# 固定長文字列である全テーブルへ広げる（_collect_filter_column_targets）
+_FILTER_COLUMNS = (
+    "banushi_code",
+    "chokyoshi_code",
+    "hanshoku_toroku_bango",
+    "kaisai_code",
+    "keibajo_code",
+    "keito_id",
+    "ketto_toroku_bango",
+    "kishu_code",
+    "kyori",
+    "race_code",
+    "seisansha_code",
+    "tracen_kubun",
+    "track_code",
+    "umaban",
+)
+
+# 取得結果の一致を検証する代表的なテーブルとカラム。
+# 実データの突き合わせは時間がかかるため主要なものに絞る
 _TARGETS = [
     ("RACE_SHOSAI", "race_code"),
     ("UMAGOTO_RACE_JOHO", "race_code"),
@@ -61,6 +81,26 @@ def _sample_values(
     df = get_sample_data(connection_manager, table_name, limit=count * 5)
     values = df[column].dropna().astype(str).unique().tolist()
     return values[:count]
+
+
+def _collect_filter_column_targets(connection_manager: ConnectionManager) -> list[tuple[str, str]]:
+    """getterがフィルタへ渡すカラムのうち、固定長文字列である組をすべて集める.
+
+    Args:
+        connection_manager (ConnectionManager): 接続マネージャー
+
+    Returns:
+        list[tuple[str, str]]: (テーブル名, カラム名) のリスト
+    """
+    placeholders = ", ".join(["%s"] * len(_FILTER_COLUMNS))
+    query = (
+        "SELECT table_name, column_name FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND data_type = 'character' "
+        f"AND column_name IN ({placeholders}) "  # noqa: S608
+        "ORDER BY table_name, column_name"
+    )
+    df = connection_manager.fetch_dataframe(query, tuple(_FILTER_COLUMNS))
+    return [(str(row.table_name), str(row.column_name)) for row in df.itertuples()]
 
 
 # 正常系
@@ -120,19 +160,26 @@ def test_blank_padded_char_column_is_not_wrapped_with_trim(
     assert "TRIM(" not in query
 
 
-@pytest.mark.parametrize("table_name, column", _TARGETS)
-def test_filter_column_has_no_leading_space(
-    connection_manager: ConnectionManager, table_name: str, column: str
-) -> None:
-    """フィルタ対象の列に先頭空白を持つ行が存在しないことを確認.
+@pytest.mark.slow
+def test_no_filter_column_has_leading_space(connection_manager: ConnectionManager) -> None:
+    """フィルタ対象の全カラムに先頭空白を持つ行が存在しないことを確認.
 
     TRIMは先頭空白も除去するが、固定長文字列の比較が無視するのは末尾空白だけである。
-    先頭空白を持つ行があるとTRIMの除去で一致しなくなるため、存在しないことを固定する。
-    """
-    query = f"SELECT 1 FROM {table_name.lower()} WHERE {column} LIKE ' %' LIMIT 1"  # noqa: S608
-    df = connection_manager.fetch_dataframe(query)
+    先頭空白を持つ行があるとTRIMの除去で一致しなくなる。
 
-    assert df.empty
+    対象は_FILTER_COLUMNSが固定長文字列である組すべてで、information_schemaから
+    動的に集める。テーブルやカラムが増えても検証範囲が自動で広がる。
+    """
+    targets = _collect_filter_column_targets(connection_manager)
+    assert targets, "フィルタ対象の固定長文字列カラムを1件も集められませんでした"
+
+    found = []
+    for table_name, column in targets:
+        query = f"SELECT 1 FROM {table_name} WHERE {column} LIKE ' %' LIMIT 1"  # noqa: S608
+        if not connection_manager.fetch_dataframe(query).empty:
+            found.append(f"{table_name}.{column}")
+
+    assert found == [], f"先頭空白を含む行があるカラム: {found}"
 
 
 # 準正常系
