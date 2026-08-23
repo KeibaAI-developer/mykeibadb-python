@@ -267,6 +267,7 @@ pytest test/mykeibadb/
 - [テーブル仕様（DATA_TABLE.md）](doc/DATA_TABLE.md): 全63テーブルの詳細（カラム定義など）
 - [コード仕様（CODE_TABLE.md）](doc/CODE_TABLE.md): 各種コード値の定義
 - [ディレクトリ構造（DIRECTORY.md）](doc/DIRECTORY.md): プロジェクトのディレクトリ構造
+- [クエリの組み立て（QUERY_BUILDING.md）](doc/QUERY_BUILDING.md): WHERE句の組み立て規則と、列の型による `TRIM()` の分岐
 - [サンプルコード（example/getter/）](example/getter/): 各Getterの使用例
 
 ## リンク
