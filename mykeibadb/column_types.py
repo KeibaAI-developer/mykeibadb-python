@@ -47,6 +47,10 @@ class ColumnTypeResolver:
     `search_path`で解決されるため、同名テーブルが複数のスキーマにあっても実際に
     参照するテーブルの型を見る。
 
+    キャッシュはテーブル名をキーとし、スキーマは含めない。本ライブラリは`search_path`を
+    設定せず、接続プールは単一のユーザーで接続するため、`search_path`の解決結果は
+    プロセス内で一定であることを前提とする。
+
     Attributes:
         connection_manager (ConnectionManager): データベース接続マネージャー
     """
