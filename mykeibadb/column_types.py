@@ -15,10 +15,22 @@ from mykeibadb.connection import ConnectionManager
 # information_schemaが返す固定長文字列の型名
 _BLANK_PADDED_CHAR_TYPE = "character"
 
-# 指定したテーブルの全列の型を取得するクエリ
-_COLUMN_TYPE_QUERY = (
-    "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = %s"
-)
+# 指定したテーブルの全列の型を取得するクエリ。
+# データ取得クエリはスキーマ非修飾（SELECT * FROM {table_name}）で発行され search_path で
+# 解決されるため、列の型も to_regclass で同じ経路に揃えて解決する。テーブル名だけで
+# information_schema を絞り込むと、同名テーブルが複数のスキーマにある場合に別のテーブルの
+# 型を拾いうる
+_COLUMN_TYPE_QUERY = """
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = %s
+  AND table_schema = (
+    SELECT n.nspname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.oid = to_regclass(%s)
+  )
+"""
 
 
 class ColumnTypeResolver:
@@ -30,6 +42,10 @@ class ColumnTypeResolver:
 
     テーブル名・カラム名は大文字小文字を区別せずに解決する。呼び出し側が
     `RACE_CODE` と `race_code` のどちらの表記でも渡しうるため。
+
+    テーブルは`search_path`で解決する。データ取得クエリがスキーマ非修飾で発行され
+    `search_path`で解決されるため、同名テーブルが複数のスキーマにあっても実際に
+    参照するテーブルの型を見る。
 
     Attributes:
         connection_manager (ConnectionManager): データベース接続マネージャー
@@ -71,6 +87,9 @@ class ColumnTypeResolver:
     def _get_column_types(self, table_name: str) -> dict[str, str]:
         """指定したテーブルの全列の型を取得する.
 
+        テーブルはsearch_pathで解決する。データ取得クエリがスキーマ非修飾で発行され
+        search_pathで解決されるため、同じテーブルの型を見るようにするため。
+
         取得済みのテーブルはキャッシュから返す。問い合わせに失敗した場合は空の辞書を
         キャッシュへ格納し、同じテーブルへ繰り返し問い合わせないようにする。
 
@@ -85,7 +104,7 @@ class ColumnTypeResolver:
             return self._column_types[key]
 
         try:
-            rows = self.connection_manager.execute_query(_COLUMN_TYPE_QUERY, (key,))
+            rows = self.connection_manager.execute_query(_COLUMN_TYPE_QUERY, (key, key))
         except Exception:
             self._logger.exception("列の型の取得に失敗しました: table=%s", table_name)
             self._column_types[key] = {}

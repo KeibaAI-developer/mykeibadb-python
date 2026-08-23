@@ -95,7 +95,23 @@ def test_queries_with_lowercase_table_name(
     resolver.is_blank_padded_char("RACE_SHOSAI", "RACE_CODE")
 
     _, params = mock_connection_manager.execute_query.call_args[0]
-    assert params == ("race_shosai",)
+    assert params == ("race_shosai", "race_shosai")
+
+
+def test_resolves_table_through_search_path(
+    resolver: ColumnTypeResolver, mock_connection_manager: MagicMock
+) -> None:
+    """テーブルをsearch_pathで解決することを確認.
+
+    データ取得クエリはスキーマ非修飾で発行されsearch_pathで解決されるため、
+    列の型も同じテーブルを見る必要がある。テーブル名だけでinformation_schemaを
+    絞り込むと、同名テーブルが複数のスキーマにある場合に別のテーブルの型を拾う。
+    """
+    resolver.is_blank_padded_char("RACE_SHOSAI", "RACE_CODE")
+
+    query, _ = mock_connection_manager.execute_query.call_args[0]
+    assert "to_regclass" in query
+    assert "table_schema" in query
 
 
 # 準正常系
