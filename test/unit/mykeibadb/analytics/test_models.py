@@ -35,17 +35,32 @@ def test_attrsource_from_dict_overseas_label() -> None:
 def test_attrsource_from_dict_tokubetsu_kyoso_bango() -> None:
     """tokubetsu_kyoso_bango フィールドが from_dict で正しく読み取れる。"""
     src = AttrSource.from_dict(
-        {"type": "same_race_prev_year_finish", "tokubetsu_kyoso_bango": "0010"}
+        {"type": "tokubetsu_race_finish", "tokubetsu_kyoso_bango": "0010", "year_offset": 0}
     )
     assert src.tokubetsu_kyoso_bango == "0010"
+
+
+def test_attrsource_from_dict_year_offset() -> None:
+    """year_offset フィールドが from_dict で int に変換される。"""
+    src = AttrSource.from_dict(
+        {"type": "tokubetsu_race_finish", "tokubetsu_kyoso_bango": "0010", "year_offset": "1"}
+    )
+    assert src.year_offset == 1
+
+
+def test_attrsource_from_dict_year_offset_none_by_default() -> None:
+    """year_offset を省略した場合は None。"""
+    src = AttrSource.from_dict({"type": "tokubetsu_race_finish"})
+    assert src.year_offset is None
 
 
 def test_attrsource_from_dict_absent_label_custom() -> None:
     """absent_label を指定した場合に from_dict で正しく読み取れる。"""
     src = AttrSource.from_dict(
         {
-            "type": "same_race_prev_year_finish",
+            "type": "tokubetsu_race_finish",
             "tokubetsu_kyoso_bango": "0010",
+            "year_offset": 1,
             "absent_label": "前年出走無し",
         }
     )
@@ -60,8 +75,48 @@ def test_attrsource_absent_label_default() -> None:
 
 def test_attrsource_from_dict_absent_label_default() -> None:
     """absent_label を省略した場合は既定値「出走無し」。"""
-    src = AttrSource.from_dict({"type": "same_race_prev_year_finish"})
+    src = AttrSource.from_dict({"type": "tokubetsu_race_finish"})
     assert src.absent_label == "出走無し"
+
+
+def test_attrsource_from_dict_chokyo_condition() -> None:
+    """chokyo_condition フィールドが from_dict で ChokyoThreshold のリストに変換される。"""
+    src = AttrSource.from_dict(
+        {
+            "type": "chokyo_match_days",
+            "chokyo_condition": [
+                {"course": "hanro", "metric": "gokei", "furlong": 2, "max_value": 239}
+            ],
+            "days_from": 1,
+            "days_to": 13,
+        }
+    )
+    assert src.chokyo_condition is not None
+    assert len(src.chokyo_condition) == 1
+    assert src.chokyo_condition[0].course == "hanro"
+    assert src.chokyo_condition[0].max_value == 239
+
+
+def test_attrsource_from_dict_chokyo_condition_none_by_default() -> None:
+    """chokyo_condition を省略した場合は None。"""
+    src = AttrSource.from_dict({"type": "chokyo_match_days"})
+    assert src.chokyo_condition is None
+
+
+def test_attrsource_from_dict_days_from_and_days_to() -> None:
+    """days_from・days_to フィールドが from_dict で int に変換される。"""
+    src = AttrSource.from_dict(
+        {"type": "chokyo_match_days", "days_from": "1", "days_to": "13"}
+    )
+    assert src.days_from == 1
+    assert src.days_to == 13
+
+
+def test_attrsource_from_dict_days_from_and_days_to_none_by_default() -> None:
+    """days_from・days_to を省略した場合は None。"""
+    src = AttrSource.from_dict({"type": "chokyo_match_days"})
+    assert src.days_from is None
+    assert src.days_to is None
 
 
 def test_attrsource_from_dict_new_fields_none_by_default() -> None:

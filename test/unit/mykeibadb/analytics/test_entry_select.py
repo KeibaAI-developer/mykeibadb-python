@@ -972,11 +972,11 @@ def test_select_entries_prev_race_name_without_overseas_label_uses_attr_val(
     assert "CASE WHEN attr_agg.is_overseas" not in sql
 
 
-# same_race_prev_year_finish（リピーター）
-def test_select_entries_same_race_prev_year_finish_uses_coalesce(
+# tokubetsu_race_finish（同一特別競走番号レースでの過去着順）
+def test_select_entries_tokubetsu_race_finish_uses_coalesce(
     mocker: MockerFixture,
 ) -> None:
-    """same_race_prev_year_finish の group_label が COALESCE + absent_label になる."""
+    """tokubetsu_race_finish の group_label が COALESCE + absent_label になる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
@@ -986,8 +986,9 @@ def test_select_entries_same_race_prev_year_finish_uses_coalesce(
         group_by=GroupBy(
             kind="history",
             source=AttrSource(
-                type="same_race_prev_year_finish",
+                type="tokubetsu_race_finish",
                 tokubetsu_kyoso_bango="0010",
+                year_offset=1,
                 absent_label="前年出走無し",
             ),
         ),
@@ -998,10 +999,11 @@ def test_select_entries_same_race_prev_year_finish_uses_coalesce(
     assert "COALESCE" in sql
     assert "target_kaisai_nen" in sql
     assert "0010" in params
+    assert 1 in params
     assert "前年出走無し" in params
 
 
-def test_select_entries_same_race_prev_year_finish_no_tokubetsu_raises(
+def test_select_entries_tokubetsu_race_finish_no_tokubetsu_raises(
     mocker: MockerFixture,
 ) -> None:
     """tokubetsu_kyoso_bango が None のとき ValueError が発生する."""
@@ -1014,6 +1016,255 @@ def test_select_entries_same_race_prev_year_finish_no_tokubetsu_raises(
             filters=[],
             group_by=GroupBy(
                 kind="history",
-                source=AttrSource(type="same_race_prev_year_finish"),
+                source=AttrSource(type="tokubetsu_race_finish", year_offset=0),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_no_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が None のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="tokubetsu_race_finish", tokubetsu_kyoso_bango="0010"),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_negative_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が負のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="tokubetsu_race_finish",
+                    tokubetsu_kyoso_bango="0010",
+                    year_offset=-1,
+                ),
+            ),
+        )
+
+
+# chokyo_match_days（期間内の調教該当日一覧）
+def test_select_entries_chokyo_match_days_skips_horse_hist_cte(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_match_days では horse_hist CTE を使わず target_horses から直接組み立てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses AS MATERIALIZED" in sql
+    assert "horse_hist AS (" not in sql
+    assert "hanro_chokyo" in sql
+    assert sql.count("chokyo_rows AS (") == 1
+
+
+def test_select_entries_chokyo_match_days_uses_jsonb_agg_with_order(
+    mocker: MockerFixture,
+) -> None:
+    """attr_val は jsonb_agg を days_before 昇順・chokyo_jikoku 昇順で組み立てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "jsonb_agg(" in sql
+    assert "jsonb_build_array(cr.days_before, cr.is_match)" in sql
+    assert "ORDER BY cr.days_before ASC, cr.chokyo_jikoku ASC" in sql
+    assert "'[]'::jsonb" in sql
+    assert "FILTER (WHERE cr.days_before IS NOT NULL)" in sql
+    assert "CAST(c.time_gokei_2furlong AS INTEGER) <= %s" in sql
+
+
+def test_select_entries_chokyo_match_days_period_params_follow_threshold_params(
+    mocker: MockerFixture,
+) -> None:
+    """期間の BETWEEN パラメータが閾値パラメータの後ろに正しい順で入る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "cr.days_before BETWEEN %s AND %s" in sql
+    assert list(params) == [239, 1, 13]
+
+
+def test_select_entries_chokyo_match_days_no_condition_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition が未指定のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="chokyo_condition"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="chokyo_match_days", days_from=1, days_to=13),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_mixed_course_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition の course が混在するとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="course"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239),
+                        ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=825),
+                    ],
+                    days_from=1,
+                    days_to=13,
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_missing_days_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from・days_to が未指定のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_days_from_below_one_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from が1未満のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                    days_from=0,
+                    days_to=13,
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_from_over_to_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from が days_to を超えるとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                    days_from=13,
+                    days_to=1,
+                ),
             ),
         )

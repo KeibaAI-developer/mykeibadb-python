@@ -2,6 +2,11 @@
 
 from typing import Any
 
+from mykeibadb.analytics._chokyo_helpers import (
+    build_threshold_where,
+    resolve_threshold_col,
+    resolve_valid_where,
+)
 from mykeibadb.analytics._cte_helpers import (
     SUBJECT_MAP,
     build_course_week_cte,
@@ -28,6 +33,7 @@ _HIST_VALID_PARTS = [
     "kakutei_chakujun ~ '^[0-9]{2}$'",
     "kakutei_chakujun != '00'",
 ]
+# horse_hist CTE を経由して attr_agg を組み立てる type
 _HIST_CTE_SOURCE_TYPES = frozenset(
     {
         "career_count",
@@ -36,9 +42,13 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
         "prev_race_name",
         "jockey_continuity",
         "prev_race_col",
-        "same_race_prev_year_finish",
+        "tokubetsu_race_finish",
     }
 )
+# target_horses CTE のみから attr_agg を組み立てる type（horse_hist 不要）
+_TARGET_HORSES_ONLY_SOURCE_TYPES = frozenset({"chokyo_match_days"})
+# history/fixed GroupBy で target_horses CTE を使う type 全体
+_TARGET_HORSES_SOURCE_TYPES = _HIST_CTE_SOURCE_TYPES | _TARGET_HORSES_ONLY_SOURCE_TYPES
 _PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset(
     {"kyakushitsu_hantei", "kyori", "kohan_3f_jun", "grade_code", "kakutei_chakujun"}
 )
@@ -108,14 +118,14 @@ def select_entries(
         )
         cte_parts.append(cte_sql)
 
-    use_hist_cte = (
+    use_target_horses_cte = (
         group_by is not None
         and group_by.kind in ("history", "fixed")
         and group_by.source is not None
-        and group_by.source.type in _HIST_CTE_SOURCE_TYPES
+        and group_by.source.type in _TARGET_HORSES_SOURCE_TYPES
     )
 
-    if use_hist_cte:
+    if use_target_horses_cte:
         th_where_parts = list(_ENTRY_VALID_PARTS)
         if condition is not None:
             th_where_parts.extend(build_race_condition_where(condition, params))
@@ -131,7 +141,8 @@ def select_entries(
 
         assert group_by is not None and group_by.source is not None
         cte_parts.append(_build_target_horses_cte(th_where_clause, cw_join_sql))
-        cte_parts.append(_build_horse_hist_cte())
+        if group_by.source.type in _HIST_CTE_SOURCE_TYPES:
+            cte_parts.append(_build_horse_hist_cte())
         cte_parts.extend(_build_attr_agg_cte(group_by.source, params))
 
         group_label_expr = _build_hist_group_label_expr(group_by, params)
@@ -470,8 +481,10 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
                 )
             return _attr_agg_prev_race_col_jun_ctes()
         return [_attr_agg_prev_race_col(source, params)]
-    if source.type == "same_race_prev_year_finish":
-        return [_attr_agg_same_race_prev_year_finish(source, params)]
+    if source.type == "tokubetsu_race_finish":
+        return [_attr_agg_tokubetsu_race_finish(source, params)]
+    if source.type == "chokyo_match_days":
+        return _attr_agg_chokyo_match_days_ctes(source, params)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -646,24 +659,29 @@ def _attr_agg_prev_race_col(source: AttrSource, params: list[Any]) -> str:
     )
 
 
-def _attr_agg_same_race_prev_year_finish(source: AttrSource, params: list[Any]) -> str:
-    """same_race_prev_year_finish 用 attr_agg CTE を返す.
+def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> str:
+    """tokubetsu_race_finish 用 attr_agg CTE を返す.
 
     Args:
-        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango 必須）
+        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango・year_offset 必須）
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
         str: attr_agg CTE 文字列
 
     Raises:
-        ValueError: source.tokubetsu_kyoso_bango が None の場合
+        ValueError: source.tokubetsu_kyoso_bango または source.year_offset が None の場合
+        ValueError: source.year_offset が負の場合
     """
-    if source.tokubetsu_kyoso_bango is None:
+    if source.tokubetsu_kyoso_bango is None or source.year_offset is None:
         raise ValueError(
-            "same_race_prev_year_finish には tokubetsu_kyoso_bango の指定が必要です。"
+            "tokubetsu_race_finish には tokubetsu_kyoso_bango と year_offset の"
+            "指定が必要です。"
         )
+    if source.year_offset < 0:
+        raise ValueError(f"year_offset は0以上の整数でなければなりません: {source.year_offset!r}")
     params.append(source.tokubetsu_kyoso_bango)
+    params.append(source.year_offset)
     hist_valid = " AND ".join(_HIST_VALID_PARTS)
     return (
         f"attr_agg AS (\n"
@@ -671,11 +689,119 @@ def _attr_agg_same_race_prev_year_finish(source: AttrSource, params: list[Any]) 
         f"               MIN(CAST(kakutei_chakujun AS INTEGER)) AS attr_val\n"
         f"        FROM horse_hist\n"
         f"        WHERE tokubetsu_kyoso_bango = %s\n"
-        f"          AND CAST(kaisai_nen AS INTEGER) = CAST(target_kaisai_nen AS INTEGER) - 1\n"
+        f"          AND CAST(kaisai_nen AS INTEGER) = CAST(target_kaisai_nen AS INTEGER) - %s\n"
         f"          AND {hist_valid}\n"
         f"        GROUP BY ketto_toroku_bango, target_race_code\n"
         f"    )"
     )
+
+
+def _validate_chokyo_match_days(source: AttrSource) -> str:
+    """chokyo_match_days の設定を検証しコースを返す.
+
+    Args:
+        source (AttrSource): 属性算出方法（chokyo_condition・days_from・days_to 必須）
+
+    Returns:
+        str: 統一されたコース（"wood" または "hanro"）
+
+    Raises:
+        ValueError: source.chokyo_condition が未指定・空リストの場合
+        ValueError: source.chokyo_condition 内の course が統一されていない場合
+        ValueError: source.days_from または source.days_to が未指定の場合
+        ValueError: source.days_from が1未満の場合
+        ValueError: source.days_from が source.days_to を超える場合
+    """
+    condition = source.chokyo_condition
+    if not condition:
+        raise ValueError("chokyo_match_days には chokyo_condition の指定が必要です。")
+    courses = {t.course for t in condition}
+    if len(courses) > 1:
+        raise ValueError(f"chokyo_condition の course は統一してください: {courses!r}")
+    if source.days_from is None or source.days_to is None:
+        raise ValueError("chokyo_match_days には days_from と days_to の指定が必要です。")
+    if source.days_from < 1:
+        raise ValueError(f"days_from は1以上でなければなりません: {source.days_from!r}")
+    if source.days_from > source.days_to:
+        raise ValueError(
+            f"days_from は days_to 以下でなければなりません: "
+            f"days_from={source.days_from!r}, days_to={source.days_to!r}"
+        )
+    return next(iter(courses))
+
+
+def _attr_agg_chokyo_match_days_ctes(source: AttrSource, params: list[Any]) -> list[str]:
+    """chokyo_match_days 用 CTE リストを返す.
+
+    対象レース日の days_to 日前〜days_from 日前（両端含む）に行われた、対象コースの
+    有効な調教記録すべてについて、レース何日前かと chokyo_condition の全閾値を
+    満たすかを判定する。対象馬の調教を1回の走査で取得する chokyo_rows CTE と、
+    それを対象レースと突き合わせて JSON 配列にまとめる attr_agg CTE の2つを返す。
+
+    Args:
+        source (AttrSource): 属性算出方法（chokyo_condition・days_from・days_to 必須）
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        list[str]: [chokyo_rows CTE, attr_agg CTE] の文字列リスト
+
+    Raises:
+        ValueError: source.chokyo_condition が未指定・空リストの場合
+        ValueError: source.chokyo_condition 内の course が統一されていない場合
+        ValueError: source.days_from または source.days_to が未指定の場合
+        ValueError: source.days_from が1未満の場合
+        ValueError: source.days_from が source.days_to を超える場合
+    """
+    course = _validate_chokyo_match_days(source)
+    condition = source.chokyo_condition
+    assert condition is not None
+    table, _ = resolve_threshold_col(condition[0])
+    valid_where = resolve_valid_where(course, "c")
+    match_conds: list[str] = []
+    for threshold in condition:
+        match_conds.extend(build_threshold_where(threshold, "c", params))
+    match_expr = "\n                    AND ".join(match_conds)
+    chokyo_rows_cte = (
+        f"chokyo_rows AS (\n"
+        f"        SELECT c.ketto_toroku_bango,\n"
+        f"               TO_DATE(c.chokyo_nengappi, 'YYYYMMDD') AS chokyo_date,\n"
+        f"               c.chokyo_jikoku,\n"
+        f"               ({match_expr}) AS is_match\n"
+        f"        FROM {table} c\n"
+        f"        WHERE {valid_where}\n"
+        f"          AND c.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)\n"
+        f"    )"
+    )
+    assert source.days_from is not None and source.days_to is not None
+    params.append(source.days_from)
+    params.append(source.days_to)
+    attr_agg_cte = (
+        "attr_agg AS (\n"
+        "        SELECT\n"
+        "            th.ketto_toroku_bango,\n"
+        "            th.race_code AS target_race_code,\n"
+        "            COALESCE(\n"
+        "                jsonb_agg(\n"
+        "                    jsonb_build_array(cr.days_before, cr.is_match)\n"
+        "                    ORDER BY cr.days_before ASC, cr.chokyo_jikoku ASC\n"
+        "                ) FILTER (WHERE cr.days_before IS NOT NULL),\n"
+        "                '[]'::jsonb\n"
+        "            )::TEXT AS attr_val\n"
+        "        FROM target_horses th\n"
+        "        LEFT JOIN (\n"
+        "            SELECT th2.ketto_toroku_bango, th2.race_code, c.is_match, c.chokyo_jikoku,\n"
+        "                   TO_DATE(th2.kaisai_nen || th2.kaisai_gappi, 'YYYYMMDD')\n"
+        "                       - c.chokyo_date AS days_before\n"
+        "            FROM target_horses th2\n"
+        "            JOIN chokyo_rows c ON c.ketto_toroku_bango = th2.ketto_toroku_bango\n"
+        "        ) cr\n"
+        "            ON cr.ketto_toroku_bango = th.ketto_toroku_bango\n"
+        "            AND cr.race_code = th.race_code\n"
+        "            AND cr.days_before BETWEEN %s AND %s\n"
+        "        GROUP BY th.ketto_toroku_bango, th.race_code\n"
+        "    )"
+    )
+    return [chokyo_rows_cte, attr_agg_cte]
 
 
 def _attr_agg_prev_race_col_jun_ctes() -> list[str]:
@@ -750,7 +876,7 @@ def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
     """
     if group_by.kind == "history":
         source = group_by.source
-        if source is not None and source.type == "same_race_prev_year_finish":
+        if source is not None and source.type == "tokubetsu_race_finish":
             params.append(source.absent_label)
             return "COALESCE(attr_agg.attr_val::TEXT, %s)"
         if source is not None and source.overseas_label is not None:
