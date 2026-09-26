@@ -7,6 +7,8 @@ from mykeibadb.analytics._cte_helpers import (
     build_course_week_cte,
     build_payout_ctes,
     build_race_condition_where,
+    build_race_display_name_cte,
+    race_display_name_expr,
 )
 from mykeibadb.analytics._models import RaceCondition, Subject
 
@@ -280,3 +282,38 @@ def test_build_race_condition_where_invalid_babajotai_codes() -> None:
     """未対応のbabajotai_codesでValueErrorが発生する."""
     with pytest.raises(ValueError, match="babajotai_codes"):
         build_race_condition_where(RaceCondition(babajotai_codes=["晴れ"]), [])
+
+
+# build_race_display_name_cte / race_display_name_expr
+def test_build_race_display_name_cte_default_name() -> None:
+    """既定のCTE名でgrade_race_latest_namesが生成される."""
+    cte_sql = build_race_display_name_cte()
+    assert cte_sql.startswith("grade_race_latest_names AS (")
+    assert "GRADE_CODE" not in cte_sql
+    assert "grade_code IN ('A', 'B', 'C', 'D', 'F', 'G', 'H')" in cte_sql
+    assert "keibajo_code ~ '^[0-9]+$'" in cte_sql
+    assert "TRIM(tokubetsu_kyoso_bango) != '0000'" in cte_sql
+    assert "DISTINCT ON (TRIM(tokubetsu_kyoso_bango))" in cte_sql
+    assert "ORDER BY TRIM(tokubetsu_kyoso_bango), kaisai_nen DESC, kaisai_gappi DESC" in cte_sql
+
+
+def test_build_race_display_name_cte_custom_name() -> None:
+    """cte_nameを指定するとその名前でCTEが生成される."""
+    cte_sql = build_race_display_name_cte(cte_name="custom_names")
+    assert cte_sql.startswith("custom_names AS (")
+
+
+def test_race_display_name_expr_uses_grade_conditions() -> None:
+    """指定エイリアスの重賞判定条件とCOALESCE式が生成される."""
+    expr = race_display_name_expr("r")
+    assert "r.grade_code IN ('A', 'B', 'C', 'D', 'F', 'G', 'H')" in expr
+    assert "r.keibajo_code ~ '^[0-9]+$'" in expr
+    assert "TRIM(r.tokubetsu_kyoso_bango) != '0000'" in expr
+    assert "COALESCE(grade_race_latest_names.latest_name, TRIM(r.kyosomei_hondai))" in expr
+    assert expr.strip().endswith("ELSE TRIM(r.kyosomei_hondai)\nEND")
+
+
+def test_race_display_name_expr_custom_cte_name() -> None:
+    """cte_nameを指定するとJOIN先CTE名がその名前になる."""
+    expr = race_display_name_expr("horse_hist", cte_name="custom_names")
+    assert "COALESCE(custom_names.latest_name, TRIM(horse_hist.kyosomei_hondai))" in expr

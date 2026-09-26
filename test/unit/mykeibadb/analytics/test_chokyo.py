@@ -4,7 +4,11 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import analyze_chokyo_debut_seiseki, get_uma_chokyo
+from mykeibadb.analytics import (
+    analyze_chokyo_debut_seiseki,
+    get_chokyo_match_days,
+    get_uma_chokyo,
+)
 from mykeibadb.analytics._models import ChokyoThreshold
 from mykeibadb.exceptions import QueryExecutionError
 
@@ -336,3 +340,49 @@ def test_analyze_chokyo_debut_seiseki_invalid_course_raises() -> None:
             "20231231",
             condition,
         )
+
+
+# get_chokyo_match_days
+def test_get_chokyo_match_days_returns_mapping_per_horse(mocker: MockerFixture) -> None:
+    """血統登録番号ごとに(何日前, 該当か)のリストを返す。"""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame(
+        [
+            {"ketto_toroku_bango": "2020100001", "attr_val": "[[1, true], [8, false]]"},
+            {"ketto_toroku_bango": "2020100002", "attr_val": "[]"},
+        ]
+    )
+    condition = [ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)]
+
+    result = get_chokyo_match_days(manager, "2026092706040911", condition, 1, 13)
+
+    assert result == {
+        "2020100001": [(1, True), (8, False)],
+        "2020100002": [],
+    }
+
+
+def test_get_chokyo_match_days_uses_race_code_as_target_horses_filter(
+    mocker: MockerFixture,
+) -> None:
+    """target_horses CTEがrace_codeのみで出走馬全頭（確定着順不問）を抽出する。"""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = pd.DataFrame(
+        columns=["ketto_toroku_bango", "attr_val"]
+    )
+    condition = [ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)]
+
+    get_chokyo_match_days(manager, "2026092706040911", condition, 1, 13)
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "WHERE u.race_code = %s" in sql
+    assert "kakutei_chakujun" not in sql
+    assert params[0] == "2026092706040911"
+
+
+def test_get_chokyo_match_days_no_condition_raises() -> None:
+    """chokyo_condition未指定でValueErrorが発生する."""
+    manager = object()
+    with pytest.raises(ValueError, match="chokyo_condition"):
+        get_chokyo_match_days(manager, "2026092706040911", [], 1, 13)  # type: ignore[arg-type]

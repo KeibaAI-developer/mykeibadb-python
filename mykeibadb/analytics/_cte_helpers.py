@@ -73,6 +73,9 @@ _SAYUU_TRACK_CODES: dict[str, tuple[str, ...]] = {
 # 馬場状態コードの有効値（「1」=良、「2」=稍重、「3」=重、「4」=不良）
 _VALID_BABAJOTAI_CODES: frozenset[str] = frozenset({"1", "2", "3", "4"})
 
+# 重賞を表すグレードコード（GRADE_CODE参照。E=特別競走・L=リステッドは含まない）
+GRADE_RACE_CODES: frozenset[str] = frozenset({"A", "B", "C", "D", "F", "G", "H"})
+
 
 def _babajotai_code_expr(race_alias: str) -> str:
     """有効な馬場状態コードを取得するSQL式を返す.
@@ -357,3 +360,59 @@ def build_past_race_top_n_filter_clause(
     sql_op = "=" if op == "==" else op
     params.append(int(value) if is_numeric else str(value))
     return f"{sql_expr} {sql_op} %s"
+
+
+def build_race_display_name_cte(cte_name: str = "grade_race_latest_names") -> str:
+    """重賞レース名統一用CTEのSQL文字列を返す.
+
+    grade_code が重賞（GRADE_RACE_CODES）かつ keibajo_code が数字（JRA開催）で
+    特別競走番号が'0000'以外のレースについて、特別競走番号ごとに開催日が最も新しい
+    レースの競走名本題（latest_name）を1行にまとめる。race_display_name_expr と
+    組み合わせて使う。
+
+    Args:
+        cte_name (str): 生成するCTEの名前
+
+    Returns:
+        str: CTE SQL文字列（WITHキーワードなし）
+    """
+    grade_codes = ", ".join(f"'{c}'" for c in sorted(GRADE_RACE_CODES))
+    return (
+        f"{cte_name} AS (\n"
+        f"        SELECT DISTINCT ON (TRIM(tokubetsu_kyoso_bango))\n"
+        f"            TRIM(tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango,\n"
+        f"            TRIM(kyosomei_hondai) AS latest_name\n"
+        f"        FROM race_shosai\n"
+        f"        WHERE grade_code IN ({grade_codes})\n"
+        f"          AND keibajo_code ~ '^[0-9]+$'\n"
+        f"          AND TRIM(tokubetsu_kyoso_bango) != '0000'\n"
+        f"        ORDER BY TRIM(tokubetsu_kyoso_bango), kaisai_nen DESC, kaisai_gappi DESC\n"
+        f"    )"
+    )
+
+
+def race_display_name_expr(alias: str, cte_name: str = "grade_race_latest_names") -> str:
+    """統一後の表示用レース名を返すSQL式を生成する.
+
+    build_race_display_name_cte で生成したCTEへのLEFT JOINを前提とする
+    （JOIN条件: `{cte_name}.tokubetsu_kyoso_bango = TRIM({alias}.tokubetsu_kyoso_bango)`）。
+    重賞（JRA開催・特別競走番号あり）はCTEの最新名を、それ以外は自身の競走名本題を返す。
+
+    Args:
+        alias (str): grade_code / keibajo_code / tokubetsu_kyoso_bango / kyosomei_hondai
+            列を持つテーブルのSQLエイリアス
+        cte_name (str): JOIN対象CTEの名前（build_race_display_name_cteと合わせる）
+
+    Returns:
+        str: 表示用レース名を返すCASE WHEN式
+    """
+    grade_codes = ", ".join(f"'{c}'" for c in sorted(GRADE_RACE_CODES))
+    a = alias
+    return (
+        f"CASE WHEN {a}.grade_code IN ({grade_codes})\n"
+        f"          AND {a}.keibajo_code ~ '^[0-9]+$'\n"
+        f"          AND TRIM({a}.tokubetsu_kyoso_bango) != '0000'\n"
+        f"     THEN COALESCE({cte_name}.latest_name, TRIM({a}.kyosomei_hondai))\n"
+        f"     ELSE TRIM({a}.kyosomei_hondai)\n"
+        f"END"
+    )

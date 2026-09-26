@@ -22,13 +22,20 @@ from mykeibadb.analytics._models import (
     parse_rows_def,
 )
 from mykeibadb.analytics.chakudo import analyze_chakudo
-from mykeibadb.analytics.chokyo import analyze_chokyo_debut_seiseki, get_uma_chokyo
+from mykeibadb.analytics.chokyo import (
+    analyze_chokyo_debut_seiseki,
+    get_chokyo_match_days,
+    get_uma_chokyo,
+)
+from mykeibadb.analytics.race_name import get_race_display_names
 from mykeibadb.analytics.uma import get_uma_rekisen
 
 __all__ = [
     "analyze_chakudo",
     "get_uma_chokyo",
     "analyze_chokyo_debut_seiseki",
+    "get_chokyo_match_days",
+    "get_race_display_names",
     "get_uma_rekisen",
     "ChakudoRow",
     "ChakudoResult",
