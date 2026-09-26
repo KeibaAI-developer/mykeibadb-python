@@ -1091,6 +1091,43 @@ def test_select_entries_chokyo_week_match_skips_horse_hist_cte(
     assert "'no_record'" in sql
 
 
+def test_select_entries_chokyo_week_match_week_boundaries(
+    mocker: MockerFixture,
+) -> None:
+    """当該週は1〜6日前、1週前は7〜13日前として判定し、ラベルを優先順に割り当てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_week_match",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    current = "BOOL_OR(cr.is_match AND cr.days_before <= 6)"
+    prev = "BOOL_OR(cr.is_match AND cr.days_before >= 7)"
+    assert "cr.days_before BETWEEN 1 AND 13" in sql
+    assert f"WHEN {current} AND {prev} THEN 'both'" in sql
+    assert f"WHEN {current} THEN 'current_week'" in sql
+    assert f"WHEN {prev} THEN 'prev_week'" in sql
+    assert "WHEN COUNT(cr.days_before) > 0 THEN 'none'" in sql
+    assert "ELSE 'no_record'" in sql
+    assert sql.index("'both'") < sql.index("'current_week'") < sql.index("'prev_week'")
+    assert sql.index("'prev_week'") < sql.index("'none'") < sql.index("'no_record'")
+    assert "CAST(c.time_gokei_2furlong AS INTEGER) <= %s" in sql
+    assert 239 in params
+
+
 def test_select_entries_chokyo_week_match_fixed_group_by_matches_label(
     mocker: MockerFixture,
 ) -> None:
