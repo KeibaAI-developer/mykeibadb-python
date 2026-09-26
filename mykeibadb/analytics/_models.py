@@ -251,8 +251,11 @@ class AttrSource:
                 条件に絞り込み、条件を満たさない場合はNULL（fixedの全行から除外）にできる）
             "tokubetsu_race_finish": 指定した特別競走番号のレースにおける、対象レースから
                 year_offset 年前の確定着順
-            "chokyo_week_match": 対象レースの当該週・1週前それぞれで、chokyo_condition の
-                調教閾値条件を満たす調教があったかの区分
+            "chokyo_match_days": 対象レース日の days_to 日前〜days_from 日前（両端含む）に
+                行われた、対象コースの有効な調教記録それぞれについて、レース何日前かと
+                chokyo_condition の全閾値を満たすかを判定した結果。属性値は
+                `[[<何日前:int>, <該当:bool>], ...]` 形式のJSON配列テキスト
+                （何日前の昇順、同日は調教時刻昇順。記録なしは `[]`）
         top_n (int | None): 何着以内を入着とみなすか（"sire_condition_finisher"用は既定1）。
             "past_race_top_n_count" で None の場合は着順で絞り込まない。
         grade_codes (list[str] | None): 対象グレードコードリスト
@@ -265,7 +268,9 @@ class AttrSource:
         year_offset (int | None): 対象レースから遡る年数。0=同年、1=前年
             （"tokubetsu_race_finish"用）
         absent_label (str): 不出走ラベル（"tokubetsu_race_finish"用）
-        chokyo_condition (ChokyoCondition | None): 調教閾値条件リスト（"chokyo_week_match"用）
+        chokyo_condition (ChokyoCondition | None): 調教閾値条件リスト（"chokyo_match_days"用）
+        days_from (int | None): 対象レース日から遡る日数の下限（"chokyo_match_days"用）
+        days_to (int | None): 対象レース日から遡る日数の上限（"chokyo_match_days"用）
         filters (list[dict[str, Any]] | None): 汎用フィルタ（"past_race_top_n_count"用）。
             各要素は {"column": horse_histの列名, "op": 演算子, "value": 比較値} の形式。
     """
@@ -282,6 +287,8 @@ class AttrSource:
     year_offset: int | None = None
     absent_label: str = "出走無し"
     chokyo_condition: ChokyoCondition | None = None
+    days_from: int | None = None
+    days_to: int | None = None
     filters: list[dict[str, Any]] | None = None
 
     @staticmethod
@@ -301,6 +308,8 @@ class AttrSource:
         raw_top_n = d.get("top_n")
         raw_year_offset = d.get("year_offset")
         raw_chokyo_condition = d.get("chokyo_condition")
+        raw_days_from = d.get("days_from")
+        raw_days_to = d.get("days_to")
         condition: RaceCondition | None = None
         if raw_condition is not None:
             condition = RaceCondition.from_dict(raw_condition)
@@ -325,6 +334,8 @@ class AttrSource:
                 if raw_chokyo_condition is not None
                 else None
             ),
+            days_from=int(raw_days_from) if raw_days_from is not None else None,
+            days_to=int(raw_days_to) if raw_days_to is not None else None,
             filters=d.get("filters"),
         )
 
