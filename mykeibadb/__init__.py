@@ -11,6 +11,7 @@ try:
 except (PackageNotFoundError, ImportError):
     __version__ = "unknown"
 
+from mykeibadb.column_types import ColumnTypeResolver
 from mykeibadb.config import ConfigManager
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import (
@@ -58,6 +59,7 @@ __all__ = [
     "InvalidFilterError",
     "ValidationError",
     "TableAccessor",
+    "ColumnTypeResolver",
     # Getter classes
     "BaseGetter",
     "RaceGetter",

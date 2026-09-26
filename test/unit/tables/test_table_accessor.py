@@ -12,9 +12,14 @@ from mykeibadb.tables import SUPPORTED_TABLES, TableAccessor
 
 @pytest.fixture
 def mock_connection_manager() -> MagicMock:
-    """モック化されたConnectionManagerを生成するfixture."""
+    """モック化されたConnectionManagerを生成するfixture.
+
+    列の型は取得できない状態にする（execute_queryが0行を返す）。この場合、
+    WHERE句は全列がTRIMで包まれる（従来の振る舞い）。
+    """
     mock_cm = MagicMock()
     mock_cm.fetch_dataframe.return_value = pd.DataFrame()
+    mock_cm.execute_query.return_value = []
     return mock_cm
 
 
@@ -22,6 +27,27 @@ def mock_connection_manager() -> MagicMock:
 def table_accessor(mock_connection_manager: MagicMock) -> TableAccessor:
     """TableAccessorインスタンスを生成するfixture."""
     return TableAccessor(mock_connection_manager)
+
+
+@pytest.fixture
+def mock_connection_manager_with_char_columns() -> MagicMock:
+    """固定長文字列の列を持つテーブルを返すモック化されたConnectionManagerを生成するfixture."""
+    mock_cm = MagicMock()
+    mock_cm.fetch_dataframe.return_value = pd.DataFrame()
+    mock_cm.execute_query.return_value = [
+        ("race_code", "character"),
+        ("umaban", "character"),
+        ("kyosomei_hondai", "character varying"),
+    ]
+    return mock_cm
+
+
+@pytest.fixture
+def table_accessor_with_char_columns(
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> TableAccessor:
+    """固定長文字列の列を解決できるTableAccessorインスタンスを生成するfixture."""
+    return TableAccessor(mock_connection_manager_with_char_columns)
 
 
 # 正常系
@@ -504,3 +530,133 @@ def test_get_table_data_with_period_raises_error_for_invalid_date_column(
         )
 
     assert "無効な日付カラム名" in str(exc_info.value)
+
+
+# 正常系（列の型によるTRIMの分岐）
+
+
+def test_blank_padded_char_column_is_not_wrapped_with_trim(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """固定長文字列の列がTRIMで包まれないことを確認.
+
+    PostgreSQLのbpchar比較は末尾空白を無視するためTRIMが不要であり、列を関数で包むと
+    その列のインデックスが使われなくなる。
+    """
+    table_accessor_with_char_columns.get_table_data(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": "202509030411"},
+    )
+
+    mock_connection_manager_with_char_columns.fetch_dataframe.assert_called_once_with(
+        "SELECT * FROM race_shosai WHERE race_code = %s",
+        ("202509030411",),
+    )
+
+
+def test_blank_padded_char_column_in_clause_is_not_wrapped_with_trim(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """固定長文字列の列のIN句がTRIMで包まれないことを確認."""
+    table_accessor_with_char_columns.get_table_data(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": ["202509030411", "202509030412"]},
+    )
+
+    mock_connection_manager_with_char_columns.fetch_dataframe.assert_called_once_with(
+        "SELECT * FROM race_shosai WHERE race_code IN (%s, %s)",
+        ("202509030411", "202509030412"),
+    )
+
+
+def test_variable_length_column_is_wrapped_with_trim(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """可変長文字列の列はTRIMで包まれることを確認.
+
+    可変長文字列は末尾空白を持ちうるため、従来どおりTRIMで包む。
+    """
+    table_accessor_with_char_columns.get_table_data(
+        "RACE_SHOSAI",
+        filters={"KYOSOMEI_HONDAI": "日本ダービー"},
+    )
+
+    mock_connection_manager_with_char_columns.fetch_dataframe.assert_called_once_with(
+        "SELECT * FROM race_shosai WHERE TRIM(kyosomei_hondai) = %s",
+        ("日本ダービー",),
+    )
+
+
+def test_mixed_column_types_are_branched_per_column(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """型が混在する複数のフィルタ列が、列ごとに正しく分岐することを確認."""
+    table_accessor_with_char_columns.get_table_data(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": "202509030411", "KYOSOMEI_HONDAI": "日本ダービー"},
+    )
+
+    query, _ = mock_connection_manager_with_char_columns.fetch_dataframe.call_args[0]
+    assert "race_code = %s" in query
+    assert "TRIM(race_code)" not in query
+    assert "TRIM(kyosomei_hondai) = %s" in query
+
+
+def test_period_query_branches_by_column_type(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """期間フィルタ付きの経路でも列の型による分岐が適用されることを確認."""
+    table_accessor_with_char_columns.get_table_data_with_period(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": "202509030411"},
+        start_date=date(2025, 1, 1),
+        end_date=date(2025, 12, 31),
+    )
+
+    query, _ = mock_connection_manager_with_char_columns.fetch_dataframe.call_args[0]
+    assert "race_code = %s" in query
+    assert "TRIM(race_code)" not in query
+
+
+def test_composite_date_period_query_branches_by_column_type(
+    table_accessor_with_char_columns: TableAccessor,
+    mock_connection_manager_with_char_columns: MagicMock,
+) -> None:
+    """複合日付の期間フィルタ付きの経路でも列の型による分岐が適用されることを確認."""
+    table_accessor_with_char_columns.get_table_data_with_composite_date_period(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": "202509030411"},
+        start_date=date(2025, 1, 1),
+        end_date=date(2025, 12, 31),
+    )
+
+    query, _ = mock_connection_manager_with_char_columns.fetch_dataframe.call_args[0]
+    assert "race_code = %s" in query
+    assert "TRIM(race_code)" not in query
+
+
+# 準正常系（列の型が取得できない場合）
+
+
+def test_unresolvable_column_type_is_wrapped_with_trim(
+    table_accessor: TableAccessor,
+    mock_connection_manager: MagicMock,
+) -> None:
+    """列の型が取得できない場合はTRIMで包まれることを確認.
+
+    速度は落ちるが結果は正しくなる側へ倒す。
+    """
+    table_accessor.get_table_data(
+        "RACE_SHOSAI",
+        filters={"RACE_CODE": "202509030411"},
+    )
+
+    mock_connection_manager.fetch_dataframe.assert_called_once_with(
+        "SELECT * FROM race_shosai WHERE TRIM(race_code) = %s",
+        ("202509030411",),
+    )
