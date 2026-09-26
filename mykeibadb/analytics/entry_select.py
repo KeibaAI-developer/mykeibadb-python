@@ -485,7 +485,7 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
     if source.type == "tokubetsu_race_finish":
         return [_attr_agg_tokubetsu_race_finish(source, params)]
     if source.type == "chokyo_week_match":
-        return [_attr_agg_chokyo_week_match(source, params)]
+        return _attr_agg_chokyo_week_match_ctes(source, params)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -718,18 +718,20 @@ def _validate_chokyo_week_match_course(condition: ChokyoCondition | None) -> str
     return next(iter(courses))
 
 
-def _attr_agg_chokyo_week_match(source: AttrSource, params: list[Any]) -> str:
-    """chokyo_week_match 用 attr_agg CTE を返す.
+def _attr_agg_chokyo_week_match_ctes(source: AttrSource, params: list[Any]) -> list[str]:
+    """chokyo_week_match 用 CTE リストを返す.
 
     対象レース日の当該週（6日前〜前日）・1週前（13日前〜7日前）それぞれで、
     chokyo_condition の全閾値を同時に満たす調教が1本以上あるかを判定する。
+    対象馬の調教を1回の走査で取得する chokyo_rows CTE と、
+    それを対象レースと突き合わせる attr_agg CTE の2つを返す。
 
     Args:
         source (AttrSource): 属性算出方法（chokyo_condition 必須）
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
-        str: attr_agg CTE 文字列
+        list[str]: [chokyo_rows CTE, attr_agg CTE] の文字列リスト
 
     Raises:
         ValueError: source.chokyo_condition が未指定・空リストの場合
@@ -740,55 +742,49 @@ def _attr_agg_chokyo_week_match(source: AttrSource, params: list[Any]) -> str:
     assert condition is not None
     table, _ = resolve_threshold_col(condition[0])
     valid_where = resolve_valid_where(course, "c")
-    race_date_expr = "TO_DATE(th.kaisai_nen || th.kaisai_gappi, 'YYYYMMDD')"
-    chokyo_date_expr = "TO_DATE(c.chokyo_nengappi, 'YYYYMMDD')"
-
-    def period_exists(days_ago_start: int, days_ago_end: int, with_threshold: bool) -> str:
-        threshold_conds: list[str] = []
-        if with_threshold:
-            for threshold in condition:
-                threshold_conds.extend(build_threshold_where(threshold, "c", params))
-        extra = "".join(f"\n              AND {cond}" for cond in threshold_conds)
-        return (
-            f"EXISTS (\n"
-            f"            SELECT 1 FROM {table} c\n"
-            f"            WHERE c.ketto_toroku_bango = th.ketto_toroku_bango\n"
-            f"              AND {chokyo_date_expr} BETWEEN "
-            f"{race_date_expr} - {days_ago_start} AND {race_date_expr} - {days_ago_end}\n"
-            f"              AND {valid_where}"
-            f"{extra}\n"
-            f"          )"
-        )
-
-    match_current = period_exists(6, 1, with_threshold=True)
-    match_prev = period_exists(13, 7, with_threshold=True)
-    has_record = period_exists(13, 1, with_threshold=False)
-
-    # 各EXISTS式（とそのパラメータ）を1回ずつだけSQLに埋め込むため、
-    # 判定結果を一度サブクエリの列に確定させてからCASEで参照する。
-    return (
-        f"attr_agg AS (\n"
-        f"        SELECT\n"
-        f"            ketto_toroku_bango,\n"
-        f"            target_race_code,\n"
-        f"            CASE\n"
-        f"                WHEN match_current AND match_prev THEN 'both'\n"
-        f"                WHEN match_current THEN 'current_week'\n"
-        f"                WHEN match_prev THEN 'prev_week'\n"
-        f"                WHEN has_record THEN 'none'\n"
-        f"                ELSE 'no_record'\n"
-        f"            END AS attr_val\n"
-        f"        FROM (\n"
-        f"            SELECT\n"
-        f"                th.ketto_toroku_bango,\n"
-        f"                th.race_code AS target_race_code,\n"
-        f"                {match_current} AS match_current,\n"
-        f"                {match_prev} AS match_prev,\n"
-        f"                {has_record} AS has_record\n"
-        f"            FROM target_horses th\n"
-        f"        ) chokyo_match\n"
+    match_conds: list[str] = []
+    for threshold in condition:
+        match_conds.extend(build_threshold_where(threshold, "c", params))
+    match_expr = "\n                    AND ".join(match_conds)
+    chokyo_rows_cte = (
+        f"chokyo_rows AS (\n"
+        f"        SELECT c.ketto_toroku_bango,\n"
+        f"               TO_DATE(c.chokyo_nengappi, 'YYYYMMDD') AS chokyo_date,\n"
+        f"               ({match_expr}) AS is_match\n"
+        f"        FROM {table} c\n"
+        f"        WHERE {valid_where}\n"
+        f"          AND c.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)\n"
         f"    )"
     )
+    current = "BOOL_OR(cr.is_match AND cr.days_before <= 6)"
+    prev = "BOOL_OR(cr.is_match AND cr.days_before >= 7)"
+    attr_agg_cte = (
+        f"attr_agg AS (\n"
+        f"        SELECT\n"
+        f"            th.ketto_toroku_bango,\n"
+        f"            th.race_code AS target_race_code,\n"
+        f"            CASE\n"
+        f"                WHEN {current} AND {prev} THEN 'both'\n"
+        f"                WHEN {current} THEN 'current_week'\n"
+        f"                WHEN {prev} THEN 'prev_week'\n"
+        f"                WHEN COUNT(cr.days_before) > 0 THEN 'none'\n"
+        f"                ELSE 'no_record'\n"
+        f"            END AS attr_val\n"
+        f"        FROM target_horses th\n"
+        f"        LEFT JOIN (\n"
+        f"            SELECT th2.ketto_toroku_bango, th2.race_code, c.is_match,\n"
+        f"                   TO_DATE(th2.kaisai_nen || th2.kaisai_gappi, 'YYYYMMDD')\n"
+        f"                       - c.chokyo_date AS days_before\n"
+        f"            FROM target_horses th2\n"
+        f"            JOIN chokyo_rows c ON c.ketto_toroku_bango = th2.ketto_toroku_bango\n"
+        f"        ) cr\n"
+        f"            ON cr.ketto_toroku_bango = th.ketto_toroku_bango\n"
+        f"            AND cr.race_code = th.race_code\n"
+        f"            AND cr.days_before BETWEEN 1 AND 13\n"
+        f"        GROUP BY th.ketto_toroku_bango, th.race_code\n"
+        f"    )"
+    )
+    return [chokyo_rows_cte, attr_agg_cte]
 
 
 def _attr_agg_prev_race_col_jun_ctes() -> list[str]:
