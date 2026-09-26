@@ -2,16 +2,14 @@
 
 from typing import Any
 
-from mykeibadb.analytics._chokyo_helpers import (
-    build_threshold_where,
-    resolve_threshold_col,
-    resolve_valid_where,
-)
+from mykeibadb.analytics._chokyo_helpers import build_chokyo_match_days_ctes
 from mykeibadb.analytics._cte_helpers import (
     SUBJECT_MAP,
     build_course_week_cte,
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
+    build_race_display_name_cte,
+    race_display_name_expr,
 )
 from mykeibadb.analytics._entry_filters import _validate_sql_expr, build_filter_subquery
 from mykeibadb.analytics._models import (
@@ -470,7 +468,7 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
     if source.type == "debut_venue":
         return [_attr_agg_debut_venue()]
     if source.type == "prev_race_name":
-        return [_attr_agg_prev_race_name()]
+        return _attr_agg_prev_race_name_ctes()
     if source.type == "jockey_continuity":
         return [_attr_agg_jockey_continuity()]
     if source.type == "prev_race_col":
@@ -484,7 +482,7 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
     if source.type == "tokubetsu_race_finish":
         return [_attr_agg_tokubetsu_race_finish(source, params)]
     if source.type == "chokyo_match_days":
-        return _attr_agg_chokyo_match_days_ctes(source, params)
+        return build_chokyo_match_days_ctes(source, params)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
@@ -561,24 +559,35 @@ def _attr_agg_debut_venue() -> str:
     )
 
 
-def _attr_agg_prev_race_name() -> str:
-    """prev_race_name 用 attr_agg CTE を返す.
+def _attr_agg_prev_race_name_ctes() -> list[str]:
+    """prev_race_name 用 CTE リストを返す.
+
+    重賞（JRA開催）は特別競走番号ごとに開催日が最も新しいレースの競走名本題へ
+    統一したうえで、各馬の直近レースの表示用レース名を取得する。
+    特別競走番号→最新名の対応は grade_race_latest_names CTE で一度だけ作り、
+    horse_hist に結合する（race_shosai を何度も走査しない）。
 
     Returns:
-        str: attr_agg CTE 文字列
+        list[str]: [grade_race_latest_names CTE, attr_agg CTE] の文字列リスト
     """
-    return (
+    name_cte = build_race_display_name_cte()
+    display_name_expr = race_display_name_expr("horse_hist")
+    attr_agg_cte = (
         "attr_agg AS (\n"
-        "        SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        "               ketto_toroku_bango, target_race_code,\n"
-        "               kyosomei_hondai AS attr_val,\n"
-        "               keibajo_code !~ '^[0-9]' AS is_overseas\n"
+        "        SELECT DISTINCT ON (horse_hist.ketto_toroku_bango, horse_hist.target_race_code)\n"
+        "               horse_hist.ketto_toroku_bango, horse_hist.target_race_code,\n"
+        f"               {display_name_expr} AS attr_val,\n"
+        "               horse_hist.keibajo_code !~ '^[0-9]' AS is_overseas\n"
         "        FROM horse_hist\n"
-        "        WHERE kyosomei_hondai != ''\n"
-        "        ORDER BY ketto_toroku_bango, target_race_code,\n"
-        "                 kaisai_nen DESC, kaisai_gappi DESC\n"
+        "        LEFT JOIN grade_race_latest_names\n"
+        "            ON grade_race_latest_names.tokubetsu_kyoso_bango"
+        " = horse_hist.tokubetsu_kyoso_bango\n"
+        "        WHERE horse_hist.kyosomei_hondai != ''\n"
+        "        ORDER BY horse_hist.ketto_toroku_bango, horse_hist.target_race_code,\n"
+        "                 horse_hist.kaisai_nen DESC, horse_hist.kaisai_gappi DESC\n"
         "    )"
     )
+    return [name_cte, attr_agg_cte]
 
 
 def _attr_agg_jockey_continuity() -> str:
@@ -694,114 +703,6 @@ def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> st
         f"        GROUP BY ketto_toroku_bango, target_race_code\n"
         f"    )"
     )
-
-
-def _validate_chokyo_match_days(source: AttrSource) -> str:
-    """chokyo_match_days の設定を検証しコースを返す.
-
-    Args:
-        source (AttrSource): 属性算出方法（chokyo_condition・days_from・days_to 必須）
-
-    Returns:
-        str: 統一されたコース（"wood" または "hanro"）
-
-    Raises:
-        ValueError: source.chokyo_condition が未指定・空リストの場合
-        ValueError: source.chokyo_condition 内の course が統一されていない場合
-        ValueError: source.days_from または source.days_to が未指定の場合
-        ValueError: source.days_from が1未満の場合
-        ValueError: source.days_from が source.days_to を超える場合
-    """
-    condition = source.chokyo_condition
-    if not condition:
-        raise ValueError("chokyo_match_days には chokyo_condition の指定が必要です。")
-    courses = {t.course for t in condition}
-    if len(courses) > 1:
-        raise ValueError(f"chokyo_condition の course は統一してください: {courses!r}")
-    if source.days_from is None or source.days_to is None:
-        raise ValueError("chokyo_match_days には days_from と days_to の指定が必要です。")
-    if source.days_from < 1:
-        raise ValueError(f"days_from は1以上でなければなりません: {source.days_from!r}")
-    if source.days_from > source.days_to:
-        raise ValueError(
-            f"days_from は days_to 以下でなければなりません: "
-            f"days_from={source.days_from!r}, days_to={source.days_to!r}"
-        )
-    return next(iter(courses))
-
-
-def _attr_agg_chokyo_match_days_ctes(source: AttrSource, params: list[Any]) -> list[str]:
-    """chokyo_match_days 用 CTE リストを返す.
-
-    対象レース日の days_to 日前〜days_from 日前（両端含む）に行われた、対象コースの
-    有効な調教記録すべてについて、レース何日前かと chokyo_condition の全閾値を
-    満たすかを判定する。対象馬の調教を1回の走査で取得する chokyo_rows CTE と、
-    それを対象レースと突き合わせて JSON 配列にまとめる attr_agg CTE の2つを返す。
-
-    Args:
-        source (AttrSource): 属性算出方法（chokyo_condition・days_from・days_to 必須）
-        params (list[Any]): SQLパラメータリスト（末尾に追加される）
-
-    Returns:
-        list[str]: [chokyo_rows CTE, attr_agg CTE] の文字列リスト
-
-    Raises:
-        ValueError: source.chokyo_condition が未指定・空リストの場合
-        ValueError: source.chokyo_condition 内の course が統一されていない場合
-        ValueError: source.days_from または source.days_to が未指定の場合
-        ValueError: source.days_from が1未満の場合
-        ValueError: source.days_from が source.days_to を超える場合
-    """
-    course = _validate_chokyo_match_days(source)
-    condition = source.chokyo_condition
-    assert condition is not None
-    table, _ = resolve_threshold_col(condition[0])
-    valid_where = resolve_valid_where(course, "c")
-    match_conds: list[str] = []
-    for threshold in condition:
-        match_conds.extend(build_threshold_where(threshold, "c", params))
-    match_expr = "\n                    AND ".join(match_conds)
-    chokyo_rows_cte = (
-        f"chokyo_rows AS (\n"
-        f"        SELECT c.ketto_toroku_bango,\n"
-        f"               TO_DATE(c.chokyo_nengappi, 'YYYYMMDD') AS chokyo_date,\n"
-        f"               c.chokyo_jikoku,\n"
-        f"               ({match_expr}) AS is_match\n"
-        f"        FROM {table} c\n"
-        f"        WHERE {valid_where}\n"
-        f"          AND c.ketto_toroku_bango IN (SELECT ketto_toroku_bango FROM target_horses)\n"
-        f"    )"
-    )
-    assert source.days_from is not None and source.days_to is not None
-    params.append(source.days_from)
-    params.append(source.days_to)
-    attr_agg_cte = (
-        "attr_agg AS (\n"
-        "        SELECT\n"
-        "            th.ketto_toroku_bango,\n"
-        "            th.race_code AS target_race_code,\n"
-        "            COALESCE(\n"
-        "                jsonb_agg(\n"
-        "                    jsonb_build_array(cr.days_before, cr.is_match)\n"
-        "                    ORDER BY cr.days_before ASC, cr.chokyo_jikoku ASC\n"
-        "                ) FILTER (WHERE cr.days_before IS NOT NULL),\n"
-        "                '[]'::jsonb\n"
-        "            )::TEXT AS attr_val\n"
-        "        FROM target_horses th\n"
-        "        LEFT JOIN (\n"
-        "            SELECT th2.ketto_toroku_bango, th2.race_code, c.is_match, c.chokyo_jikoku,\n"
-        "                   TO_DATE(th2.kaisai_nen || th2.kaisai_gappi, 'YYYYMMDD')\n"
-        "                       - c.chokyo_date AS days_before\n"
-        "            FROM target_horses th2\n"
-        "            JOIN chokyo_rows c ON c.ketto_toroku_bango = th2.ketto_toroku_bango\n"
-        "        ) cr\n"
-        "            ON cr.ketto_toroku_bango = th.ketto_toroku_bango\n"
-        "            AND cr.race_code = th.race_code\n"
-        "            AND cr.days_before BETWEEN %s AND %s\n"
-        "        GROUP BY th.ketto_toroku_bango, th.race_code\n"
-        "    )"
-    )
-    return [chokyo_rows_cte, attr_agg_cte]
 
 
 def _attr_agg_prev_race_col_jun_ctes() -> list[str]:

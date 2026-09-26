@@ -2,8 +2,13 @@
 
 import pytest
 
-from mykeibadb.analytics._chokyo_helpers import build_threshold_where, resolve_threshold_col
-from mykeibadb.analytics._models import ChokyoThreshold
+from mykeibadb.analytics._chokyo_helpers import (
+    build_chokyo_match_days_ctes,
+    build_threshold_where,
+    resolve_threshold_col,
+    validate_chokyo_match_days,
+)
+from mykeibadb.analytics._models import AttrSource, ChokyoThreshold
 
 
 # 正常系
@@ -110,3 +115,78 @@ def test_resolve_threshold_col_invalid_metric() -> None:
     t = ChokyoThreshold(course="wood", metric="speed", furlong=6)
     with pytest.raises(ValueError, match="metric"):
         resolve_threshold_col(t)
+
+
+def _chokyo_match_days_source(**overrides: object) -> AttrSource:
+    """chokyo_match_days用のAttrSourceを生成する."""
+    defaults: dict[str, object] = {
+        "type": "chokyo_match_days",
+        "chokyo_condition": [ChokyoThreshold(course="hanro", metric="gokei", furlong=4)],
+        "days_from": 1,
+        "days_to": 10,
+    }
+    defaults.update(overrides)
+    return AttrSource(**defaults)  # type: ignore[arg-type]
+
+
+# validate_chokyo_match_days 正常系
+def test_validate_chokyo_match_days_returns_course() -> None:
+    """chokyo_conditionのcourseを返す."""
+    source = _chokyo_match_days_source()
+    assert validate_chokyo_match_days(source) == "hanro"
+
+
+# validate_chokyo_match_days 準正常系
+def test_validate_chokyo_match_days_no_condition_raises() -> None:
+    """chokyo_condition未指定でValueErrorが発生する."""
+    source = _chokyo_match_days_source(chokyo_condition=None)
+    with pytest.raises(ValueError, match="chokyo_condition"):
+        validate_chokyo_match_days(source)
+
+
+def test_validate_chokyo_match_days_mixed_course_raises() -> None:
+    """chokyo_condition内でcourseが統一されていない場合ValueErrorが発生する."""
+    source = _chokyo_match_days_source(
+        chokyo_condition=[
+            ChokyoThreshold(course="hanro", metric="gokei", furlong=4),
+            ChokyoThreshold(course="wood", metric="gokei", furlong=6),
+        ]
+    )
+    with pytest.raises(ValueError, match="course"):
+        validate_chokyo_match_days(source)
+
+
+def test_validate_chokyo_match_days_no_days_raises() -> None:
+    """days_from/days_to未指定でValueErrorが発生する."""
+    source = _chokyo_match_days_source(days_from=None)
+    with pytest.raises(ValueError, match="days_from"):
+        validate_chokyo_match_days(source)
+
+
+def test_validate_chokyo_match_days_days_from_less_than_one_raises() -> None:
+    """days_fromが1未満でValueErrorが発生する."""
+    source = _chokyo_match_days_source(days_from=0)
+    with pytest.raises(ValueError, match="days_from"):
+        validate_chokyo_match_days(source)
+
+
+def test_validate_chokyo_match_days_days_from_over_days_to_raises() -> None:
+    """days_fromがdays_toを超えるとValueErrorが発生する."""
+    source = _chokyo_match_days_source(days_from=10, days_to=1)
+    with pytest.raises(ValueError, match="days_to"):
+        validate_chokyo_match_days(source)
+
+
+# build_chokyo_match_days_ctes 正常系
+def test_build_chokyo_match_days_ctes_returns_two_ctes() -> None:
+    """chokyo_rows CTEとattr_agg CTEの2件を返す."""
+    source = _chokyo_match_days_source()
+    params: list[object] = []
+    ctes = build_chokyo_match_days_ctes(source, params)
+    assert len(ctes) == 2
+    assert ctes[0].startswith("chokyo_rows AS (")
+    assert ctes[1].startswith("attr_agg AS (")
+    assert "hanro_chokyo" in ctes[0]
+    assert "target_horses" in ctes[0]
+    assert "jsonb_agg" in ctes[1]
+    assert params[-2:] == [1, 10]

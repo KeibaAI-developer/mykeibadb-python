@@ -1,16 +1,80 @@
 """調教データ取得・分析モジュール."""
 
+import json
 from typing import Any
 
 import pandas as pd
 
-from mykeibadb.analytics._chokyo_helpers import build_threshold_where, resolve_threshold_col
-from mykeibadb.analytics._models import ChokyoCondition
+from mykeibadb.analytics._chokyo_helpers import (
+    build_chokyo_match_days_ctes,
+    build_threshold_where,
+    resolve_threshold_col,
+)
+from mykeibadb.analytics._models import AttrSource, ChokyoCondition
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
 _WOOD_VALID = "w.time_gokei_6furlong NOT IN ('0000', '9999')"
 _HANRO_VALID = "h.time_gokei_4furlong NOT IN ('0000', '9999')"
+
+
+def get_chokyo_match_days(
+    manager: ConnectionManager,
+    race_code: str,
+    chokyo_condition: ChokyoCondition,
+    days_from: int,
+    days_to: int,
+) -> dict[str, list[tuple[int, bool]]]:
+    """指定レースの出走馬について、期間内の調教ごとの(何日前, 該当か)を返す.
+
+    確定着順の有無を問わず、race_code の全出走馬（umagoto_race_joho）を対象にする。
+    判定ロジック（chokyo_rows の作り方・閾値判定・期間・検証）は analytics の
+    chokyo_match_days（entry_select._build_attr_agg_cte 経由）と共通の
+    build_chokyo_match_days_ctes を使う。
+
+    Args:
+        manager (ConnectionManager): DB接続マネージャ
+        race_code (str): 対象レースコード（16桁）
+        chokyo_condition (ChokyoCondition): 調教閾値条件リスト
+        days_from (int): 対象レース日から遡る日数の下限
+        days_to (int): 対象レース日から遡る日数の上限
+
+    Returns:
+        dict[str, list[tuple[int, bool]]]: 血統登録番号 -> [(何日前, 該当か), ...]。
+            何日前の昇順、同日は調教時刻昇順。調教記録なしの馬は空リスト。
+
+    Raises:
+        ValueError: chokyo_condition が未指定・空リストの場合
+        ValueError: chokyo_condition 内の course が統一されていない場合
+        ValueError: days_from または days_to が不正な場合
+    """
+    source = AttrSource(
+        type="chokyo_match_days",
+        chokyo_condition=chokyo_condition,
+        days_from=days_from,
+        days_to=days_to,
+    )
+    params: list[Any] = [race_code]
+    target_horses_cte = (
+        "target_horses AS MATERIALIZED (\n"
+        "        SELECT DISTINCT\n"
+        "            u.ketto_toroku_bango,\n"
+        "            u.race_code,\n"
+        "            r.kaisai_nen,\n"
+        "            r.kaisai_gappi\n"
+        "        FROM umagoto_race_joho u\n"
+        "        JOIN race_shosai r ON u.race_code = r.race_code\n"
+        "        WHERE u.race_code = %s\n"
+        "    )"
+    )
+    cte_parts = [target_horses_cte, *build_chokyo_match_days_ctes(source, params)]
+    sql = f"WITH {', '.join(cte_parts)}\nSELECT ketto_toroku_bango, attr_val FROM attr_agg"
+    df = manager.fetch_dataframe(sql, params=tuple(params))
+    result: dict[str, list[tuple[int, bool]]] = {}
+    for _, row in df.iterrows():
+        records = json.loads(row["attr_val"])
+        result[str(row["ketto_toroku_bango"])] = [(int(r[0]), bool(r[1])) for r in records]
+    return result
 
 
 def get_uma_chokyo(
