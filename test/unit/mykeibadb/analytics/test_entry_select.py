@@ -972,11 +972,11 @@ def test_select_entries_prev_race_name_without_overseas_label_uses_attr_val(
     assert "CASE WHEN attr_agg.is_overseas" not in sql
 
 
-# same_race_prev_year_finish（リピーター）
-def test_select_entries_same_race_prev_year_finish_uses_coalesce(
+# tokubetsu_race_finish（同一特別競走番号レースでの過去着順）
+def test_select_entries_tokubetsu_race_finish_uses_coalesce(
     mocker: MockerFixture,
 ) -> None:
-    """same_race_prev_year_finish の group_label が COALESCE + absent_label になる."""
+    """tokubetsu_race_finish の group_label が COALESCE + absent_label になる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
@@ -986,8 +986,9 @@ def test_select_entries_same_race_prev_year_finish_uses_coalesce(
         group_by=GroupBy(
             kind="history",
             source=AttrSource(
-                type="same_race_prev_year_finish",
+                type="tokubetsu_race_finish",
                 tokubetsu_kyoso_bango="0010",
+                year_offset=1,
                 absent_label="前年出走無し",
             ),
         ),
@@ -998,10 +999,11 @@ def test_select_entries_same_race_prev_year_finish_uses_coalesce(
     assert "COALESCE" in sql
     assert "target_kaisai_nen" in sql
     assert "0010" in params
+    assert 1 in params
     assert "前年出走無し" in params
 
 
-def test_select_entries_same_race_prev_year_finish_no_tokubetsu_raises(
+def test_select_entries_tokubetsu_race_finish_no_tokubetsu_raises(
     mocker: MockerFixture,
 ) -> None:
     """tokubetsu_kyoso_bango が None のとき ValueError が発生する."""
@@ -1014,6 +1016,144 @@ def test_select_entries_same_race_prev_year_finish_no_tokubetsu_raises(
             filters=[],
             group_by=GroupBy(
                 kind="history",
-                source=AttrSource(type="same_race_prev_year_finish"),
+                source=AttrSource(type="tokubetsu_race_finish", year_offset=0),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_no_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が None のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="tokubetsu_race_finish", tokubetsu_kyoso_bango="0010"),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_negative_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が負のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="tokubetsu_race_finish",
+                    tokubetsu_kyoso_bango="0010",
+                    year_offset=-1,
+                ),
+            ),
+        )
+
+
+# chokyo_week_match（当該週・1週前の調教該当区分）
+def test_select_entries_chokyo_week_match_skips_horse_hist_cte(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_week_match では horse_hist CTE を使わず target_horses から直接組み立てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_week_match",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses AS MATERIALIZED" in sql
+    assert "horse_hist AS (" not in sql
+    assert "hanro_chokyo" in sql
+    assert "'both'" in sql
+    assert "'no_record'" in sql
+
+
+def test_select_entries_chokyo_week_match_fixed_group_by_matches_label(
+    mocker: MockerFixture,
+) -> None:
+    """kind='fixed' の rows が attr_val の文字列一致で判定される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="chokyo_week_match",
+                chokyo_condition=[
+                    ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=825)
+                ],
+            ),
+            rows={"両週該当": "both"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "attr_agg.attr_val::TEXT = %s" in sql
+    assert "both" in params
+    assert "両週該当" in params
+
+
+def test_select_entries_chokyo_week_match_no_condition_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition が未指定のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="chokyo_condition"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(kind="history", source=AttrSource(type="chokyo_week_match")),
+        )
+
+
+def test_select_entries_chokyo_week_match_mixed_course_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition の course が混在するとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="course"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_week_match",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239),
+                        ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=825),
+                    ],
+                ),
             ),
         )

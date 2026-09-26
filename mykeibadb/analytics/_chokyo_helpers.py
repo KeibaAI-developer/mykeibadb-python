@@ -39,6 +39,27 @@ def resolve_threshold_col(threshold: ChokyoThreshold) -> tuple[str, str]:
     return table, col
 
 
+def resolve_valid_where(course: str, alias: str) -> str:
+    """調教コースに応じた有効判定WHERE句を返す.
+
+    合計タイムのセンチネル値（0000/9999）を除外する。
+
+    Args:
+        course (str): "wood" または "hanro"
+        alias (str): SQLテーブルエイリアス
+
+    Returns:
+        str: 有効判定WHERE句
+
+    Raises:
+        ValueError: course が未対応の場合
+    """
+    if course not in _VALID_COURSES:
+        raise ValueError(f"未対応の course です: {course!r}")
+    col = "time_gokei_6furlong" if course == "wood" else "time_gokei_4furlong"
+    return f"{alias}.{col} NOT IN ('0000', '9999')"
+
+
 def build_threshold_where(
     threshold: ChokyoThreshold,
     alias: str,

@@ -249,7 +249,10 @@ class AttrSource:
             "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
             "prev_race_col": 前走の任意列値（column で対象列を指定。filtersで前走の別列を
                 条件に絞り込み、条件を満たさない場合はNULL（fixedの全行から除外）にできる）
-            "same_race_prev_year_finish": 前年同特別競走番号レースでの確定着順
+            "tokubetsu_race_finish": 指定した特別競走番号のレースにおける、対象レースから
+                year_offset 年前の確定着順
+            "chokyo_week_match": 対象レースの当該週・1週前それぞれで、chokyo_condition の
+                調教閾値条件を満たす調教があったかの区分
         top_n (int | None): 何着以内を入着とみなすか（"sire_condition_finisher"用は既定1）。
             "past_race_top_n_count" で None の場合は着順で絞り込まない。
         grade_codes (list[str] | None): 対象グレードコードリスト
@@ -258,8 +261,11 @@ class AttrSource:
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
         column (str | None): 前走列名（"prev_race_col"用）
         overseas_label (str | None): 海外開催集約ラベル（"prev_race_name"用）
-        tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"same_race_prev_year_finish"用）
-        absent_label (str): 不出走ラベル（"same_race_prev_year_finish"用）
+        tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"tokubetsu_race_finish"用）
+        year_offset (int | None): 対象レースから遡る年数。0=同年、1=前年
+            （"tokubetsu_race_finish"用）
+        absent_label (str): 不出走ラベル（"tokubetsu_race_finish"用）
+        chokyo_condition (ChokyoCondition | None): 調教閾値条件リスト（"chokyo_week_match"用）
         filters (list[dict[str, Any]] | None): 汎用フィルタ（"past_race_top_n_count"用）。
             各要素は {"column": horse_histの列名, "op": 演算子, "value": 比較値} の形式。
     """
@@ -273,7 +279,9 @@ class AttrSource:
     column: str | None = None
     overseas_label: str | None = None
     tokubetsu_kyoso_bango: str | None = None
+    year_offset: int | None = None
     absent_label: str = "出走無し"
+    chokyo_condition: ChokyoCondition | None = None
     filters: list[dict[str, Any]] | None = None
 
     @staticmethod
@@ -291,6 +299,8 @@ class AttrSource:
         """
         raw_condition = d.get("condition")
         raw_top_n = d.get("top_n")
+        raw_year_offset = d.get("year_offset")
+        raw_chokyo_condition = d.get("chokyo_condition")
         condition: RaceCondition | None = None
         if raw_condition is not None:
             condition = RaceCondition.from_dict(raw_condition)
@@ -308,7 +318,13 @@ class AttrSource:
             column=d.get("column"),
             overseas_label=d.get("overseas_label"),
             tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
+            year_offset=int(raw_year_offset) if raw_year_offset is not None else None,
             absent_label=d.get("absent_label", "出走無し"),
+            chokyo_condition=(
+                [ChokyoThreshold.from_dict(t) for t in raw_chokyo_condition]
+                if raw_chokyo_condition is not None
+                else None
+            ),
             filters=d.get("filters"),
         )
 
