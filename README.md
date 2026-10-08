@@ -220,24 +220,6 @@ with ConnectionManager(config) as conn:
 ```
 
 
-### 指定レースの出走馬のグループ値を取得する
-
-`mykeibadb.analytics.get_race_entry_groups`は、指定した1レースの出走馬について、`analyze_chakudo`と同じグループ分け軸（`GroupBy`）の値を馬番ごとに返します。確定着順の有無は問わないため、出馬表の確定後でレース前でも使えます。出走取消・発走除外・競走除外（異常区分コード1〜3）の馬は含まれません。前走や過去の実績など過去走を使う属性は、そのレースの開催日より前の記録から求めます。値が求まらない馬（前走が無いなど）の値は`None`です。
-
-```python
-from mykeibadb.analytics import AttrSource, GroupBy, get_race_entry_groups
-
-group_by = GroupBy(
-    kind="history",
-    source=AttrSource(type="prev_race_col", column="grade_code"),
-)
-groups = get_race_entry_groups(manager, "2025092806040911", group_by)
-# {1: "A", 2: "B", 3: None, ...}  馬番 -> グループの値
-```
-
-レースコードが16桁の数字でない場合は`ValueError`、指定レースの出走馬がDBに無い場合は`MykeibaDBError`が送出されます。
-
-
 ## Getterクラス一覧
 
 | Getterクラス | 対象テーブル数 | 説明 |
