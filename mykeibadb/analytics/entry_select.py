@@ -130,7 +130,7 @@ def select_entries(
             )
         return where_parts
 
-    sql = build_entry_select_sql(
+    sql = _build_entry_select_sql(
         group_by, params, cte_parts, cw_join_sql, build_entry_where, history_before_race=False
     )
     df = manager.fetch_dataframe(sql, params=tuple(params))
@@ -145,7 +145,7 @@ def select_entries(
     ]
 
 
-def build_entry_select_sql(
+def _build_entry_select_sql(
     group_by: GroupBy | None,
     params: list[Any],
     cte_parts: list[str],
