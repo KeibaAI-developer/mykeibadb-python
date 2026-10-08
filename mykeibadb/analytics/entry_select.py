@@ -1,5 +1,6 @@
 """着度数集計フェーズ1: エントリ選択モジュール."""
 
+from collections.abc import Callable
 from typing import Any
 
 from mykeibadb.analytics._chokyo_helpers import build_chokyo_match_days_ctes
@@ -98,7 +99,6 @@ def select_entries(
     """
     params: list[Any] = []
     cte_parts: list[str] = []
-    extra_joins: list[str] = []
     cw_join_sql = ""
 
     _validate_course_week(condition)
@@ -116,6 +116,60 @@ def select_entries(
         )
         cte_parts.append(cte_sql)
 
+    def build_entry_where(where_params: list[Any]) -> list[str]:
+        where_parts = list(_ENTRY_VALID_PARTS)
+        if condition is not None:
+            where_parts.extend(build_race_condition_where(condition, where_params))
+        if filters:
+            filter_subqs = [build_filter_subquery(f, where_params) for f in filters]
+            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
+            where_parts.append(
+                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
+                f"          {intersect_sql}\n"
+                f"        )"
+            )
+        return where_parts
+
+    sql = build_entry_select_sql(group_by, params, cte_parts, cw_join_sql, build_entry_where)
+    df = manager.fetch_dataframe(sql, params=tuple(params))
+    return [
+        Entry(
+            ketto_toroku_bango=str(row["ketto_toroku_bango"]),
+            race_code=str(row["race_code"]),
+            umaban=str(row["umaban"]),
+            group_label=str(row["group_label"]),
+        )
+        for _, row in df.iterrows()
+    ]
+
+
+def build_entry_select_sql(
+    group_by: GroupBy | None,
+    params: list[Any],
+    cte_parts: list[str],
+    cw_join_sql: str,
+    build_entry_where: Callable[[list[Any]], list[str]],
+) -> str:
+    """対象の出走ごとに group_label を返す SQL を組み立てる.
+
+    対象の出走の選び方は build_entry_where で切り替える。
+    SQL 内のプレースホルダの順序に合わせて、build_entry_where は必要なタイミングで呼び出される。
+
+    Args:
+        group_by (GroupBy | None): グループ分け軸
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        cte_parts (list[str]): すでに組み立て済みの CTE 文字列のリスト（末尾に追加される）
+        cw_join_sql (str): course_week CTE の JOIN 句（不要なら空文字）
+        build_entry_where (Callable[[list[Any]], list[str]]): SQLパラメータリストを受け取り、
+            対象の出走を選ぶ WHERE 条件のリストを返す関数。AND で連結される。
+
+    Returns:
+        str: ketto_toroku_bango, race_code, umaban, group_label を返す SQL
+
+    Raises:
+        ValueError: group_by.kind が未対応の場合
+    """
+    extra_joins: list[str] = []
     use_target_horses_cte = (
         group_by is not None
         and group_by.kind in ("history", "fixed")
@@ -124,18 +178,7 @@ def select_entries(
     )
 
     if use_target_horses_cte:
-        th_where_parts = list(_ENTRY_VALID_PARTS)
-        if condition is not None:
-            th_where_parts.extend(build_race_condition_where(condition, params))
-        if filters:
-            filter_subqs = [build_filter_subquery(f, params) for f in filters]
-            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
-            th_where_parts.append(
-                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
-                f"          {intersect_sql}\n"
-                f"        )"
-            )
-        th_where_clause = "\n          AND ".join(th_where_parts)
+        th_where_clause = "\n          AND ".join(build_entry_where(params))
 
         assert group_by is not None and group_by.source is not None
         cte_parts.append(_build_target_horses_cte(th_where_clause, cw_join_sql))
@@ -156,19 +199,7 @@ def select_entries(
     else:
         group_label_expr, group_extra_joins = _build_group_label_expr(group_by, params)
         extra_joins.extend(group_extra_joins)
-
-        where_parts = list(_ENTRY_VALID_PARTS)
-        if condition is not None:
-            where_parts.extend(build_race_condition_where(condition, params))
-        if filters:
-            filter_subqs = [build_filter_subquery(f, params) for f in filters]
-            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
-            where_parts.append(
-                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
-                f"          {intersect_sql}\n"
-                f"        )"
-            )
-        where_clause = "\n          AND ".join(where_parts)
+        where_clause = "\n          AND ".join(build_entry_where(params))
 
     join_lines = ([cw_join_sql] if cw_join_sql else []) + extra_joins
     joins_sql = "\n        ".join(join_lines)
@@ -186,20 +217,8 @@ def select_entries(
     )
 
     if cte_parts:
-        sql = f"WITH RECURSIVE {', '.join(cte_parts)}\n{select_body}"
-    else:
-        sql = select_body
-
-    df = manager.fetch_dataframe(sql, params=tuple(params))
-    return [
-        Entry(
-            ketto_toroku_bango=str(row["ketto_toroku_bango"]),
-            race_code=str(row["race_code"]),
-            umaban=str(row["umaban"]),
-            group_label=str(row["group_label"]),
-        )
-        for _, row in df.iterrows()
-    ]
+        return f"WITH RECURSIVE {', '.join(cte_parts)}\n{select_body}"
+    return select_body
 
 
 def _validate_course_week(condition: RaceCondition | None) -> None:
