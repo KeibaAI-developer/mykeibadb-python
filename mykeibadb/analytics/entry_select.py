@@ -1,5 +1,6 @@
 """着度数集計フェーズ1: エントリ選択モジュール."""
 
+from collections.abc import Callable
 from typing import Any
 
 from mykeibadb.analytics._chokyo_helpers import build_chokyo_match_days_ctes
@@ -98,7 +99,6 @@ def select_entries(
     """
     params: list[Any] = []
     cte_parts: list[str] = []
-    extra_joins: list[str] = []
     cw_join_sql = ""
 
     _validate_course_week(condition)
@@ -116,6 +116,65 @@ def select_entries(
         )
         cte_parts.append(cte_sql)
 
+    def build_entry_where(where_params: list[Any]) -> list[str]:
+        where_parts = list(_ENTRY_VALID_PARTS)
+        if condition is not None:
+            where_parts.extend(build_race_condition_where(condition, where_params))
+        if filters:
+            filter_subqs = [build_filter_subquery(f, where_params) for f in filters]
+            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
+            where_parts.append(
+                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
+                f"          {intersect_sql}\n"
+                f"        )"
+            )
+        return where_parts
+
+    sql = _build_entry_select_sql(
+        group_by, params, cte_parts, cw_join_sql, build_entry_where, history_before_race=False
+    )
+    df = manager.fetch_dataframe(sql, params=tuple(params))
+    return [
+        Entry(
+            ketto_toroku_bango=str(row["ketto_toroku_bango"]),
+            race_code=str(row["race_code"]),
+            umaban=str(row["umaban"]),
+            group_label=str(row["group_label"]),
+        )
+        for _, row in df.iterrows()
+    ]
+
+
+def _build_entry_select_sql(
+    group_by: GroupBy | None,
+    params: list[Any],
+    cte_parts: list[str],
+    cw_join_sql: str,
+    build_entry_where: Callable[[list[Any]], list[str]],
+    history_before_race: bool,
+) -> str:
+    """対象の出走ごとに group_label を返す SQL を組み立てる.
+
+    対象の出走の選び方は build_entry_where で切り替える。
+    SQL 内のプレースホルダの順序に合わせて、build_entry_where は必要なタイミングで呼び出される。
+
+    Args:
+        group_by (GroupBy | None): グループ分け軸
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        cte_parts (list[str]): すでに組み立て済みの CTE 文字列のリスト（末尾に追加される）
+        cw_join_sql (str): course_week CTE の JOIN 句（不要なら空文字）
+        build_entry_where (Callable[[list[Any]], list[str]]): SQLパラメータリストを受け取り、
+            対象の出走を選ぶ WHERE 条件のリストを返す関数。AND で連結される。
+        history_before_race (bool): sire_condition_finisher の父馬の好走の判定を、
+            対象の出走のレースの開催日より前のレースに限るか。
+
+    Returns:
+        str: ketto_toroku_bango, race_code, umaban, group_label を返す SQL
+
+    Raises:
+        ValueError: group_by.kind が未対応の場合
+    """
+    extra_joins: list[str] = []
     use_target_horses_cte = (
         group_by is not None
         and group_by.kind in ("history", "fixed")
@@ -124,18 +183,7 @@ def select_entries(
     )
 
     if use_target_horses_cte:
-        th_where_parts = list(_ENTRY_VALID_PARTS)
-        if condition is not None:
-            th_where_parts.extend(build_race_condition_where(condition, params))
-        if filters:
-            filter_subqs = [build_filter_subquery(f, params) for f in filters]
-            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
-            th_where_parts.append(
-                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
-                f"          {intersect_sql}\n"
-                f"        )"
-            )
-        th_where_clause = "\n          AND ".join(th_where_parts)
+        th_where_clause = "\n          AND ".join(build_entry_where(params))
 
         assert group_by is not None and group_by.source is not None
         cte_parts.append(_build_target_horses_cte(th_where_clause, cw_join_sql))
@@ -154,21 +202,11 @@ def select_entries(
             "(SELECT ketto_toroku_bango, race_code FROM target_horses)"
         )
     else:
-        group_label_expr, group_extra_joins = _build_group_label_expr(group_by, params)
+        group_label_expr, group_extra_joins = _build_group_label_expr(
+            group_by, params, history_before_race
+        )
         extra_joins.extend(group_extra_joins)
-
-        where_parts = list(_ENTRY_VALID_PARTS)
-        if condition is not None:
-            where_parts.extend(build_race_condition_where(condition, params))
-        if filters:
-            filter_subqs = [build_filter_subquery(f, params) for f in filters]
-            intersect_sql = "\n            INTERSECT\n            ".join(filter_subqs)
-            where_parts.append(
-                f"(u.ketto_toroku_bango, u.race_code) IN (\n"
-                f"          {intersect_sql}\n"
-                f"        )"
-            )
-        where_clause = "\n          AND ".join(where_parts)
+        where_clause = "\n          AND ".join(build_entry_where(params))
 
     join_lines = ([cw_join_sql] if cw_join_sql else []) + extra_joins
     joins_sql = "\n        ".join(join_lines)
@@ -186,20 +224,8 @@ def select_entries(
     )
 
     if cte_parts:
-        sql = f"WITH RECURSIVE {', '.join(cte_parts)}\n{select_body}"
-    else:
-        sql = select_body
-
-    df = manager.fetch_dataframe(sql, params=tuple(params))
-    return [
-        Entry(
-            ketto_toroku_bango=str(row["ketto_toroku_bango"]),
-            race_code=str(row["race_code"]),
-            umaban=str(row["umaban"]),
-            group_label=str(row["group_label"]),
-        )
-        for _, row in df.iterrows()
-    ]
+        return f"WITH RECURSIVE {', '.join(cte_parts)}\n{select_body}"
+    return select_body
 
 
 def _validate_course_week(condition: RaceCondition | None) -> None:
@@ -223,6 +249,7 @@ def _validate_course_week(condition: RaceCondition | None) -> None:
 def _build_group_label_expr(
     group_by: GroupBy | None,
     params: list[Any],
+    history_before_race: bool,
 ) -> tuple[str, list[str]]:
     """GroupBy から group_label SQL式と追加JOIN文のリストを返す.
 
@@ -233,6 +260,8 @@ def _build_group_label_expr(
     Args:
         group_by (GroupBy | None): グループ分け軸
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        history_before_race (bool): sire_condition_finisher の父馬の好走の判定を、
+            対象の出走のレースの開催日より前のレースに限るか。
 
     Returns:
         tuple[str, list[str]]: (group_label_expr, extra_join_list)
@@ -260,7 +289,7 @@ def _build_group_label_expr(
     if group_by.kind == "history":
         if group_by.source is None:
             raise ValueError("GroupBy.kind='history' には source が必要です。")
-        expr = _build_attr_value_expr(group_by.source, params)
+        expr = _build_attr_value_expr(group_by.source, params, history_before_race)
         km2_join = _needs_km2_join(group_by.source)
         extra = (
             ["JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango"]
@@ -272,7 +301,9 @@ def _build_group_label_expr(
     if group_by.kind == "fixed":
         if group_by.source is None or group_by.rows is None:
             raise ValueError("GroupBy.kind='fixed' には source と rows が必要です。")
-        expr = _build_fixed_group_label_expr(group_by.source, group_by.rows, params)
+        expr = _build_fixed_group_label_expr(
+            group_by.source, group_by.rows, params, history_before_race
+        )
         km2_join = _needs_km2_join(group_by.source)
         extra = (
             ["JOIN kyosoba_master2 km2 ON u.ketto_toroku_bango = km2.ketto_toroku_bango"]
@@ -296,12 +327,15 @@ def _needs_km2_join(source: AttrSource) -> bool:
     return source.type == "sire_condition_finisher"
 
 
-def _build_attr_value_expr(source: AttrSource, params: list[Any]) -> str:
+def _build_attr_value_expr(
+    source: AttrSource, params: list[Any], history_before_race: bool
+) -> str:
     """AttrSource に応じた属性値を返す相関サブクエリ式を生成する.
 
     Args:
         source (AttrSource): 属性算出方法
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        history_before_race (bool): 父馬の好走の判定を対象の出走のレースの開催日より前に限るか
 
     Returns:
         str: 属性値を返すSQL式
@@ -310,16 +344,20 @@ def _build_attr_value_expr(source: AttrSource, params: list[Any]) -> str:
         ValueError: source.type が未対応の場合
     """
     if source.type == "sire_condition_finisher":
-        return _sire_condition_finisher_expr(source, params)
+        return _sire_condition_finisher_expr(source, params, history_before_race)
     raise ValueError(f"未対応の source.type です: {source.type!r}")
 
 
-def _sire_condition_finisher_expr(source: AttrSource, params: list[Any]) -> str:
+def _sire_condition_finisher_expr(
+    source: AttrSource, params: list[Any], history_before_race: bool
+) -> str:
     """sire_condition_finisher 属性値式を生成する.
 
     Args:
         source (AttrSource): 属性算出方法
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        history_before_race (bool): 父馬の好走の判定を、対象の出走のレース（エイリアス r）の
+            開催日より前のレースに限るか
 
     Returns:
         str: 父馬の条件戦好走有無（0/1）を返すCASE WHEN式
@@ -334,6 +372,8 @@ def _sire_condition_finisher_expr(source: AttrSource, params: list[Any]) -> str:
         tmp: list[Any] = []
         sire_parts.extend(build_race_condition_where(source.condition, tmp, race_alias="r2"))
         params.extend(tmp)
+    if history_before_race:
+        sire_parts.append("(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)")
     sire_where = "\n              AND ".join(sire_parts)
     finisher_subq = (
         f"SELECT DISTINCT km2b.ketto1_bamei\n"
@@ -354,6 +394,7 @@ def _build_fixed_group_label_expr(
     source: AttrSource,
     rows: RowsDef,
     params: list[Any],
+    history_before_race: bool,
 ) -> str:
     """fixed GroupBy のCASE WHEN式を生成する（相関サブクエリ方式）.
 
@@ -361,12 +402,13 @@ def _build_fixed_group_label_expr(
         source (AttrSource): 属性算出方法
         rows (RowsDef): グループ名→フィルタ条件の辞書
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
+        history_before_race (bool): 父馬の好走の判定を対象の出走のレースの開催日より前に限るか
 
     Returns:
         str: CASE WHEN式
     """
     attr_params: list[Any] = []
-    attr_expr = _build_attr_value_expr(source, attr_params)
+    attr_expr = _build_attr_value_expr(source, attr_params, history_before_race)
     when_clauses: list[str] = []
     for label, cond in rows.items():
         params.extend(attr_params)

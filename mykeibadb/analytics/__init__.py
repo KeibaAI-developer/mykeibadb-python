@@ -27,6 +27,7 @@ from mykeibadb.analytics.chokyo import (
     get_chokyo_match_days,
     get_uma_chokyo,
 )
+from mykeibadb.analytics.race_entry_groups import get_race_entry_groups
 from mykeibadb.analytics.race_name import get_race_display_names
 from mykeibadb.analytics.uma import get_uma_rekisen
 
@@ -36,6 +37,7 @@ __all__ = [
     "analyze_chokyo_debut_seiseki",
     "get_chokyo_match_days",
     "get_race_display_names",
+    "get_race_entry_groups",
     "get_uma_rekisen",
     "ChakudoRow",
     "ChakudoResult",
