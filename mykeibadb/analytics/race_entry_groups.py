@@ -24,7 +24,8 @@ def get_race_entry_groups(
 
     analyze_chakudo と同じ group_by の解釈（race_col / subject / history / fixed）で値を求める。
     確定着順の有無は問わない。出走取消・発走除外・競走除外（異常区分コード 1〜3）の馬は含めない。
-    過去走を使う属性（前走・過去の実績・調教など）は、そのレースの開催日より前の記録から求める。
+    過去走を使う属性（前走・過去の実績・調教・父馬の好走など）は、そのレースの開催日より前の記録から
+    求める。
 
     Args:
         manager (ConnectionManager): DB接続マネージャ
@@ -48,7 +49,9 @@ def get_race_entry_groups(
         where_params.extend([race_code, list(_EXCLUDED_IJO_KUBUN_CODES)])
         return ["u.race_code = %s", "NOT (u.ijo_kubun_code = ANY(%s))"]
 
-    sql = build_entry_select_sql(group_by, params, [], "", build_entry_where)
+    sql = build_entry_select_sql(
+        group_by, params, [], "", build_entry_where, history_before_race=True
+    )
     df = manager.fetch_dataframe(sql, params=tuple(params))
     if df.empty:
         raise MykeibaDBError(f"出走馬が見つかりません: race_code={race_code}")

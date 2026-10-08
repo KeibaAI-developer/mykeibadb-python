@@ -13,10 +13,16 @@ from mykeibadb.analytics import (
     Subject,
     get_race_entry_groups,
 )
+from mykeibadb.analytics.entry_select import select_entries
 from mykeibadb.exceptions import MykeibaDBError, QueryExecutionError
 
 _RACE_CODE = "2025092806040911"
 _EXCLUDED_CODES = ["1", "2", "3"]
+_BEFORE_RACE_SQL = "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)"
+_SIRE_GROUP_BY = GroupBy(
+    kind="history",
+    source=AttrSource(type="sire_condition_finisher", top_n=1),
+)
 
 
 def _make_df(rows: list[tuple[str, str | None]]) -> pd.DataFrame:
@@ -157,6 +163,30 @@ def test_get_race_entry_groups_fixed_returns_row_labels(mocker: MockerFixture) -
     assert "CASE" in sql
     assert params[:2] == (_RACE_CODE, _EXCLUDED_CODES)
     assert result == {1: "0回", 2: "2回以上", 3: None}
+
+
+def test_get_race_entry_groups_sire_condition_finisher_uses_races_before_race_date(
+    mocker: MockerFixture,
+) -> None:
+    """sire_condition_finisher の父馬の好走は、指定レースの開催日より前のレースで判定する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([("01", "1")])
+
+    get_race_entry_groups(manager, _RACE_CODE, _SIRE_GROUP_BY)
+
+    sql, _ = _fetched(manager)
+    assert _BEFORE_RACE_SQL in sql
+
+
+def test_select_entries_sire_condition_finisher_keeps_all_races(mocker: MockerFixture) -> None:
+    """select_entries の sire_condition_finisher は、開催日で父馬の好走を絞らない."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([])
+
+    select_entries(manager, [], None, _SIRE_GROUP_BY)
+
+    sql, _ = _fetched(manager)
+    assert _BEFORE_RACE_SQL not in sql
 
 
 def test_get_race_entry_groups_null_group_label_is_none(mocker: MockerFixture) -> None:
