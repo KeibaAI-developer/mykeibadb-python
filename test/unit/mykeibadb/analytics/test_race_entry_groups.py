@@ -70,7 +70,7 @@ def test_get_race_entry_groups_filters_by_race_code_without_chakujun_condition(
 
     sql, params = _fetched(manager)
     assert "u.race_code = %s" in sql
-    assert "u.ijo_kubun_code = ANY(%s)" in sql
+    assert "NOT (u.ijo_kubun_code = ANY(%s))" in sql
     assert "kakutei_chakujun" not in sql
     assert params == (_RACE_CODE, _EXCLUDED_CODES)
 
