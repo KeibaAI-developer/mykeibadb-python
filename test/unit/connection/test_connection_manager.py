@@ -380,7 +380,7 @@ def test_fetch_dataframe_handles_general_db_error(db_config: DBConfig) -> None:
 
 
 def test_context_manager_closes_on_exception(db_config: DBConfig) -> None:
-    """例外発生時もコンテキストマネージャーが接続をクローズすることを確認."""
+    """例外発生時もコンテキストマネージャーが接続をクローズすることを確認."""  # noqa: DOC501
     with patch("mykeibadb.connection.pool.SimpleConnectionPool") as mock_pool_class:
         mock_pool = MagicMock()
         mock_pool_class.return_value = mock_pool

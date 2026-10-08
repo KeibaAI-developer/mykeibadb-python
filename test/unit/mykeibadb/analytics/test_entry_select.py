@@ -1,0 +1,1270 @@
+"""select_entries の単体テスト."""
+
+import pandas as pd
+import pytest
+from pytest_mock import MockerFixture
+
+from mykeibadb.analytics._models import (
+    AttrSource,
+    ChokyoFilter,
+    ChokyoThreshold,
+    GroupBy,
+    HistoryFilter,
+    RaceColFilter,
+    RaceCondition,
+    Subject,
+    SubjectFilter,
+)
+from mykeibadb.analytics.entry_select import select_entries
+from mykeibadb.exceptions import QueryExecutionError
+
+
+def _make_entry_df(rows: list[dict[str, object]] | None = None) -> pd.DataFrame:
+    """テスト用エントリDataFrameを生成する."""
+    if rows is None:
+        rows = [
+            {
+                "ketto_toroku_bango": "2019100001",
+                "race_code": "202101010101",
+                "umaban": "01",
+                "group_label": "全体",
+            }
+        ]
+    return pd.DataFrame(rows)
+
+
+# RaceColFilter 単独
+def test_select_entries_race_col_filter_returns_entries(mocker: MockerFixture) -> None:
+    """RaceColFilter のみ指定で Entry リストが返る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    result = select_entries(
+        manager,
+        filters=[RaceColFilter(column="u.wakuban", values=["1", "2"])],
+    )
+
+    assert len(result) == 1
+    assert result[0].ketto_toroku_bango == "2019100001"
+    assert result[0].race_code == "202101010101"
+    assert result[0].umaban == "01"
+
+
+def test_select_entries_race_col_filter_sql_contains_in_clause(mocker: MockerFixture) -> None:
+    """RaceColFilter 指定時にINサブクエリがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[RaceColFilter(column="u.wakuban", values=["1", "2"])],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "ketto_toroku_bango, u.race_code" in sql
+    assert "IN (" in sql
+    assert "1" in params
+    assert "2" in params
+
+
+# INTERSECT 合成
+def test_select_entries_multiple_filters_uses_intersect(mocker: MockerFixture) -> None:
+    """複数フィルタ指定時にINTERSECTが使われる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            RaceColFilter(column="u.wakuban", values=["1"]),
+            SubjectFilter(subject=Subject.SIRE, name="キタサンブラック"),
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "INTERSECT" in sql
+
+
+# group_by 指定時
+def test_select_entries_group_by_race_col_sets_group_label(mocker: MockerFixture) -> None:
+    """group_by=race_col 指定時にgroup_labelがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="race_col", column="u.wakuban"),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "u.wakuban::TEXT" in sql
+    assert "group_label" in sql
+
+
+def test_select_entries_group_by_none_uses_zentai_label(mocker: MockerFixture) -> None:
+    """group_by=None のとき '全体' がラベルとして使われる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(manager, filters=[])
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "'全体'" in sql
+
+
+def test_select_entries_group_by_subject_includes_join(mocker: MockerFixture) -> None:
+    """group_by=subject で km2 JOINが追加される（種牡馬）."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="subject", subject=Subject.SIRE),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyosoba_master2" in sql
+    assert "ketto1_bamei" in sql
+
+
+# condition 指定
+def test_select_entries_condition_keibajo_code_in_sql(mocker: MockerFixture) -> None:
+    """condition でkeibajo_codesフィルタがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_codes=["05"], year_from="2020"),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
+    assert "kaisai_nen >= %s" in sql
+    assert ["05"] in params
+    assert "2020" in params
+
+
+def test_select_entries_filters_empty_returns_base_set(mocker: MockerFixture) -> None:
+    """filters が空のときINTERSECTなしのベース集合を返す."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(manager, filters=[])
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "INTERSECT" not in sql
+
+
+# ChokyoFilter
+def test_select_entries_chokyo_filter_includes_exists_clause(mocker: MockerFixture) -> None:
+    """ChokyoFilter 指定時にEXISTSサブクエリがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            ChokyoFilter(
+                condition=[ChokyoThreshold(course="wood", metric="lap", furlong=1, max_value=115)]
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "EXISTS" in sql
+    assert "woodchip_chokyo" in sql
+
+
+# HistoryFilter
+def test_select_entries_history_filter_career_count(mocker: MockerFixture) -> None:
+    """HistoryFilter(career_count) 指定時に相関サブクエリがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[HistoryFilter(source=AttrSource(type="career_count"), cond=(0, 5))],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "COUNT(*)" in sql
+    assert "BETWEEN" in sql
+
+
+def test_select_entries_history_filter_past_race_top_n_count(mocker: MockerFixture) -> None:
+    """HistoryFilter(past_race_top_n_count) 指定時に相関サブクエリがSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=1,
+                    grade_codes=["A", "B", "C"],
+                    keibajo_codes=["05"],
+                ),
+                cond=(1, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "COUNT(*)" in sql
+    assert "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" in sql
+    assert "r2.grade_code = ANY(%s)" in sql
+    assert "r2.keibajo_code = ANY(%s)" in sql
+    assert 1 in params
+    assert ["A", "B", "C"] in params
+    assert ["05"] in params
+
+
+def test_select_entries_history_filter_past_race_top_n_count_no_top_n(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(past_race_top_n_count) で top_n 未指定時はBETWEEN条件が含まれない."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(type="past_race_top_n_count", top_n=None),
+                cond=(0, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" not in sql
+
+
+# DBエラー
+def test_select_entries_raises_on_db_error(mocker: MockerFixture) -> None:
+    """DBエラーで例外が送出される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.side_effect = QueryExecutionError("DB接続失敗")
+
+    with pytest.raises(QueryExecutionError, match="DB接続失敗"):
+        select_entries(manager, filters=[])
+
+
+# course_week 検証
+def test_select_entries_raises_when_only_course_kubun_given(mocker: MockerFixture) -> None:
+    """course_kubun のみ指定時にValueErrorが発生する."""
+    manager = mocker.MagicMock()
+
+    with pytest.raises(ValueError):
+        select_entries(
+            manager,
+            filters=[],
+            condition=RaceCondition(course_kubun="C"),
+        )
+
+
+# Entry の内容確認
+def test_select_entries_entry_fields_are_mapped_correctly(mocker: MockerFixture) -> None:
+    """DataFrameの各列がEntryフィールドに正しくマッピングされる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df(
+        [
+            {
+                "ketto_toroku_bango": "2019100001",
+                "race_code": "202101010101",
+                "umaban": "05",
+                "group_label": "キタサンブラック",
+            },
+            {
+                "ketto_toroku_bango": "2020200002",
+                "race_code": "202101010102",
+                "umaban": "08",
+                "group_label": "キタサンブラック",
+            },
+        ]
+    )
+
+    result = select_entries(
+        manager,
+        filters=[SubjectFilter(subject=Subject.SIRE, name="キタサンブラック")],
+    )
+
+    assert len(result) == 2
+    assert result[0].umaban == "05"
+    assert result[1].ketto_toroku_bango == "2020200002"
+    assert result[0].group_label == "キタサンブラック"
+
+
+# group_by history/fixed
+def test_select_entries_group_by_history_uses_cte(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=history(career_count) で CTE 方式の SQL が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "group_label" in sql
+    assert "COUNT(*)" in sql
+
+
+def test_select_entries_group_by_history_debut_venue_includes_keibajo(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=history(debut_venue) で keibajo_code 式がSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="history", source=AttrSource(type="debut_venue")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "keibajo_code" in sql
+    assert "group_label" in sql
+
+
+def test_select_entries_group_by_fixed_generates_case_when(mocker: MockerFixture) -> None:
+    """group_by=fixed で CASE WHEN 式が group_label としてSQLに含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="career_count"),
+            rows={"初戦": (0, 0), "2〜5戦": (1, 4), "6戦以上": (5, 999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "CASE" in sql
+    assert "WHEN" in sql
+    assert "初戦" in params
+    assert "2〜5戦" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_cte_params(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で CTE 方式では top_n が1回だけ params に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=3),
+            rows={"0回": 0, "1回": 1, "2回以上": (2, 9999)},
+        ),
+    )
+
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    top_n_count = sum(1 for p in params if p == 3)
+    assert top_n_count == 1, f"CTE 方式では top_n=3 は1回だけ params に含まれるべき: {params}"
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_no_top_n(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で top_n 未指定時はBETWEEN条件が含まれない."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=None),
+            rows={"0回": 0, "1回": 1, "2回以上": (2, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "BETWEEN %s AND %s) AS attr_val" not in sql
+    assert "CAST(kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s" not in sql
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_grade_codes(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で grade_codes が grade_code = ANY(%s) に反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=1, grade_codes=["A", "B", "C"]),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "grade_code = ANY(%s)" in sql
+    assert ["A", "B", "C"] in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_keibajo_codes(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) の keibajo_codes が反映される.
+
+    keibajo_code = ANY(%s) がSQLに現れることを確認する。
+    """
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="past_race_top_n_count", top_n=1, keibajo_codes=["05"]),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "keibajo_code = ANY(%s)" in sql
+    assert ["05"] in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_eq(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の == 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "kyori_int", "op": "==", "value": 2000}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "kyori_int = %s" in sql
+    assert 2000 in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_in(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の in 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "grade_code", "op": "in", "value": ["A", "B"]}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "grade_code IN (%s, %s)" in sql
+    assert "A" in params
+    assert "B" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_column(
+    mocker: MockerFixture,
+) -> None:
+    """filters.column が未対応の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="column"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "umaban", "op": "==", "value": 1}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_op(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が未対応の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="op"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "kyori_int", "op": "between", "value": 2000}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_empty_in(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が in で value が空リストの場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="空リスト"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "grade_code", "op": "in", "value": []}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_in_non_list(
+    mocker: MockerFixture,
+) -> None:
+    """filters.op が in で value がリスト・タプル以外の場合 ValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="空リスト"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "grade_code", "op": "in", "value": "A"}],
+                ),
+                rows={"0回": 0, "1回以上": (1, 9999)},
+            ),
+        )
+
+
+def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=history(sire_condition_finisher) で kyosoba_master2 JOIN が含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(type="sire_condition_finisher", top_n=1),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyosoba_master2" in sql
+    assert "ketto1_bamei" in sql
+
+
+# CTE 方式（history/fixed 各 source.type）
+def test_select_entries_group_by_history_prev_race_name_uses_cte(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=history(prev_race_name) で CTE 方式の SQL が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(kind="history", source=AttrSource(type="prev_race_name")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "kyosomei_hondai" in sql
+
+
+def test_select_entries_group_by_fixed_jockey_continuity_uses_cte(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(jockey_continuity) で CTE 方式の SQL が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="jockey_continuity"),
+            rows={"継続": "継続", "乗り戻り": "乗り戻り", "テン乗り": "テン乗り"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "ARRAY_AGG" in sql
+
+
+def test_select_entries_hist_cte_where_uses_target_horses(
+    mocker: MockerFixture,
+) -> None:
+    """CTE 方式では最終 SELECT の WHERE が target_horses を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_codes=["05"]),
+        group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "SELECT ketto_toroku_bango, race_code FROM target_horses" in sql
+
+
+def test_select_entries_hist_cte_condition_in_target_horses(
+    mocker: MockerFixture,
+) -> None:
+    """CTE 方式では condition の keibajo_codes が target_horses の WHERE に含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_codes=["05"], year_from="2020"),
+        group_by=GroupBy(kind="history", source=AttrSource(type="career_count")),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "target_horses" in sql
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
+    assert ["05"] in params
+    assert "2020" in params
+
+
+# course_week CTE
+def test_select_entries_course_week_uses_cte_and_keeps_keibajo_in_where(
+    mocker: MockerFixture,
+) -> None:
+    """course_kubun+week_in_course 指定時にCTEが生成され、keibajo_codesはWHEREにも残る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(keibajo_codes=["05"], course_kubun="C", week_in_course=1),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "WITH RECURSIVE" in sql
+    assert "cw_target" in sql
+    assert "keibajo_code = ANY(%s::TEXT[])" in sql
+    assert ["05"] in params
+    assert "C" in params
+    assert 1 in params
+
+
+def test_select_entries_course_week_params_order(mocker: MockerFixture) -> None:
+    """course_week + condition の params がCTE先行・WHERE条件後続の順になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        condition=RaceCondition(
+            keibajo_codes=["05"],
+            course_kubun="C",
+            week_in_course=2,
+            year_from="2022",
+        ),
+    )
+
+    params = list(manager.fetch_dataframe.call_args[1]["params"])
+    keibajo_idx = params.index(["05"])
+    course_kubun_idx = params.index("C")
+    year_idx = params.index("2022")
+    assert keibajo_idx < course_kubun_idx < year_idx
+
+
+# prev_race_col
+def test_select_entries_prev_race_col_fixed_uses_cte(mocker: MockerFixture) -> None:
+    """prev_race_col + fixed でCTE（target_horses/horse_hist/attr_agg）が生成される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
+            rows={"逃げ": "1", "先行": "2", "差し": "3", "追込": "4"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses" in sql
+    assert "horse_hist" in sql
+    assert "attr_agg" in sql
+    assert "kyakushitsu_hantei" in sql
+
+
+def test_select_entries_prev_race_col_kyori_uses_kyori_int(mocker: MockerFixture) -> None:
+    """column=kyori 指定時に attr_agg が kyori_int を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyori"),
+            rows={"距離延長": (0, 1599), "同距離": 1600, "距離短縮": (1601, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyori_int" in sql
+
+
+def test_select_entries_prev_race_col_grade_code_uses_grade_code(mocker: MockerFixture) -> None:
+    """column=grade_code 指定時に attr_agg が grade_code を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="grade_code"),
+            rows={"G1": "A", "G2": "B", "G3": "C"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "grade_code" in sql
+
+
+def test_select_entries_prev_race_col_kakutei_chakujun_uses_cast_integer(
+    mocker: MockerFixture,
+) -> None:
+    """column=kakutei_chakujun 指定時に attr_agg が CAST(...AS INTEGER) を参照する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kakutei_chakujun"),
+            rows={"1着": 1},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CAST(kakutei_chakujun AS INTEGER)" in sql
+
+
+def test_select_entries_prev_race_col_filters_adds_case_when(mocker: MockerFixture) -> None:
+    """filters指定時、attr_valがCASE WHEN ... ELSE NULL ENDになり該当列がSELECTされる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="prev_race_col",
+                column="kakutei_chakujun",
+                filters=[{"column": "grade_code", "op": "in", "value": ["A", "B", "C"]}],
+            ),
+            rows={"1着": 1},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "CASE WHEN grade_code IN" in sql
+    assert "ELSE NULL END AS attr_val" in sql
+
+
+def test_select_entries_prev_race_col_kohan_3f_jun_with_filters_raises(
+    mocker: MockerFixture,
+) -> None:
+    """column=kohan_3f_jun かつ filters指定時はValueError."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="kohan_3f_jun"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(
+                    type="prev_race_col",
+                    column="kohan_3f_jun",
+                    filters=[{"column": "grade_code", "op": "in", "value": ["A"]}],
+                ),
+                rows={"1位": 1},
+            ),
+        )
+
+
+def test_select_entries_prev_race_col_invalid_column_raises(mocker: MockerFixture) -> None:
+    """許可リスト外の column を指定すると ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="column"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="fixed",
+                source=AttrSource(type="prev_race_col", column="hoge"),
+                rows={"1着": 1},
+            ),
+        )
+
+
+def test_horse_hist_cte_includes_kyakushitsu_hantei_and_kaisai_nen(
+    mocker: MockerFixture,
+) -> None:
+    """horse_hist CTE に kyakushitsu_hantei と target_kaisai_nen が含まれる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
+            rows={"逃げ": "1"},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "kyakushitsu_hantei" in sql
+    assert "target_kaisai_nen" in sql
+
+
+# prev_race_name 海外集約
+def test_select_entries_prev_race_name_overseas_label_uses_case_when(
+    mocker: MockerFixture,
+) -> None:
+    """overseas_label 指定時に group_label が CASE WHEN is_overseas 式になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(type="prev_race_name", overseas_label="海外"),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "is_overseas" in sql
+    assert "海外" in params
+
+
+def test_select_entries_prev_race_name_without_overseas_label_uses_attr_val(
+    mocker: MockerFixture,
+) -> None:
+    """overseas_label 未指定時は group_label が attr_val::TEXT になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(type="prev_race_name"),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "attr_agg.attr_val::TEXT AS group_label" in sql
+    assert "CASE WHEN attr_agg.is_overseas" not in sql
+
+
+# tokubetsu_race_finish（同一特別競走番号レースでの過去着順）
+def test_select_entries_tokubetsu_race_finish_uses_coalesce(
+    mocker: MockerFixture,
+) -> None:
+    """tokubetsu_race_finish の group_label が COALESCE + absent_label になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="tokubetsu_race_finish",
+                tokubetsu_kyoso_bango="0010",
+                year_offset=1,
+                absent_label="前年出走無し",
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "COALESCE" in sql
+    assert "target_kaisai_nen" in sql
+    assert "0010" in params
+    assert 1 in params
+    assert "前年出走無し" in params
+
+
+def test_select_entries_tokubetsu_race_finish_no_tokubetsu_raises(
+    mocker: MockerFixture,
+) -> None:
+    """tokubetsu_kyoso_bango が None のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="tokubetsu_kyoso_bango"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="tokubetsu_race_finish", year_offset=0),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_no_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が None のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="tokubetsu_race_finish", tokubetsu_kyoso_bango="0010"),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_negative_year_offset_raises(
+    mocker: MockerFixture,
+) -> None:
+    """year_offset が負のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="year_offset"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="tokubetsu_race_finish",
+                    tokubetsu_kyoso_bango="0010",
+                    year_offset=-1,
+                ),
+            ),
+        )
+
+
+# chokyo_match_days（期間内の調教該当日一覧）
+def test_select_entries_chokyo_match_days_skips_horse_hist_cte(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_match_days では horse_hist CTE を使わず target_horses から直接組み立てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "target_horses AS MATERIALIZED" in sql
+    assert "horse_hist AS (" not in sql
+    assert "hanro_chokyo" in sql
+    assert sql.count("chokyo_rows AS (") == 1
+
+
+def test_select_entries_chokyo_match_days_uses_jsonb_agg_with_order(
+    mocker: MockerFixture,
+) -> None:
+    """attr_val は jsonb_agg を days_before 昇順・chokyo_jikoku 昇順で組み立てる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "jsonb_agg(" in sql
+    assert "jsonb_build_array(cr.days_before, cr.is_match)" in sql
+    assert "ORDER BY cr.days_before ASC, cr.chokyo_jikoku ASC" in sql
+    assert "'[]'::jsonb" in sql
+    assert "FILTER (WHERE cr.days_before IS NOT NULL)" in sql
+    assert "CAST(c.time_gokei_2furlong AS INTEGER) <= %s" in sql
+
+
+def test_select_entries_chokyo_match_days_period_params_follow_threshold_params(
+    mocker: MockerFixture,
+) -> None:
+    """期間の BETWEEN パラメータが閾値パラメータの後ろに正しい順で入る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="chokyo_match_days",
+                chokyo_condition=[
+                    ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                ],
+                days_from=1,
+                days_to=13,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "cr.days_before BETWEEN %s AND %s" in sql
+    assert list(params) == [239, 1, 13]
+
+
+def test_select_entries_chokyo_match_days_no_condition_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition が未指定のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="chokyo_condition"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(type="chokyo_match_days", days_from=1, days_to=13),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_mixed_course_raises(
+    mocker: MockerFixture,
+) -> None:
+    """chokyo_condition の course が混在するとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="course"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239),
+                        ChokyoThreshold(course="wood", metric="gokei", furlong=6, max_value=825),
+                    ],
+                    days_from=1,
+                    days_to=13,
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_missing_days_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from・days_to が未指定のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_days_from_below_one_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from が1未満のとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                    days_from=0,
+                    days_to=13,
+                ),
+            ),
+        )
+
+
+def test_select_entries_chokyo_match_days_from_over_to_raises(
+    mocker: MockerFixture,
+) -> None:
+    """days_from が days_to を超えるとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match="days_from"):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="chokyo_match_days",
+                    chokyo_condition=[
+                        ChokyoThreshold(course="hanro", metric="gokei", furlong=2, max_value=239)
+                    ],
+                    days_from=13,
+                    days_to=1,
+                ),
+            ),
+        )
