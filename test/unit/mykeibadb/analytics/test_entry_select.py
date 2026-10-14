@@ -515,6 +515,61 @@ def test_select_entries_group_by_fixed_past_race_top_n_count_filters_in(
     assert "B" in params
 
 
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_shiba_da(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の shiba_da 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "shiba_da", "op": "==", "value": "芝"}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "AS shiba_da" in sql
+    assert "shiba_da = %s" in sql
+    assert "芝" in params
+
+
+def test_select_entries_history_filter_past_race_top_n_count_filters_shiba_da(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(past_race_top_n_count) で filters の shiba_da 条件が芝ダ区分の式で絞り込む."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "shiba_da", "op": "==", "value": "ダ"}],
+                ),
+                cond=(1, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "WHEN TRIM(r2.track_code) BETWEEN '23' AND '29' THEN 'ダ' END = %s" in sql
+    assert "ダ" in params
+
+
 def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_column(
     mocker: MockerFixture,
 ) -> None:

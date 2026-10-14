@@ -317,6 +317,24 @@ def build_payout_ctes() -> str:
         )"""
 
 
+def shiba_da_expr(race_alias: str) -> str:
+    """平地競走のトラックコードを芝ダ区分（'芝' / 'ダ'）に変換するSQL式を返す.
+
+    障害競走など平地以外のトラックコードは NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式による芝ダ区分取得式
+    """
+    a = race_alias
+    return (
+        f"CASE WHEN TRIM({a}.track_code) BETWEEN '10' AND '22' THEN '芝' "
+        f"WHEN TRIM({a}.track_code) BETWEEN '23' AND '29' THEN 'ダ' END"
+    )
+
+
 PAST_RACE_TOP_N_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
 
 

@@ -9,6 +9,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_race_condition_where,
     build_race_display_name_cte,
     race_display_name_expr,
+    shiba_da_expr,
 )
 from mykeibadb.analytics._models import RaceCondition, Subject
 
@@ -317,3 +318,12 @@ def test_race_display_name_expr_custom_cte_name() -> None:
     """cte_nameを指定するとJOIN先CTE名がその名前になる."""
     expr = race_display_name_expr("horse_hist", cte_name="custom_names")
     assert "COALESCE(custom_names.latest_name, TRIM(horse_hist.kyosomei_hondai))" in expr
+
+
+# shiba_da_expr
+def test_shiba_da_expr_maps_flat_track_codes() -> None:
+    """平地の芝・ダートのトラックコード範囲をそれぞれ'芝'・'ダ'に変換する式を返す."""
+    expr = shiba_da_expr("r2")
+    assert "TRIM(r2.track_code) BETWEEN '10' AND '22' THEN '芝'" in expr
+    assert "TRIM(r2.track_code) BETWEEN '23' AND '29' THEN 'ダ'" in expr
+    assert "ELSE" not in expr
