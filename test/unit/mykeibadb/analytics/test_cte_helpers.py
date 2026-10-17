@@ -8,8 +8,12 @@ from mykeibadb.analytics._cte_helpers import (
     build_payout_ctes,
     build_race_condition_where,
     build_race_display_name_cte,
+    hinba_gentei_expr,
+    mawari_expr,
     race_display_name_expr,
+    sedai_gentei_expr,
     shiba_da_expr,
+    stand_mae_hasso_expr,
 )
 from mykeibadb.analytics._models import RaceCondition, Subject
 
@@ -327,3 +331,50 @@ def test_shiba_da_expr_maps_flat_track_codes() -> None:
     assert "TRIM(r2.track_code) BETWEEN '10' AND '22' THEN '芝'" in expr
     assert "TRIM(r2.track_code) BETWEEN '23' AND '29' THEN 'ダ'" in expr
     assert "ELSE" not in expr
+
+
+# mawari_expr
+def test_mawari_expr_maps_track_codes_to_direction() -> None:
+    """トラックコードを右回り・左回りに変換し、中央競馬以外はNULLにする式を返す."""
+    expr = mawari_expr("r2")
+    assert "r2.keibajo_code BETWEEN '01' AND '10'" in expr
+    assert (
+        "TRIM(r2.track_code) IN ('17', '18', '19', '20', '21', '22', '24', '26', '28') THEN '右'"
+        in expr
+    )
+    assert (
+        "TRIM(r2.track_code) IN ('11', '12', '13', '14', '15', '16', '23', '25', '27') THEN '左'"
+        in expr
+    )
+    assert "ELSE" not in expr
+
+
+# hinba_gentei_expr
+def test_hinba_gentei_expr_checks_second_char_of_kyoso_kigo_code() -> None:
+    """競走記号コードの2文字目が'2'なら'あり'、それ以外は'なし'とする式を返す."""
+    expr = hinba_gentei_expr("r2")
+    assert "r2.keibajo_code BETWEEN '01' AND '10'" in expr
+    assert "SUBSTRING(TRIM(r2.kyoso_kigo_code) FROM 2 FOR 1) = '2' THEN 'あり' ELSE 'なし'" in expr
+
+
+# sedai_gentei_expr
+def test_sedai_gentei_expr_maps_kyoso_shubetsu_code() -> None:
+    """競走種別コードを世代限定の有無に変換し、それ以外はNULLにする式を返す."""
+    expr = sedai_gentei_expr("r2")
+    assert "r2.keibajo_code BETWEEN '01' AND '10'" in expr
+    assert "TRIM(r2.kyoso_shubetsu_code) IN ('11', '12') THEN 'あり'" in expr
+    assert "TRIM(r2.kyoso_shubetsu_code) IN ('13', '14', '18', '19') THEN 'なし'" in expr
+    assert "ELSE" not in expr
+
+
+# stand_mae_hasso_expr
+def test_stand_mae_hasso_expr_checks_corner1_and_shukaisu_equality() -> None:
+    """平地で1コーナー通過かつ全コーナーの周回数が等しいとき'あり'とする式を返す."""
+    expr = stand_mae_hasso_expr("r2")
+    assert "r2.keibajo_code BETWEEN '01' AND '10'" in expr
+    assert "TRIM(r2.track_code) BETWEEN '10' AND '29'" in expr
+    assert "TRIM(r2.corner1) = '1'" in expr
+    assert "TRIM(r2.shukaisu1) = TRIM(r2.shukaisu2)" in expr
+    assert "TRIM(r2.shukaisu2) = TRIM(r2.shukaisu3)" in expr
+    assert "TRIM(r2.shukaisu3) = TRIM(r2.shukaisu4)" in expr
+    assert "THEN 'あり' ELSE 'なし' END END) END" in expr
