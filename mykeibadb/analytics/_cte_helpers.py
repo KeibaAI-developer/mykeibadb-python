@@ -335,21 +335,6 @@ def shiba_da_expr(race_alias: str) -> str:
     )
 
 
-def _jra_only_expr(race_alias: str, case_expr: str) -> str:
-    """中央競馬（keibajo_code '01'〜'10'）のレースに限定して式を評価するSQL式を返す.
-
-    地方・海外競馬は条件を判定できないため NULL になる。
-
-    Args:
-        race_alias (str): race_shosaiテーブルのSQLエイリアス
-        case_expr (str): 中央競馬のレースで評価する式
-
-    Returns:
-        str: 中央競馬以外で NULL になるCASE式
-    """
-    return f"CASE WHEN {race_alias}.keibajo_code BETWEEN '01' AND '10' THEN {case_expr} END"
-
-
 def mawari_expr(race_alias: str) -> str:
     """トラックコードを回り（'右' / '左'）に変換するSQL式を返す.
 
@@ -539,3 +524,18 @@ def race_display_name_expr(alias: str, cte_name: str = "grade_race_latest_names"
         f"     ELSE TRIM({a}.kyosomei_hondai)\n"
         f"END"
     )
+
+
+def _jra_only_expr(race_alias: str, case_expr: str) -> str:
+    """中央競馬（keibajo_code '01'〜'10'）のレースに限定して式を評価するSQL式を返す.
+
+    地方・海外競馬は条件を判定できないため NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+        case_expr (str): 中央競馬のレースで評価する式
+
+    Returns:
+        str: 中央競馬以外で NULL になるCASE式
+    """
+    return f"CASE WHEN {race_alias}.keibajo_code BETWEEN '01' AND '10' THEN {case_expr} END"
