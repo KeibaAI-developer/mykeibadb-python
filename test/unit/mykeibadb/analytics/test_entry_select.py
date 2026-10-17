@@ -570,6 +570,146 @@ def test_select_entries_history_filter_past_race_top_n_count_filters_shiba_da(
     assert "ダ" in params
 
 
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_mawari(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の mawari 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "mawari", "op": "==", "value": "右"}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "AS mawari" in sql
+    assert "mawari = %s" in sql
+    assert "右" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_hinba_gentei(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の hinba_gentei 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "hinba_gentei", "op": "==", "value": "あり"}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "AS hinba_gentei" in sql
+    assert "hinba_gentei = %s" in sql
+    assert "あり" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_sedai_gentei(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の sedai_gentei 条件がWHEREに反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "sedai_gentei", "op": "==", "value": "あり"}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "AS sedai_gentei" in sql
+    assert "sedai_gentei = %s" in sql
+    assert "あり" in params
+
+
+def test_select_entries_group_by_fixed_past_race_top_n_count_filters_stand_mae_hasso(
+    mocker: MockerFixture,
+) -> None:
+    """group_by=fixed(past_race_top_n_count) で filters の stand_mae_hasso 条件が反映される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="fixed",
+            source=AttrSource(
+                type="past_race_top_n_count",
+                top_n=None,
+                filters=[{"column": "stand_mae_hasso", "op": "==", "value": "なし"}],
+            ),
+            rows={"0回": 0, "1回以上": (1, 9999)},
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "AS stand_mae_hasso" in sql
+    assert "stand_mae_hasso = %s" in sql
+    assert "なし" in params
+
+
+def test_select_entries_history_filter_past_race_top_n_count_filters_stand_mae_hasso(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(past_race_top_n_count) で filters の stand_mae_hasso 条件が判定式で絞り込む."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=None,
+                    filters=[{"column": "stand_mae_hasso", "op": "==", "value": "あり"}],
+                ),
+                cond=(1, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "TRIM(r2.corner1) = '1'" in sql
+    assert "THEN 'あり' ELSE 'なし' END END) END = %s" in sql
+    assert "あり" in params
+
+
 def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_column(
     mocker: MockerFixture,
 ) -> None:

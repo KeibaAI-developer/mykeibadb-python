@@ -335,6 +335,111 @@ def shiba_da_expr(race_alias: str) -> str:
     )
 
 
+def _jra_only_expr(race_alias: str, case_expr: str) -> str:
+    """中央競馬（keibajo_code '01'〜'10'）のレースに限定して式を評価するSQL式を返す.
+
+    地方・海外競馬は条件を判定できないため NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+        case_expr (str): 中央競馬のレースで評価する式
+
+    Returns:
+        str: 中央競馬以外で NULL になるCASE式
+    """
+    return f"CASE WHEN {race_alias}.keibajo_code BETWEEN '01' AND '10' THEN {case_expr} END"
+
+
+def mawari_expr(race_alias: str) -> str:
+    """トラックコードを回り（'右' / '左'）に変換するSQL式を返す.
+
+    直線コース（10, 29）と障害競走は NULL になる。
+    地方・海外競馬も NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式による回り取得式
+    """
+    a = race_alias
+    return _jra_only_expr(
+        a,
+        f"(CASE WHEN TRIM({a}.track_code) IN "
+        f"('17', '18', '19', '20', '21', '22', '24', '26', '28') THEN '右' "
+        f"WHEN TRIM({a}.track_code) IN "
+        f"('11', '12', '13', '14', '15', '16', '23', '25', '27') THEN '左' END)",
+    )
+
+
+def hinba_gentei_expr(race_alias: str) -> str:
+    """競走記号コードを牝馬限定の有無（'あり' / 'なし'）に変換するSQL式を返す.
+
+    競走記号コードの2文字目が '2' のとき牝馬限定（020〜024、A20〜A24 など）となる。
+    地方・海外競馬は NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式による牝馬限定取得式
+    """
+    a = race_alias
+    return _jra_only_expr(
+        a,
+        f"(CASE WHEN SUBSTRING(TRIM({a}.kyoso_kigo_code) FROM 2 FOR 1) = '2' "
+        f"THEN 'あり' ELSE 'なし' END)",
+    )
+
+
+def sedai_gentei_expr(race_alias: str) -> str:
+    """競走種別コードを世代限定の有無（'あり' / 'なし'）に変換するSQL式を返す.
+
+    2歳（11）・3歳（12）は世代限定あり、3歳以上（13, 18）・4歳以上（14, 19）は世代限定なし、
+    それ以外（障害競走など）と地方・海外競馬は NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式による世代限定取得式
+    """
+    a = race_alias
+    return _jra_only_expr(
+        a,
+        f"(CASE WHEN TRIM({a}.kyoso_shubetsu_code) IN ('11', '12') THEN 'あり' "
+        f"WHEN TRIM({a}.kyoso_shubetsu_code) IN ('13', '14', '18', '19') THEN 'なし' END)",
+    )
+
+
+def stand_mae_hasso_expr(race_alias: str) -> str:
+    """スタンド前発走の有無（'あり' / 'なし'）を判定するSQL式を返す.
+
+    corner1〜4 は通過順に並んだコーナー番号、shukaisu1〜4 は各コーナーを最後に通過した周回数を表す。
+    スタンド前から発走するレースは最初に通過するコーナーが1コーナーであり、
+    4つのコーナーすべてで周回数が等しくなる。
+    向正面から発走するレースでは3・4コーナーを1回多く通過するため、
+    1-1, 2-1, 3-2, 4-2 のように周回数が揃わない。
+    平地競走（トラックコード10〜29）のみ判定し、障害競走と地方・海外競馬は NULL になる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式によるスタンド前発走取得式
+    """
+    a = race_alias
+    return _jra_only_expr(
+        a,
+        f"(CASE WHEN TRIM({a}.track_code) BETWEEN '10' AND '29' THEN "
+        f"CASE WHEN TRIM({a}.corner1) = '1' "
+        f"AND TRIM({a}.shukaisu1) = TRIM({a}.shukaisu2) "
+        f"AND TRIM({a}.shukaisu2) = TRIM({a}.shukaisu3) "
+        f"AND TRIM({a}.shukaisu3) = TRIM({a}.shukaisu4) "
+        f"THEN 'あり' ELSE 'なし' END END)",
+    )
+
+
 PAST_RACE_TOP_N_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
 
 
