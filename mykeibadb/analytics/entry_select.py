@@ -11,6 +11,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_race_condition_where,
     build_race_display_name_cte,
     race_display_name_expr,
+    shiba_da_expr,
 )
 from mykeibadb.analytics._entry_filters import _validate_sql_expr, build_filter_subquery
 from mykeibadb.analytics._models import (
@@ -70,6 +71,7 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "grade_code": ("grade_code", False),
     "keibajo_code": ("keibajo_code", False),
     "kyori_int": ("kyori_int", True),
+    "shiba_da": ("shiba_da", False),
     "kyakushitsu_hantei": ("kyakushitsu_hantei", False),
     "tokubetsu_kyoso_bango": ("tokubetsu_kyoso_bango", False),
 }
@@ -479,6 +481,7 @@ def _build_horse_hist_cte() -> str:
         "            TRIM(r2.kyosomei_hondai)  AS kyosomei_hondai,\n"
         "            r2.grade_code,\n"
         "            TRIM(r2.kyori)::INTEGER   AS kyori_int,\n"
+        f"            {shiba_da_expr('r2')} AS shiba_da,\n"
         "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango,\n"
         "            TRIM(u2.kohan_3f)         AS kohan_3f\n"
         "        FROM target_horses th\n"

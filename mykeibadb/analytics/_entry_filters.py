@@ -7,6 +7,7 @@ from mykeibadb.analytics._cte_helpers import (
     SUBJECT_MAP,
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
+    shiba_da_expr,
 )
 from mykeibadb.analytics._models import (
     AttrSource,
@@ -35,6 +36,7 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "grade_code": ("r2.grade_code", False),
     "keibajo_code": ("r2.keibajo_code", False),
     "kyori_int": ("TRIM(r2.kyori)::INTEGER", True),
+    "shiba_da": (shiba_da_expr("r2"), False),
     "kyakushitsu_hantei": ("u2.kyakushitsu_hantei", False),
     "tokubetsu_kyoso_bango": ("TRIM(r2.tokubetsu_kyoso_bango)", False),
 }
