@@ -9,10 +9,8 @@ from mykeibadb.analytics._cte_helpers import (
     build_course_week_cte,
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
-    build_race_display_name_cte,
     hinba_gentei_expr,
     mawari_expr,
-    race_display_name_expr,
     sedai_gentei_expr,
     shiba_da_expr,
     stand_mae_hasso_expr,
@@ -27,6 +25,7 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     RowsDef,
 )
+from mykeibadb.analytics.race_name import build_race_display_name_cte, race_display_name_expr
 from mykeibadb.connection import ConnectionManager
 
 _ENTRY_VALID_PARTS = [
@@ -495,6 +494,11 @@ def _build_horse_hist_cte() -> str:
         f"            {sedai_gentei_expr('r2')} AS sedai_gentei,\n"
         f"            {stand_mae_hasso_expr('r2')} AS stand_mae_hasso,\n"
         "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango,\n"
+        "            r2.kyoso_joken_code_2sai,\n"
+        "            r2.kyoso_joken_code_3sai,\n"
+        "            r2.kyoso_joken_code_4sai,\n"
+        "            r2.kyoso_joken_code_5sai_ijo,\n"
+        "            r2.kyoso_joken_code_saijakunen,\n"
         "            TRIM(u2.kohan_3f)         AS kohan_3f\n"
         "        FROM target_horses th\n"
         "        JOIN umagoto_race_joho u2\n"
