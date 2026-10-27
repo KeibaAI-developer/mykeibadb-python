@@ -1,12 +1,12 @@
 """VirtualRace・apply_virtual_race の単体テスト."""
 
 import json
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 
 from mykeibadb.analytics import VirtualRace, apply_virtual_race
-from mykeibadb.analytics.virtual_race import validate_virtual_race_columns
 
 _RACE_CODE = "2099110105041111"
 
@@ -14,6 +14,18 @@ _RACE_CODE = "2099110105041111"
 def _entry(umaban: str, ketto: str = "2021105898") -> dict[str, str]:
     """テスト用の出走の行を返す."""
     return {"race_code": _RACE_CODE, "ketto_toroku_bango": ketto, "umaban": umaban}
+
+
+def _manager(mocker: MockerFixture) -> MagicMock:
+    """表の列名として、テストで使う列名を返す DB接続マネージャのモックを返す."""
+    manager = mocker.MagicMock()
+    manager.execute_query.return_value = [
+        ("race_code",),
+        ("umaban",),
+        ("ketto_toroku_bango",),
+        ("ketto1_bamei",),
+    ]
+    return manager
 
 
 def _virtual_race(horses: list[dict[str, str]] | None = None) -> VirtualRace:
@@ -26,9 +38,11 @@ def _virtual_race(horses: list[dict[str, str]] | None = None) -> VirtualRace:
 
 
 # 正常系
-def test_apply_virtual_race_prepends_with_to_plain_sql() -> None:
+def test_apply_virtual_race_prepends_with_to_plain_sql(mocker: MockerFixture) -> None:
     """WITH の無い SQL に4つの CTE を足し、パラメータを先頭に足す."""
-    sql, params = apply_virtual_race("SELECT 1 WHERE x = %s", ("a",), _virtual_race())
+    sql, params = apply_virtual_race(
+        _manager(mocker), "SELECT 1 WHERE x = %s", ("a",), _virtual_race()
+    )
 
     assert sql.startswith("WITH virtual_race_shosai AS MATERIALIZED")
     assert sql.endswith("\nSELECT 1 WHERE x = %s")
@@ -41,10 +55,12 @@ def test_apply_virtual_race_prepends_with_to_plain_sql() -> None:
 
 
 @pytest.mark.parametrize("keyword", ["WITH", "WITH RECURSIVE"])
-def test_apply_virtual_race_prepends_ctes_to_existing_with(keyword: str) -> None:
+def test_apply_virtual_race_prepends_ctes_to_existing_with(
+    keyword: str, mocker: MockerFixture
+) -> None:
     """WITH・WITH RECURSIVE で始まる SQL は、CTE の並びの先頭に足す."""
     sql, params = apply_virtual_race(
-        f"{keyword} a AS (SELECT %s)\nSELECT * FROM a", (5,), _virtual_race()
+        _manager(mocker), f"{keyword} a AS (SELECT %s)\nSELECT * FROM a", (5,), _virtual_race()
     )
 
     assert sql.startswith(f"{keyword} virtual_race_shosai AS MATERIALIZED")
@@ -57,19 +73,21 @@ def test_apply_virtual_race_prepends_ctes_to_existing_with(keyword: str) -> None
     "prefix",
     ["/* 集計 */ ", "-- 集計\n", "\n  /* a */\n-- b\n"],
 )
-def test_apply_virtual_race_prepends_ctes_to_with_after_comments(prefix: str) -> None:
+def test_apply_virtual_race_prepends_ctes_to_with_after_comments(
+    prefix: str, mocker: MockerFixture
+) -> None:
     """先頭にコメントがある WITH の SQL でも、その CTE の並びの先頭に足す."""
     original = f"{prefix}WITH a AS (SELECT 1) SELECT * FROM a"
-    sql, _ = apply_virtual_race(original, (), _virtual_race())
+    sql, _ = apply_virtual_race(_manager(mocker), original, (), _virtual_race())
     assert sql.startswith(f"{prefix}WITH virtual_race_shosai AS MATERIALIZED")
     assert sql.count("WITH") == 1
     assert sql.endswith(", a AS (SELECT 1) SELECT * FROM a")
 
 
-def test_apply_virtual_race_adds_horse_ctes_when_horses_given() -> None:
+def test_apply_virtual_race_adds_horse_ctes_when_horses_given(mocker: MockerFixture) -> None:
     """horses がある場合は kyosoba_master2 の CTE も足す."""
     horse = {"ketto_toroku_bango": "000a000001", "ketto1_bamei": "テスト"}
-    sql, params = apply_virtual_race("SELECT 1", (), _virtual_race([horse]))
+    sql, params = apply_virtual_race(_manager(mocker), "SELECT 1", (), _virtual_race([horse]))
 
     assert "virtual_kyosoba_master2 AS MATERIALIZED" in sql
     assert "kyosoba_master2 AS NOT MATERIALIZED" in sql
@@ -119,7 +137,7 @@ def test_virtual_race_duplicate_horse_raises() -> None:
         _virtual_race([horse, horse])
 
 
-def test_validate_virtual_race_columns_unknown_column_raises(mocker: MockerFixture) -> None:
+def test_apply_virtual_race_unknown_column_raises(mocker: MockerFixture) -> None:
     """表に無い列名があると ValueError."""
     manager = mocker.MagicMock()
     manager.execute_query.return_value = [("race_code",), ("umaban",), ("ketto_toroku_bango",)]
@@ -128,12 +146,12 @@ def test_validate_virtual_race_columns_unknown_column_raises(mocker: MockerFixtu
     )
 
     with pytest.raises(ValueError, match="no_such_column"):
-        validate_virtual_race_columns(manager, virtual_race)
+        apply_virtual_race(manager, "SELECT 1", (), virtual_race)
 
 
-def test_validate_virtual_race_columns_known_columns_passes(mocker: MockerFixture) -> None:
+def test_apply_virtual_race_known_columns_passes(mocker: MockerFixture) -> None:
     """列名がすべて表にあれば例外にならない."""
     manager = mocker.MagicMock()
     manager.execute_query.return_value = [("race_code",), ("umaban",), ("ketto_toroku_bango",)]
 
-    validate_virtual_race_columns(manager, _virtual_race())
+    apply_virtual_race(manager, "SELECT 1", (), _virtual_race())

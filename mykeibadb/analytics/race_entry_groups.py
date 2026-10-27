@@ -10,7 +10,6 @@ from mykeibadb.analytics.entry_select import _build_entry_select_sql
 from mykeibadb.analytics.virtual_race import (
     VirtualRace,
     apply_virtual_race,
-    validate_virtual_race_columns,
 )
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
@@ -58,7 +57,6 @@ def get_race_entry_groups(
                 f"virtual_race の race_code が race_code と違います: "
                 f"{virtual_race.race['race_code']!r} != {race_code!r}"
             )
-        validate_virtual_race_columns(manager, virtual_race)
 
     params: list[Any] = []
 
@@ -71,7 +69,7 @@ def get_race_entry_groups(
     )
     query_params = tuple(params)
     if virtual_race is not None:
-        sql, query_params = apply_virtual_race(sql, query_params, virtual_race)
+        sql, query_params = apply_virtual_race(manager, sql, query_params, virtual_race)
     df = manager.fetch_dataframe(sql, params=query_params)
     if df.empty:
         raise MykeibaDBError(f"出走馬が見つかりません: race_code={race_code}")

@@ -71,7 +71,7 @@ class VirtualRace:
 
 
 def apply_virtual_race(
-    sql: str, params: tuple[Any, ...], virtual_race: VirtualRace
+    manager: ConnectionManager, sql: str, params: tuple[Any, ...], virtual_race: VirtualRace
 ) -> tuple[str, tuple[Any, ...]]:
     """SQL の中で、race_shosai・umagoto_race_joho に仮のレースの行が加わって見えるようにする.
 
@@ -80,7 +80,11 @@ def apply_virtual_race(
     CTE の並びの先頭に足す。DB には書き込まない。仮のレースと同じレースコードの行が DB に
     ある場合の確認はしない。
 
+    仮のレースの列名が対応する表の列にあることを、DB の列名と照合して確かめる。
+    jsonb_populate_recordset は表に無いキーを黙って無視するため。
+
     Args:
+        manager (ConnectionManager): 列名の照合に使う DB接続マネージャ
         sql (str): 書き換え前の SQL
         params (tuple[Any, ...]): 書き換え前の SQL のパラメータ
         virtual_race (VirtualRace): 仮のレース
@@ -88,7 +92,11 @@ def apply_virtual_race(
     Returns:
         tuple[str, tuple[Any, ...]]: 書き換えた SQL
         tuple[str, tuple[Any, ...]]: 書き換えた SQL のパラメータ（足した CTE の分が先頭）
+
+    Raises:
+        ValueError: 仮のレースに表に無い列名がある場合
     """
+    _validate_columns(manager, virtual_race)
     tables = [
         ("race_shosai", [virtual_race.race]),
         ("umagoto_race_joho", virtual_race.entries),
@@ -123,7 +131,7 @@ def apply_virtual_race(
     return new_sql, (*cte_params, *params)
 
 
-def validate_virtual_race_columns(manager: ConnectionManager, virtual_race: VirtualRace) -> None:
+def _validate_columns(manager: ConnectionManager, virtual_race: VirtualRace) -> None:
     """仮のレースの列名が、対応する表の列にあることを確かめる.
 
     jsonb_populate_recordset は表に無いキーを黙って無視するため、DB の列名と照合して検出する。
