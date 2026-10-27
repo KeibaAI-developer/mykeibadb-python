@@ -243,12 +243,9 @@ class AttrSource:
             "past_race_top_n_count": 過去レースの集計
                 （top_n/grade_codes/keibajo_codes/filtersでフィルタ可）
             "career_count": キャリア戦数
-            "prev_race_name": 前走レース名
             "debut_venue": デビュー競馬場コード
             "jockey_continuity": 騎手継続性（継続/乗り戻り/テン乗り）
             "sire_condition_finisher": 父馬の条件戦好走有無（condition/top_nでフィルタ）
-            "prev_race_col": 前走の任意列値（column で対象列を指定。filtersで前走の別列を
-                条件に絞り込み、条件を満たさない場合はNULL（fixedの全行から除外）にできる）
             "tokubetsu_race_finish": 指定した特別競走番号のレースにおける、対象レースから
                 year_offset 年前の確定着順
             "chokyo_match_days": 対象レース日の days_to 日前〜days_from 日前（両端含む）に
@@ -262,8 +259,6 @@ class AttrSource:
         keibajo_codes (list[str] | None): 対象競馬場コードリスト（"past_race_top_n_count"用）
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
-        column (str | None): 前走列名（"prev_race_col"用）
-        overseas_label (str | None): 海外開催集約ラベル（"prev_race_name"用）
         tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"tokubetsu_race_finish"用）
         year_offset (int | None): 対象レースから遡る年数。0=同年、1=前年
             （"tokubetsu_race_finish"用）
@@ -281,8 +276,6 @@ class AttrSource:
     keibajo_codes: list[str] | None = None
     condition: RaceCondition | None = None
     allowed_values: list[str] | None = None
-    column: str | None = None
-    overseas_label: str | None = None
     tokubetsu_kyoso_bango: str | None = None
     year_offset: int | None = None
     absent_label: str = "出走無し"
@@ -324,8 +317,6 @@ class AttrSource:
             keibajo_codes=d.get("keibajo_codes"),
             condition=condition,
             allowed_values=d.get("allowed_values"),
-            column=d.get("column"),
-            overseas_label=d.get("overseas_label"),
             tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
             year_offset=int(raw_year_offset) if raw_year_offset is not None else None,
             absent_label=d.get("absent_label", "出走無し"),

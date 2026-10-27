@@ -25,7 +25,6 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     RowsDef,
 )
-from mykeibadb.analytics.race_name import build_race_display_name_cte, race_display_name_expr
 from mykeibadb.connection import ConnectionManager
 
 _ENTRY_VALID_PARTS = [
@@ -42,9 +41,7 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
         "career_count",
         "past_race_top_n_count",
         "debut_venue",
-        "prev_race_name",
         "jockey_continuity",
-        "prev_race_col",
         "tokubetsu_race_finish",
     }
 )
@@ -52,20 +49,6 @@ _HIST_CTE_SOURCE_TYPES = frozenset(
 _TARGET_HORSES_ONLY_SOURCE_TYPES = frozenset({"chokyo_match_days"})
 # history/fixed GroupBy で target_horses CTE を使う type 全体
 _TARGET_HORSES_SOURCE_TYPES = _HIST_CTE_SOURCE_TYPES | _TARGET_HORSES_ONLY_SOURCE_TYPES
-_PREV_RACE_COL_ALLOWED: frozenset[str] = frozenset(
-    {"kyakushitsu_hantei", "kyori", "kohan_3f_jun", "grade_code", "kakutei_chakujun"}
-)
-
-# prev_race_col の column名 -> SELECTするhorse_histの実列名
-_PREV_RACE_COL_RAW_COLUMN: dict[str, str] = {
-    "kyori": "kyori_int",
-}
-
-# prev_race_col の column名 -> attr_valに使うSQL式
-# （未指定時は_PREV_RACE_COL_RAW_COLUMNの列をそのまま使う）
-_PREV_RACE_COL_VAL_EXPR: dict[str, str] = {
-    "kakutei_chakujun": "CAST(kakutei_chakujun AS INTEGER)",
-}
 
 # past_race_top_n_count の filters で指定可能な horse_hist 列
 # 列名 -> (SQL式, 数値列か)
@@ -482,10 +465,8 @@ def _build_horse_hist_cte() -> str:
         "            r2.keibajo_code,\n"
         "            r2.kaisai_nen,\n"
         "            r2.kaisai_gappi,\n"
-        "            u2.race_code              AS hist_race_code,\n"
         "            u2.kakutei_chakujun,\n"
         "            u2.kyakushitsu_hantei,\n"
-        "            TRIM(r2.kyosomei_hondai)  AS kyosomei_hondai,\n"
         "            r2.grade_code,\n"
         "            TRIM(r2.kyori)::INTEGER   AS kyori_int,\n"
         f"            {shiba_da_expr('r2')} AS shiba_da,\n"
@@ -493,13 +474,7 @@ def _build_horse_hist_cte() -> str:
         f"            {hinba_gentei_expr('r2')} AS hinba_gentei,\n"
         f"            {sedai_gentei_expr('r2')} AS sedai_gentei,\n"
         f"            {stand_mae_hasso_expr('r2')} AS stand_mae_hasso,\n"
-        "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango,\n"
-        "            r2.kyoso_joken_code_2sai,\n"
-        "            r2.kyoso_joken_code_3sai,\n"
-        "            r2.kyoso_joken_code_4sai,\n"
-        "            r2.kyoso_joken_code_5sai_ijo,\n"
-        "            r2.kyoso_joken_code_saijakunen,\n"
-        "            TRIM(u2.kohan_3f)         AS kohan_3f\n"
+        "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango\n"
         "        FROM target_horses th\n"
         "        JOIN umagoto_race_joho u2\n"
         "            ON u2.ketto_toroku_bango = th.ketto_toroku_bango\n"
@@ -528,18 +503,8 @@ def _build_attr_agg_cte(source: AttrSource, params: list[Any]) -> list[str]:
         return [_attr_agg_past_race_top_n_count(source, params)]
     if source.type == "debut_venue":
         return [_attr_agg_debut_venue()]
-    if source.type == "prev_race_name":
-        return _attr_agg_prev_race_name_ctes()
     if source.type == "jockey_continuity":
         return [_attr_agg_jockey_continuity()]
-    if source.type == "prev_race_col":
-        if source.column == "kohan_3f_jun":
-            if source.filters:
-                raise ValueError(
-                    "prev_race_col の column='kohan_3f_jun' では filters を指定できません。"
-                )
-            return _attr_agg_prev_race_col_jun_ctes()
-        return [_attr_agg_prev_race_col(source, params)]
     if source.type == "tokubetsu_race_finish":
         return [_attr_agg_tokubetsu_race_finish(source, params)]
     if source.type == "chokyo_match_days":
@@ -620,37 +585,6 @@ def _attr_agg_debut_venue() -> str:
     )
 
 
-def _attr_agg_prev_race_name_ctes() -> list[str]:
-    """prev_race_name 用 CTE リストを返す.
-
-    重賞（JRA開催）は特別競走番号ごとに開催日が最も新しいレースの競走名本題へ
-    統一したうえで、各馬の直近レースの表示用レース名を取得する。
-    特別競走番号→最新名の対応は grade_race_latest_names CTE で一度だけ作り、
-    horse_hist に結合する（race_shosai を何度も走査しない）。
-
-    Returns:
-        list[str]: [grade_race_latest_names CTE, attr_agg CTE] の文字列リスト
-    """
-    name_cte = build_race_display_name_cte()
-    display_name_expr = race_display_name_expr("horse_hist")
-    attr_agg_cte = (
-        "attr_agg AS (\n"
-        "        SELECT DISTINCT ON (horse_hist.ketto_toroku_bango, horse_hist.target_race_code)\n"
-        "               horse_hist.ketto_toroku_bango, horse_hist.target_race_code,\n"
-        f"               {display_name_expr} AS attr_val,\n"
-        "               horse_hist.keibajo_code !~ '^[0-9]' AS is_overseas\n"
-        "        FROM horse_hist\n"
-        "        LEFT JOIN grade_race_latest_names\n"
-        "            ON grade_race_latest_names.tokubetsu_kyoso_bango"
-        " = horse_hist.tokubetsu_kyoso_bango\n"
-        "        WHERE horse_hist.kyosomei_hondai != ''\n"
-        "        ORDER BY horse_hist.ketto_toroku_bango, horse_hist.target_race_code,\n"
-        "                 horse_hist.kaisai_nen DESC, horse_hist.kaisai_gappi DESC\n"
-        "    )"
-    )
-    return [name_cte, attr_agg_cte]
-
-
 def _attr_agg_jockey_continuity() -> str:
     """jockey_continuity 用 attr_agg CTE を返す.
 
@@ -677,56 +611,6 @@ def _attr_agg_jockey_continuity() -> str:
         f"        FROM horse_hist\n"
         f"        WHERE {hist_valid}\n"
         f"        GROUP BY ketto_toroku_bango, target_race_code, target_kishu_code\n"
-        f"    )"
-    )
-
-
-def _attr_agg_prev_race_col(source: AttrSource, params: list[Any]) -> str:
-    """prev_race_col 用 attr_agg CTE を返す.
-
-    Args:
-        source (AttrSource): 属性算出方法（column 必須）
-        params (list[Any]): SQLパラメータリスト（末尾に追加される）
-
-    Returns:
-        str: attr_agg CTE 文字列
-
-    Raises:
-        ValueError: source.column が None または許可リスト外の場合
-    """
-    if source.column not in _PREV_RACE_COL_ALLOWED:
-        raise ValueError(
-            f"prev_race_col の column は {set(_PREV_RACE_COL_ALLOWED)} "
-            f"のいずれかで指定してください。 指定値: {source.column!r}"
-        )
-    hist_valid = " AND ".join(_HIST_VALID_PARTS)
-    raw_col = _PREV_RACE_COL_RAW_COLUMN.get(source.column, source.column)
-    attr_col = _PREV_RACE_COL_VAL_EXPR.get(source.column, raw_col)
-
-    select_cols = {raw_col}
-    filter_exprs = []
-    for filt in source.filters or []:
-        filter_exprs.append(build_past_race_top_n_filter_clause(filt, params, _HIST_FILTER_COLUMNS))
-        select_cols.add(filt["column"])
-
-    if filter_exprs:
-        condition = " AND ".join(filter_exprs)
-        attr_val_expr = f"CASE WHEN {condition} THEN {attr_col} ELSE NULL END"
-    else:
-        attr_val_expr = attr_col
-
-    select_cols_sql = ", ".join(sorted(select_cols))
-    return (
-        f"attr_agg AS (\n"
-        f"        SELECT ketto_toroku_bango, target_race_code, {attr_val_expr} AS attr_val\n"
-        f"        FROM (\n"
-        f"            SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        f"                   ketto_toroku_bango, target_race_code, {select_cols_sql}\n"
-        f"            FROM horse_hist\n"
-        f"            WHERE {hist_valid}\n"
-        f"            ORDER BY ketto_toroku_bango, target_race_code,\n"
-        f"                     kaisai_nen DESC, kaisai_gappi DESC\n"
-        f"        ) prev\n"
         f"    )"
     )
 
@@ -768,62 +652,6 @@ def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> st
     )
 
 
-def _attr_agg_prev_race_col_jun_ctes() -> list[str]:
-    """kohan_3f_jun（前走上がり3F順位）用 CTE リストを返す.
-
-    対象馬の直前レースコードのみに絞った prev_race_codes CTE と、
-    その CTE を使って umagoto_race_joho を限定スキャンする attr_agg CTE の2つを返す。
-
-    Returns:
-        list[str]: [prev_race_codes CTE, attr_agg CTE] の文字列リスト
-    """
-    hist_valid = " AND ".join(_HIST_VALID_PARTS)
-    kohan_valid = "TRIM(kohan_3f) ~ '^[0-9]+$' AND TRIM(kohan_3f) != '000'"
-    prev_race_codes_cte = (
-        f"prev_race_codes AS (\n"
-        f"        SELECT DISTINCT hist_race_code\n"
-        f"        FROM (\n"
-        f"            SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        f"                   hist_race_code\n"
-        f"            FROM horse_hist\n"
-        f"            WHERE {hist_valid} AND {kohan_valid}\n"
-        f"            ORDER BY ketto_toroku_bango, target_race_code,\n"
-        f"                     kaisai_nen DESC, kaisai_gappi DESC\n"
-        f"        ) s\n"
-        f"    )"
-    )
-    attr_agg_cte = (
-        f"attr_agg AS (\n"
-        f"        SELECT pr.ketto_toroku_bango, pr.target_race_code,\n"
-        f"               ranked.jun AS attr_val\n"
-        f"        FROM (\n"
-        f"            SELECT DISTINCT ON (ketto_toroku_bango, target_race_code)\n"
-        f"                   ketto_toroku_bango, target_race_code, hist_race_code\n"
-        f"            FROM horse_hist\n"
-        f"            WHERE {hist_valid} AND {kohan_valid}\n"
-        f"            ORDER BY ketto_toroku_bango, target_race_code,\n"
-        f"                     kaisai_nen DESC, kaisai_gappi DESC\n"
-        f"        ) pr\n"
-        f"        JOIN (\n"
-        f"            SELECT u.race_code, u.ketto_toroku_bango,\n"
-        f"                   RANK() OVER (\n"
-        f"                       PARTITION BY u.race_code\n"
-        f"                       ORDER BY TRIM(u.kohan_3f)::NUMERIC\n"
-        f"                   ) AS jun\n"
-        f"            FROM umagoto_race_joho u\n"
-        f"            JOIN prev_race_codes prc ON prc.hist_race_code = u.race_code\n"
-        f"            WHERE TRIM(u.kohan_3f) ~ '^[0-9]+$'\n"
-        f"              AND TRIM(u.kohan_3f) != '000'\n"
-        f"              AND u.kakutei_chakujun ~ '^[0-9]{{2}}$'\n"
-        f"              AND u.kakutei_chakujun != '00'\n"
-        f"        ) ranked\n"
-        f"            ON ranked.race_code = pr.hist_race_code\n"
-        f"            AND ranked.ketto_toroku_bango = pr.ketto_toroku_bango\n"
-        f"    )"
-    )
-    return [prev_race_codes_cte, attr_agg_cte]
-
-
 def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
     """history/fixed kind の group_label SQL 式を返す（attr_agg.attr_val を参照）.
 
@@ -843,9 +671,6 @@ def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
         if source is not None and source.type == "tokubetsu_race_finish":
             params.append(source.absent_label)
             return "COALESCE(attr_agg.attr_val::TEXT, %s)"
-        if source is not None and source.overseas_label is not None:
-            params.append(source.overseas_label)
-            return "CASE WHEN attr_agg.is_overseas THEN %s ELSE attr_agg.attr_val::TEXT END"
         return "attr_agg.attr_val::TEXT"
 
     if group_by.kind == "fixed":

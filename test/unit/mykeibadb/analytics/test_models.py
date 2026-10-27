@@ -20,18 +20,6 @@ from mykeibadb.analytics._models import (
 # ---------------------------------------------------------------------------
 # 正常系
 # ---------------------------------------------------------------------------
-def test_attrsource_from_dict_column() -> None:
-    """column フィールドが from_dict で正しく読み取れる。"""
-    src = AttrSource.from_dict({"type": "prev_race_col", "column": "kyori"})
-    assert src.column == "kyori"
-
-
-def test_attrsource_from_dict_overseas_label() -> None:
-    """overseas_label フィールドが from_dict で正しく読み取れる。"""
-    src = AttrSource.from_dict({"type": "prev_race_name", "overseas_label": "海外"})
-    assert src.overseas_label == "海外"
-
-
 def test_attrsource_from_dict_tokubetsu_kyoso_bango() -> None:
     """tokubetsu_kyoso_bango フィールドが from_dict で正しく読み取れる。"""
     src = AttrSource.from_dict(
@@ -121,9 +109,7 @@ def test_attrsource_from_dict_days_from_and_days_to_none_by_default() -> None:
 
 def test_attrsource_from_dict_new_fields_none_by_default() -> None:
     """新フィールドを省略した場合はすべて None。"""
-    src = AttrSource.from_dict({"type": "prev_race_name"})
-    assert src.column is None
-    assert src.overseas_label is None
+    src = AttrSource.from_dict({"type": "career_count"})
     assert src.tokubetsu_kyoso_bango is None
 
 

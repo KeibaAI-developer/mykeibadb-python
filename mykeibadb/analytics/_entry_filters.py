@@ -168,8 +168,6 @@ def build_history_filter_subquery(f: HistoryFilter, params: list[Any]) -> str:
         return _build_past_race_top_n_count_filter(source, f.cond, params)
     if source.type == "career_count":
         return _build_career_count_filter(f.cond, params)
-    if source.type == "prev_race_name":
-        return _build_prev_race_name_filter(f.cond, params)
     if source.type == "jockey_continuity":
         return _build_jockey_continuity_filter(f.cond, params)
     if source.type == "sire_condition_finisher":
@@ -402,46 +400,6 @@ def _build_career_count_filter(
         f"              WHERE {hist_where}"
     )
     cond_pred = _apply_cond(count_expr, cond, params)
-    base_valid = "\n              AND ".join(_ENTRY_VALID_PARTS)
-    return (
-        f"SELECT u.ketto_toroku_bango, u.race_code\n"
-        f"        FROM umagoto_race_joho u\n"
-        f"        JOIN race_shosai r ON u.race_code = r.race_code\n"
-        f"        WHERE {base_valid}\n"
-        f"          AND {cond_pred}"
-    )
-
-
-def _build_prev_race_name_filter(
-    cond: tuple[int, int] | int | str,
-    params: list[Any],
-) -> str:
-    """prev_race_name HistoryFilter のサブクエリを生成する.
-
-    Args:
-        cond (tuple[int, int] | int | str): 前走レース名への比較条件
-        params (list[Any]): SQLパラメータリスト（末尾に追加される）
-
-    Returns:
-        str: (ketto_toroku_bango, race_code) を返すSELECT文
-    """
-    hist_parts = [
-        "u2.ketto_toroku_bango = u.ketto_toroku_bango",
-        "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
-        "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
-        "u2.kakutei_chakujun != '00'",
-        "TRIM(r2.kyosomei_hondai) != ''",
-    ]
-    hist_where = "\n                  AND ".join(hist_parts)
-    prev_name_expr = (
-        f"SELECT TRIM(r2.kyosomei_hondai)\n"
-        f"              FROM umagoto_race_joho u2\n"
-        f"              JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
-        f"              WHERE {hist_where}\n"
-        f"              ORDER BY r2.kaisai_nen DESC, r2.kaisai_gappi DESC\n"
-        f"              LIMIT 1"
-    )
-    cond_pred = _apply_cond(prev_name_expr, cond, params)
     base_valid = "\n              AND ".join(_ENTRY_VALID_PARTS)
     return (
         f"SELECT u.ketto_toroku_bango, u.race_code\n"

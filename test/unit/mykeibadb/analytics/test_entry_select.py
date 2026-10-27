@@ -749,26 +749,6 @@ def test_select_entries_group_by_history_sire_condition_finisher_includes_km2(
 
 
 # CTE 方式（history/fixed 各 source.type）
-def test_select_entries_group_by_history_prev_race_name_uses_cte(
-    mocker: MockerFixture,
-) -> None:
-    """group_by=history(prev_race_name) で CTE 方式の SQL が生成される."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(kind="history", source=AttrSource(type="prev_race_name")),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "target_horses" in sql
-    assert "horse_hist" in sql
-    assert "attr_agg" in sql
-    assert "kyosomei_hondai" in sql
-
-
 def test_select_entries_group_by_fixed_jockey_continuity_uses_cte(
     mocker: MockerFixture,
 ) -> None:
@@ -882,216 +862,20 @@ def test_select_entries_course_week_params_order(mocker: MockerFixture) -> None:
     assert keibajo_idx < course_kubun_idx < year_idx
 
 
-# prev_race_col
-def test_select_entries_prev_race_col_fixed_uses_cte(mocker: MockerFixture) -> None:
-    """prev_race_col + fixed でCTE（target_horses/horse_hist/attr_agg）が生成される."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
-            rows={"逃げ": "1", "先行": "2", "差し": "3", "追込": "4"},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "target_horses" in sql
-    assert "horse_hist" in sql
-    assert "attr_agg" in sql
-    assert "kyakushitsu_hantei" in sql
-
-
-def test_select_entries_prev_race_col_kyori_uses_kyori_int(mocker: MockerFixture) -> None:
-    """column=kyori 指定時に attr_agg が kyori_int を参照する."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(type="prev_race_col", column="kyori"),
-            rows={"距離延長": (0, 1599), "同距離": 1600, "距離短縮": (1601, 9999)},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "kyori_int" in sql
-
-
-def test_select_entries_prev_race_col_grade_code_uses_grade_code(mocker: MockerFixture) -> None:
-    """column=grade_code 指定時に attr_agg が grade_code を参照する."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(type="prev_race_col", column="grade_code"),
-            rows={"G1": "A", "G2": "B", "G3": "C"},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "grade_code" in sql
-
-
-def test_select_entries_prev_race_col_kakutei_chakujun_uses_cast_integer(
-    mocker: MockerFixture,
+@pytest.mark.parametrize("source_type", ["prev_race_name", "prev_race_col"])
+def test_select_entries_group_by_history_unsupported_source_type_raises(
+    mocker: MockerFixture, source_type: str
 ) -> None:
-    """column=kakutei_chakujun 指定時に attr_agg が CAST(...AS INTEGER) を参照する."""
+    """未対応の source.type を history に指定すると ValueError になる."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_entry_df()
 
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(type="prev_race_col", column="kakutei_chakujun"),
-            rows={"1着": 1},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "CAST(kakutei_chakujun AS INTEGER)" in sql
-
-
-def test_select_entries_prev_race_col_filters_adds_case_when(mocker: MockerFixture) -> None:
-    """filters指定時、attr_valがCASE WHEN ... ELSE NULL ENDになり該当列がSELECTされる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(
-                type="prev_race_col",
-                column="kakutei_chakujun",
-                filters=[{"column": "grade_code", "op": "in", "value": ["A", "B", "C"]}],
-            ),
-            rows={"1着": 1},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "CASE WHEN grade_code IN" in sql
-    assert "ELSE NULL END AS attr_val" in sql
-
-
-def test_select_entries_prev_race_col_kohan_3f_jun_with_filters_raises(
-    mocker: MockerFixture,
-) -> None:
-    """column=kohan_3f_jun かつ filters指定時はValueError."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    with pytest.raises(ValueError, match="kohan_3f_jun"):
+    with pytest.raises(ValueError, match="未対応の source.type"):
         select_entries(
             manager,
             filters=[],
-            group_by=GroupBy(
-                kind="fixed",
-                source=AttrSource(
-                    type="prev_race_col",
-                    column="kohan_3f_jun",
-                    filters=[{"column": "grade_code", "op": "in", "value": ["A"]}],
-                ),
-                rows={"1位": 1},
-            ),
+            group_by=GroupBy(kind="history", source=AttrSource(type=source_type)),
         )
-
-
-def test_select_entries_prev_race_col_invalid_column_raises(mocker: MockerFixture) -> None:
-    """許可リスト外の column を指定すると ValueError が発生する."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    with pytest.raises(ValueError, match="column"):
-        select_entries(
-            manager,
-            filters=[],
-            group_by=GroupBy(
-                kind="fixed",
-                source=AttrSource(type="prev_race_col", column="hoge"),
-                rows={"1着": 1},
-            ),
-        )
-
-
-def test_horse_hist_cte_includes_kyakushitsu_hantei_and_kaisai_nen(
-    mocker: MockerFixture,
-) -> None:
-    """horse_hist CTE に kyakushitsu_hantei と target_kaisai_nen が含まれる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="fixed",
-            source=AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
-            rows={"逃げ": "1"},
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "kyakushitsu_hantei" in sql
-    assert "target_kaisai_nen" in sql
-
-
-# prev_race_name 海外集約
-def test_select_entries_prev_race_name_overseas_label_uses_case_when(
-    mocker: MockerFixture,
-) -> None:
-    """overseas_label 指定時に group_label が CASE WHEN is_overseas 式になる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="history",
-            source=AttrSource(type="prev_race_name", overseas_label="海外"),
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "is_overseas" in sql
-    assert "海外" in params
-
-
-def test_select_entries_prev_race_name_without_overseas_label_uses_attr_val(
-    mocker: MockerFixture,
-) -> None:
-    """overseas_label 未指定時は group_label が attr_val::TEXT になる."""
-    manager = mocker.MagicMock()
-    manager.fetch_dataframe.return_value = _make_entry_df()
-
-    select_entries(
-        manager,
-        filters=[],
-        group_by=GroupBy(
-            kind="history",
-            source=AttrSource(type="prev_race_name"),
-        ),
-    )
-
-    sql = manager.fetch_dataframe.call_args[0][0]
-    assert "attr_agg.attr_val::TEXT AS group_label" in sql
-    assert "CASE WHEN attr_agg.is_overseas" not in sql
 
 
 # tokubetsu_race_finish（同一特別競走番号レースでの過去着順）
