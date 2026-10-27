@@ -465,7 +465,6 @@ def _build_horse_hist_cte() -> str:
         "            r2.keibajo_code,\n"
         "            r2.kaisai_nen,\n"
         "            r2.kaisai_gappi,\n"
-        "            u2.race_code              AS hist_race_code,\n"
         "            u2.kakutei_chakujun,\n"
         "            u2.kyakushitsu_hantei,\n"
         "            r2.grade_code,\n"
