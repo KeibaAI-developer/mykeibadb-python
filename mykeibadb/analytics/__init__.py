@@ -28,7 +28,13 @@ from mykeibadb.analytics.chokyo import (
     get_uma_chokyo,
 )
 from mykeibadb.analytics.race_entry_groups import get_race_entry_groups
-from mykeibadb.analytics.race_name import get_race_display_names
+from mykeibadb.analytics.race_name import (
+    build_race_display_name_cte,
+    get_race_display_names,
+    race_display_name_expr,
+    race_joken_class_expr,
+    race_joken_code_expr,
+)
 from mykeibadb.analytics.uma import get_uma_rekisen
 
 __all__ = [
@@ -36,7 +42,11 @@ __all__ = [
     "get_uma_chokyo",
     "analyze_chokyo_debut_seiseki",
     "get_chokyo_match_days",
+    "build_race_display_name_cte",
     "get_race_display_names",
+    "race_display_name_expr",
+    "race_joken_class_expr",
+    "race_joken_code_expr",
     "get_race_entry_groups",
     "get_uma_rekisen",
     "ChakudoRow",
