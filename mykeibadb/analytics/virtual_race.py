@@ -7,7 +7,11 @@ from typing import Any
 
 from mykeibadb.connection import ConnectionManager
 
-_WITH_PATTERN = re.compile(r"^\s*WITH\s+(?:RECURSIVE\s+)?", re.IGNORECASE)
+# 先頭の空白・行コメント・ブロックコメントに続く WITH（RECURSIVE を含む）
+_WITH_PATTERN = re.compile(
+    r"^(?:\s+|--[^\n]*(?:\n|$)|/\*.*?\*/)*WITH\s+(?:RECURSIVE\s+)?",
+    re.IGNORECASE | re.DOTALL,
+)
 _COLUMNS_QUERY = """
 SELECT column_name
 FROM information_schema.columns

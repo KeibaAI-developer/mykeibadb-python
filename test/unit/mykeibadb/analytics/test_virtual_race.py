@@ -53,6 +53,19 @@ def test_apply_virtual_race_prepends_ctes_to_existing_with(keyword: str) -> None
     assert params[2:] == (5,)
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    ["/* 集計 */ ", "-- 集計\n", "\n  /* a */\n-- b\n"],
+)
+def test_apply_virtual_race_prepends_ctes_to_with_after_comments(prefix: str) -> None:
+    """先頭にコメントがある WITH の SQL でも、その CTE の並びの先頭に足す."""
+    original = f"{prefix}WITH a AS (SELECT 1) SELECT * FROM a"
+    sql, _ = apply_virtual_race(original, (), _virtual_race())
+    assert sql.startswith(f"{prefix}WITH virtual_race_shosai AS MATERIALIZED")
+    assert sql.count("WITH") == 1
+    assert sql.endswith(", a AS (SELECT 1) SELECT * FROM a")
+
+
 def test_apply_virtual_race_adds_horse_ctes_when_horses_given() -> None:
     """horses がある場合は kyosoba_master2 の CTE も足す."""
     horse = {"ketto_toroku_bango": "000a000001", "ketto1_bamei": "テスト"}
