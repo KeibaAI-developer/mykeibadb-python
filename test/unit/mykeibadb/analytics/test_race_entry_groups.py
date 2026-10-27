@@ -93,7 +93,6 @@ def test_get_race_entry_groups_subject_includes_subject_column(mocker: MockerFix
 @pytest.mark.parametrize(
     "source",
     [
-        AttrSource(type="prev_race_col", column="kyakushitsu_hantei"),
         AttrSource(type="past_race_top_n_count", top_n=3),
         AttrSource(type="tokubetsu_race_finish", tokubetsu_kyoso_bango="0016", year_offset=1),
     ],
@@ -198,7 +197,7 @@ def test_get_race_entry_groups_null_group_label_is_none(mocker: MockerFixture) -
     result = get_race_entry_groups(
         manager,
         _RACE_CODE,
-        GroupBy(kind="history", source=AttrSource(type="prev_race_col", column="grade_code")),
+        GroupBy(kind="history", source=AttrSource(type="past_race_top_n_count", top_n=3)),
     )
 
     assert result == {1: None, 2: "2"}
