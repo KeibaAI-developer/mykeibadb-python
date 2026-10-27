@@ -11,6 +11,7 @@ from mykeibadb.analytics import (
     ChokyoThreshold,
     GroupBy,
     Subject,
+    VirtualRace,
     get_race_entry_groups,
 )
 from mykeibadb.analytics.entry_select import select_entries
@@ -243,3 +244,46 @@ def test_get_race_entry_groups_db_error_propagates(mocker: MockerFixture) -> Non
 
     with pytest.raises(MykeibaDBError):
         get_race_entry_groups(manager, _RACE_CODE, GroupBy(kind="race_col", column="u.wakuban"))
+
+
+def _virtual_race(race_code: str = _RACE_CODE) -> VirtualRace:
+    """テスト用の仮のレースを返す."""
+    return VirtualRace(
+        race={"race_code": race_code},
+        entries=[{"race_code": race_code, "ketto_toroku_bango": "2021105898", "umaban": "01"}],
+    )
+
+
+# 正常系
+def test_get_race_entry_groups_virtual_race_applies_virtual_ctes(mocker: MockerFixture) -> None:
+    """virtual_race を指定すると仮の行の CTE が足され、パラメータが先頭に足される."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([("01", "1")])
+    manager.execute_query.return_value = [("race_code",), ("ketto_toroku_bango",), ("umaban",)]
+
+    result = get_race_entry_groups(
+        manager,
+        _RACE_CODE,
+        GroupBy(kind="race_col", column="u.wakuban"),
+        virtual_race=_virtual_race(),
+    )
+
+    sql, params = _fetched(manager)
+    assert sql.startswith("WITH virtual_race_shosai AS MATERIALIZED")
+    assert params[2:] == (_RACE_CODE, _EXCLUDED_CODES)
+    assert result == {1: "1"}
+
+
+# 準正常系
+def test_get_race_entry_groups_virtual_race_code_mismatch_raises(mocker: MockerFixture) -> None:
+    """virtual_race の race_code が race_code と違うと ValueError."""
+    manager = mocker.MagicMock()
+
+    with pytest.raises(ValueError):
+        get_race_entry_groups(
+            manager,
+            _RACE_CODE,
+            GroupBy(kind="race_col", column="u.wakuban"),
+            virtual_race=_virtual_race("2099110105041112"),
+        )
+    manager.fetch_dataframe.assert_not_called()
