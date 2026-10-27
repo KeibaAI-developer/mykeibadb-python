@@ -791,6 +791,8 @@ def test_select_entries_group_by_fixed_jockey_continuity_uses_cte(
     assert "horse_hist" in sql
     assert "attr_agg" in sql
     assert "ARRAY_AGG" in sql
+    assert "target_kishu_code IS NULL OR target_kishu_code IN ('', '00000')" in sql
+    assert sql.index("THEN NULL") < sql.index("ELSE 'テン乗り'")
 
 
 def test_select_entries_hist_cte_where_uses_target_horses(

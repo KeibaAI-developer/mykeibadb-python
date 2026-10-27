@@ -36,6 +36,7 @@ from mykeibadb.analytics.race_name import (
     race_joken_code_expr,
 )
 from mykeibadb.analytics.uma import get_uma_rekisen
+from mykeibadb.analytics.virtual_race import VirtualRace, apply_virtual_race
 
 __all__ = [
     "analyze_chakudo",
@@ -49,6 +50,8 @@ __all__ = [
     "race_joken_code_expr",
     "get_race_entry_groups",
     "get_uma_rekisen",
+    "apply_virtual_race",
+    "VirtualRace",
     "ChakudoRow",
     "ChakudoResult",
     "ChakudoTally",

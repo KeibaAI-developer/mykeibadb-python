@@ -664,6 +664,8 @@ def _attr_agg_jockey_continuity() -> str:
         f"            ketto_toroku_bango,\n"
         f"            target_race_code,\n"
         f"            CASE\n"
+        f"                WHEN target_kishu_code IS NULL OR target_kishu_code IN ('', '00000')\n"
+        f"                THEN NULL\n"
         f"                WHEN target_kishu_code = (\n"
         f"                    ARRAY_AGG(kishu_code ORDER BY kaisai_nen DESC, kaisai_gappi DESC)\n"
         f"                )[1]\n"
