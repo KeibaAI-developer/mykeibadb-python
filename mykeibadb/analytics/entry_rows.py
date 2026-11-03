@@ -18,8 +18,10 @@ def ran_entry_condition(alias: str) -> str:
     Returns:
         str: WHERE 句に AND でつなげる条件式
     """
+    # サブクエリの別名を引数の別名から作り、外側の別名を隠さないようにする
+    rs = f"{alias}_ran_rs"
     return (
-        f"NOT EXISTS (SELECT 1 FROM race_shosai ran_rs "
-        f"WHERE ran_rs.race_code = {alias}.race_code "
-        f"AND {alias}.data_kubun = '1' AND ran_rs.data_kubun <> '1')"
+        f"NOT EXISTS (SELECT 1 FROM race_shosai {rs} "
+        f"WHERE {rs}.race_code = {alias}.race_code "
+        f"AND {alias}.data_kubun = '1' AND {rs}.data_kubun <> '1')"
     )

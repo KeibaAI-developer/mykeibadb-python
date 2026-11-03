@@ -19,9 +19,18 @@ def test_ran_entry_condition_looks_up_race_shosai_in_subquery() -> None:
     """race_shosai はスキーマ修飾なしのサブクエリで引く."""
     condition = ran_entry_condition("u")
 
-    assert "NOT EXISTS (SELECT 1 FROM race_shosai ran_rs" in condition
-    assert "ran_rs.data_kubun <> '1'" in condition
+    assert "NOT EXISTS (SELECT 1 FROM race_shosai u_ran_rs" in condition
+    assert "u_ran_rs.data_kubun <> '1'" in condition
     assert "public." not in condition
+
+
+@pytest.mark.parametrize("alias", ["ran_rs", "u_ran_rs"])
+def test_ran_entry_condition_subquery_alias_differs_from_alias(alias: str) -> None:
+    """サブクエリの別名は引数の別名と重ならない."""
+    condition = ran_entry_condition(alias)
+
+    assert f"FROM race_shosai {alias} " not in condition
+    assert f"AND {alias}.data_kubun = '1'" in condition
 
 
 def test_ran_entry_condition_does_not_wrap_data_kubun_with_trim() -> None:
