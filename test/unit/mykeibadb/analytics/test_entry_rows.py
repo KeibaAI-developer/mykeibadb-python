@@ -11,7 +11,7 @@ def test_ran_entry_condition_uses_alias_data_kubun_and_race_code(alias: str) -> 
     """指定したエイリアスの data_kubun と race_code を使う."""
     condition = ran_entry_condition(alias)
 
-    assert f"{alias}.data_kubun IS DISTINCT FROM '1'" in condition
+    assert f"{alias}.data_kubun = '1'" in condition
     assert f"= {alias}.race_code" in condition
 
 
