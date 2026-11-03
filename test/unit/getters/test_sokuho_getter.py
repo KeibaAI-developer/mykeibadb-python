@@ -23,7 +23,7 @@ def test_get_kyosoba_jogai_joho_without_filters(
 
     result = sokuho_getter.get_kyosoba_jogai_joho(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("KYOSOBA_JOGAI_JOHO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("KYOSOBA_JOGAI_JOHO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -40,6 +40,7 @@ def test_get_kyosoba_jogai_joho_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KYOSOBA_JOGAI_JOHO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -65,6 +66,7 @@ def test_get_kyosoba_jogai_joho_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -82,7 +84,7 @@ def test_get_bataiju_without_filters(
 
     result = sokuho_getter.get_bataiju(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("BATAIJU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("BATAIJU", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -99,6 +101,7 @@ def test_get_bataiju_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "BATAIJU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -124,6 +127,7 @@ def test_get_bataiju_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -141,7 +145,7 @@ def test_get_tenko_baba_jotai_without_filters(
 
     result = sokuho_getter.get_tenko_baba_jotai(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("TENKO_BABA_JOTAI", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("TENKO_BABA_JOTAI", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -158,6 +162,7 @@ def test_get_tenko_baba_jotai_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "TENKO_BABA_JOTAI",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -183,6 +188,7 @@ def test_get_tenko_baba_jotai_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -200,7 +206,11 @@ def test_get_shussotorikeshi_kyosojogai_without_filters(
 
     result = sokuho_getter.get_shussotorikeshi_kyosojogai(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("SHUSSOTORIKESHI_KYOSOJOGAI", None)
+    mock_table_accessor.get_table_data.assert_called_once_with(
+
+        "SHUSSOTORIKESHI_KYOSOJOGAI", None, None
+
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -220,6 +230,7 @@ def test_get_shussotorikeshi_kyosojogai_with_kaisai_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "SHUSSOTORIKESHI_KYOSOJOGAI",
         {"RACE_CODE": VALID_KAISAI_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -245,6 +256,7 @@ def test_get_shussotorikeshi_kyosojogai_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -262,7 +274,7 @@ def test_get_kishu_henko_without_filters(
 
     result = sokuho_getter.get_kishu_henko(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("KISHU_HENKO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("KISHU_HENKO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -279,6 +291,7 @@ def test_get_kishu_henko_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "KISHU_HENKO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -304,6 +317,7 @@ def test_get_kishu_henko_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -321,7 +335,7 @@ def test_get_hassojikoku_henko_without_filters(
 
     result = sokuho_getter.get_hassojikoku_henko(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("HASSOJIKOKU_HENKO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("HASSOJIKOKU_HENKO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -338,6 +352,7 @@ def test_get_hassojikoku_henko_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "HASSOJIKOKU_HENKO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -363,6 +378,7 @@ def test_get_hassojikoku_henko_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -380,7 +396,7 @@ def test_get_course_henko_without_filters(
 
     result = sokuho_getter.get_course_henko(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("COURSE_HENKO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("COURSE_HENKO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -397,6 +413,7 @@ def test_get_course_henko_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "COURSE_HENKO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -422,5 +439,6 @@ def test_get_course_henko_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)

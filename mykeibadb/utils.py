@@ -86,7 +86,8 @@ def validate_race_code(race_code: str | list[str] | None) -> None:
         race_str = code[14:16]
         if not race_str.isdigit():
             raise ValidationError(
-                f"レースコードのレース番号部分は数字である必要があります: {code} (レース番号: {race_str})"
+                f"レースコードのレース番号部分は数字である必要があります: {code} "
+                f"(レース番号: {race_str})"
             )
         month = int(month_str)
         if not (1 <= month <= 12):
@@ -149,7 +150,8 @@ def validate_kishu_code(kishu_code: str | list[str] | None) -> None:
 
     if not isinstance(kishu_code, (str, list)):
         raise TypeError(
-            f"kishu_codeはstr, list[str], またはNoneである必要があります: {type(kishu_code).__name__}"
+            f"kishu_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(kishu_code).__name__}"
         )
 
     codes = [kishu_code] if isinstance(kishu_code, str) else kishu_code
@@ -179,7 +181,8 @@ def validate_chokyoshi_code(chokyoshi_code: str | list[str] | None) -> None:
 
     if not isinstance(chokyoshi_code, (str, list)):
         raise TypeError(
-            f"chokyoshi_codeはstr, list[str], またはNoneである必要があります: {type(chokyoshi_code).__name__}"
+            f"chokyoshi_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(chokyoshi_code).__name__}"
         )
 
     codes = [chokyoshi_code] if isinstance(chokyoshi_code, str) else chokyoshi_code
@@ -209,7 +212,8 @@ def validate_seisansha_code(seisansha_code: str | list[str] | None) -> None:
 
     if not isinstance(seisansha_code, (str, list)):
         raise TypeError(
-            f"seisansha_codeはstr, list[str], またはNoneである必要があります: {type(seisansha_code).__name__}"
+            f"seisansha_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(seisansha_code).__name__}"
         )
 
     codes = [seisansha_code] if isinstance(seisansha_code, str) else seisansha_code
@@ -239,7 +243,8 @@ def validate_banushi_code(banushi_code: str | list[str] | None) -> None:
 
     if not isinstance(banushi_code, (str, list)):
         raise TypeError(
-            f"banushi_codeはstr, list[str], またはNoneである必要があります: {type(banushi_code).__name__}"
+            f"banushi_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(banushi_code).__name__}"
         )
 
     codes = [banushi_code] if isinstance(banushi_code, str) else banushi_code
@@ -268,7 +273,8 @@ def validate_kaisai_code(kaisai_code: str | list[str] | None) -> None:
 
     if not isinstance(kaisai_code, (str, list)):
         raise TypeError(
-            f"kaisai_codeはstr, list[str], またはNoneである必要があります: {type(kaisai_code).__name__}"
+            f"kaisai_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(kaisai_code).__name__}"
         )
 
     codes = [kaisai_code] if isinstance(kaisai_code, str) else kaisai_code
@@ -331,7 +337,8 @@ def validate_keibajo_code(keibajo_code: str | list[str] | None) -> None:
 
     if not isinstance(keibajo_code, (str, list)):
         raise TypeError(
-            f"keibajo_codeはstr, list[str], またはNoneである必要があります: {type(keibajo_code).__name__}"
+            f"keibajo_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(keibajo_code).__name__}"
         )
 
     codes = [keibajo_code] if isinstance(keibajo_code, str) else keibajo_code
@@ -359,7 +366,8 @@ def validate_track_code(track_code: str | list[str] | None) -> None:
 
     if not isinstance(track_code, (str, list)):
         raise TypeError(
-            f"track_codeはstr, list[str], またはNoneである必要があります: {type(track_code).__name__}"
+            f"track_codeはstr, list[str], またはNoneである必要があります: "
+            f"{type(track_code).__name__}"
         )
 
     codes = [track_code] if isinstance(track_code, str) else track_code
@@ -389,7 +397,8 @@ def validate_tracen_kubun(tracen_kubun: str | list[str] | None) -> None:
 
     if not isinstance(tracen_kubun, (str, list)):
         raise TypeError(
-            f"tracen_kubunはstr, list[str], またはNoneである必要があります: {type(tracen_kubun).__name__}"
+            f"tracen_kubunはstr, list[str], またはNoneである必要があります: "
+            f"{type(tracen_kubun).__name__}"
         )
 
     codes = [tracen_kubun] if isinstance(tracen_kubun, str) else tracen_kubun
