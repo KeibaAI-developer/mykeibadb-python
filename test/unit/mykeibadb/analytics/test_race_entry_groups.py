@@ -13,6 +13,7 @@ from mykeibadb.analytics import (
     Subject,
     VirtualRace,
     get_race_entry_groups,
+    ran_entry_condition,
 )
 from mykeibadb.analytics.entry_select import select_entries
 from mykeibadb.exceptions import MykeibaDBError, QueryExecutionError
@@ -74,6 +75,17 @@ def test_get_race_entry_groups_filters_by_race_code_without_chakujun_condition(
     assert "NOT (u.ijo_kubun_code = ANY(%s))" in sql
     assert "kakutei_chakujun" not in sql
     assert params == (_RACE_CODE, _EXCLUDED_CODES)
+
+
+def test_get_race_entry_groups_excludes_non_running_entries(mocker: MockerFixture) -> None:
+    """対象の出走から出走しなかった馬の行を除く条件が付く."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([("01", "1")])
+
+    get_race_entry_groups(manager, _RACE_CODE, GroupBy(kind="race_col", column="u.wakuban"))
+
+    sql, _ = _fetched(manager)
+    assert ran_entry_condition("u") in sql
 
 
 def test_get_race_entry_groups_subject_includes_subject_column(mocker: MockerFixture) -> None:

@@ -25,11 +25,13 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     RowsDef,
 )
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.connection import ConnectionManager
 
 _ENTRY_VALID_PARTS = [
     "u.kakutei_chakujun ~ '^[0-9]{2}$'",
     "u.kakutei_chakujun != '00'",
+    ran_entry_condition("u"),
 ]
 _HIST_VALID_PARTS = [
     "kakutei_chakujun ~ '^[0-9]{2}$'",
@@ -357,6 +359,7 @@ def _sire_condition_finisher_expr(
     sire_parts = [
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
+        ran_entry_condition("u2"),
         "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
     params.append(int(source.top_n) if source.top_n is not None else 1)
@@ -480,6 +483,7 @@ def _build_horse_hist_cte() -> str:
         "            ON u2.ketto_toroku_bango = th.ketto_toroku_bango\n"
         "        JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
         "        WHERE (r2.kaisai_nen || r2.kaisai_gappi) < (th.kaisai_nen || th.kaisai_gappi)\n"
+        f"          AND {ran_entry_condition('u2')}\n"
         "    )"
     )
 

@@ -27,6 +27,7 @@ from mykeibadb.analytics.chokyo import (
     get_chokyo_match_days,
     get_uma_chokyo,
 )
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.analytics.race_entry_groups import get_race_entry_groups
 from mykeibadb.analytics.race_name import (
     build_race_display_name_cte,
@@ -48,6 +49,7 @@ __all__ = [
     "race_display_name_expr",
     "race_joken_class_expr",
     "race_joken_code_expr",
+    "ran_entry_condition",
     "get_race_entry_groups",
     "get_uma_rekisen",
     "apply_virtual_race",

@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 
 from mykeibadb.analytics._models import Entry, EntrySet
 from mykeibadb.analytics.chakujun_tally import tally_chakujun
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -157,6 +158,18 @@ def test_tally_chakujun_sql_joins_payout_tables(mocker: MockerFixture) -> None:
     assert "tansho_payouts" in sql
     assert "fukusho_payouts" in sql
     assert "LEFT JOIN" in sql
+
+
+def test_tally_chakujun_sql_excludes_non_running_entries(mocker: MockerFixture) -> None:
+    """生成SQLが出走しなかった馬の行を除く条件を含む."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_tally_df([_tally_row()])
+
+    entries = _make_entries(("2019100001", "202101010101", "01", "全体"))
+    tally_chakujun(manager, entries)
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert ran_entry_condition("u") in sql
 
 
 # 空EntrySet

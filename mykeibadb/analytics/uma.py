@@ -6,6 +6,7 @@ import pandas as pd
 
 from mykeibadb.analytics._cte_helpers import build_race_condition_where
 from mykeibadb.analytics._models import RaceCondition
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
@@ -43,6 +44,7 @@ def get_uma_rekisen(
         where_parts: list[str] = [
             "u.kakutei_chakujun ~ '^[0-9]{2}$'",
             "u.kakutei_chakujun != '00'",
+            ran_entry_condition("u"),
         ]
 
         if ketto_toroku_bango is not None:

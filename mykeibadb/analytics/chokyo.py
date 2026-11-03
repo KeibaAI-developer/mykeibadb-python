@@ -11,6 +11,7 @@ from mykeibadb.analytics._chokyo_helpers import (
     resolve_threshold_col,
 )
 from mykeibadb.analytics._models import AttrSource, ChokyoCondition
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.connection import ConnectionManager
 from mykeibadb.exceptions import MykeibaDBError
 
@@ -65,6 +66,7 @@ def get_chokyo_match_days(
         "        FROM umagoto_race_joho u\n"
         "        JOIN race_shosai r ON u.race_code = r.race_code\n"
         "        WHERE u.race_code = %s\n"
+        f"          AND {ran_entry_condition('u')}\n"
         "    )"
     )
     cte_parts = [target_horses_cte, *build_chokyo_match_days_ctes(source, params)]
@@ -161,13 +163,14 @@ def analyze_chokyo_debut_seiseki(
         cte_parts: list[str] = []
         sql_params: list[Any] = []
 
-        cte_parts.append("""
+        cte_parts.append(f"""
     debut_horses AS (
         SELECT ketto_toroku_bango,
                MIN(kaisai_nen || kaisai_gappi) AS debut_date
         FROM umagoto_race_joho
-        WHERE kakutei_chakujun ~ '^[0-9]{2}$'
+        WHERE kakutei_chakujun ~ '^[0-9]{{2}}$'
           AND kakutei_chakujun != '00'
+          AND {ran_entry_condition("umagoto_race_joho")}
         GROUP BY ketto_toroku_bango
         HAVING MIN(kaisai_nen || kaisai_gappi) BETWEEN %s AND %s
     )""")
@@ -201,11 +204,12 @@ def analyze_chokyo_debut_seiseki(
           AND {hanro_where}
     )""")
 
-        cte_parts.append("""
+        cte_parts.append(f"""
     winners AS (
         SELECT DISTINCT ketto_toroku_bango
         FROM umagoto_race_joho
         WHERE kakutei_chakujun = '01'
+          AND {ran_entry_condition("umagoto_race_joho")}
           AND kaisai_nen || kaisai_gappi BETWEEN %s AND %s
     )""")
         sql_params.extend([debut_date_from, debut_date_to])
@@ -269,13 +273,14 @@ def _get_chokyo_by_race(
     """
     try:
         umaban_str = f"{horse_num:02}"
-        info_sql = """
+        info_sql = f"""
             SELECT u.ketto_toroku_bango,
                    r.kaisai_nen || r.kaisai_gappi AS race_date
             FROM umagoto_race_joho u
             JOIN race_shosai r ON u.race_code = r.race_code
             WHERE u.race_code = %s
               AND u.umaban = %s
+              AND {ran_entry_condition("u")}
         """
         info_df = manager.fetch_dataframe(info_sql, params=(race_code, umaban_str))
         if info_df.empty:
@@ -290,14 +295,15 @@ def _get_chokyo_by_race(
         ketto = str(info_df.iloc[0]["ketto_toroku_bango"])
         race_date = str(info_df.iloc[0]["race_date"])
 
-        prev_sql = """
+        prev_sql = f"""
             SELECT r2.kaisai_nen || r2.kaisai_gappi AS prev_race_date
             FROM umagoto_race_joho u2
             JOIN race_shosai r2 ON u2.race_code = r2.race_code
             WHERE u2.ketto_toroku_bango = %s
               AND (r2.kaisai_nen || r2.kaisai_gappi) < %s
-              AND u2.kakutei_chakujun ~ '^[0-9]{2}$'
+              AND u2.kakutei_chakujun ~ '^[0-9]{{2}}$'
               AND u2.kakutei_chakujun != '00'
+              AND {ran_entry_condition("u2")}
             ORDER BY r2.kaisai_nen DESC, r2.kaisai_gappi DESC
             LIMIT 1
         """

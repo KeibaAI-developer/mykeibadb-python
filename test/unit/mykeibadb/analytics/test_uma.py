@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
-from mykeibadb.analytics import RaceCondition, get_uma_rekisen
+from mykeibadb.analytics import RaceCondition, get_uma_rekisen, ran_entry_condition
 from mykeibadb.exceptions import QueryExecutionError
 
 
@@ -41,6 +41,17 @@ def test_get_uma_rekisen_by_name(mocker: MockerFixture) -> None:
     assert result["count"] == 1
     assert len(result["results"]) == 1
     assert result["results"][0]["bamei"] == "ディープインパクト"
+
+
+def test_get_uma_rekisen_excludes_non_running_entries(mocker: MockerFixture) -> None:
+    """生成SQLが出走しなかった馬の行を除く条件を含む."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_df([_make_rekisen_row()])
+
+    get_uma_rekisen(manager, uma_name="ディープ")
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert ran_entry_condition("u") in sql
 
 
 def test_get_uma_rekisen_by_ketto_toroku_bango(mocker: MockerFixture) -> None:

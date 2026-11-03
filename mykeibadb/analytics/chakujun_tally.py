@@ -4,6 +4,7 @@ from typing import Any
 
 from mykeibadb.analytics._cte_helpers import build_payout_ctes
 from mykeibadb.analytics._models import ChakudoTally, EntrySet, GroupTally
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.connection import ConnectionManager
 
 
@@ -51,6 +52,7 @@ def tally_chakujun(manager: ConnectionManager, entries: EntrySet) -> ChakudoTall
         JOIN umagoto_race_joho u ON e.race_code = u.race_code AND e.umaban = u.umaban
         LEFT JOIN tansho_payouts tp ON e.race_code = tp.race_code AND e.umaban = tp.umaban
         LEFT JOIN fukusho_payouts fp ON e.race_code = fp.race_code AND e.umaban = fp.umaban
+        WHERE {ran_entry_condition("u")}
         GROUP BY e.group_label
         ORDER BY e.group_label
     """
