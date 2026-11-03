@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from mykeibadb.analytics._models import GroupBy
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.analytics.entry_select import _build_entry_select_sql
 from mykeibadb.analytics.virtual_race import (
     VirtualRace,
@@ -62,7 +63,11 @@ def get_race_entry_groups(
 
     def build_entry_where(where_params: list[Any]) -> list[str]:
         where_params.extend([race_code, list(_EXCLUDED_IJO_KUBUN_CODES)])
-        return ["u.race_code = %s", "NOT (u.ijo_kubun_code = ANY(%s))"]
+        return [
+            "u.race_code = %s",
+            "NOT (u.ijo_kubun_code = ANY(%s))",
+            ran_entry_condition("u"),
+        ]
 
     sql = _build_entry_select_sql(
         group_by, params, [], "", build_entry_where, history_before_race=True

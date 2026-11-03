@@ -182,6 +182,28 @@ df = getter.get_race_shosai(
 df = getter.get_race_shosai(race_code="2025122806050811", convert_codes=False)
 ```
 
+### 出走しなかった馬の行
+
+`UMAGOTO_RACE_JOHO`の主キーは（`RACE_CODE`, `KETTO_TOROKU_BANGO`）で、木曜の出走馬名表（データ区分`1`）の行は馬番`00`・枠番`0`で入ります。
+出馬表（データ区分`2`以降）に載った馬の行は同じ主キーで上書きされますが、出馬表に載らなかった馬の行はデータ区分`1`のまま残ります。
+この行は出走した馬と区別できないため、`RaceGetter.get_umagoto_race_joho`と`mykeibadb.analytics`の集計は、この行を返さず集計にも含めません。
+海外のレース（データ区分`B`）は出走した馬でも馬番が`00`で入るため、馬番では区別できません。
+
+`UMAGOTO_RACE_JOHO`を自前のSQLで引く場合は、`mykeibadb.analytics.ran_entry_condition`が返す条件式をWHERE句に`AND`でつなげると、同じ行を除けます。
+条件式は`RACE_SHOSAI`のサブクエリを含むため、呼び出し側で`RACE_SHOSAI`を結合する必要はありません。
+`apply_virtual_race`で仮のレースを差し込んだSQLでも使え、データ区分を持たない仮の出走の行は除かれません。
+
+```python
+from mykeibadb.analytics import ran_entry_condition
+
+sql = f"""
+SELECT u.umaban, u.bamei
+FROM umagoto_race_joho u
+WHERE u.race_code = %s
+  AND {ran_entry_condition("u")}
+"""
+```
+
 ### ConnectionManagerを直接使用する
 
 低レベルのAPIとして`ConnectionManager`を使い、任意のSQLクエリを実行することも可能です：
@@ -224,7 +246,7 @@ with ConnectionManager(config) as conn:
 
 | Getterクラス | 対象テーブル数 | 説明 |
 |---|---|---|
-| `RaceGetter` | 7 | レース関連（レース詳細、馬毎レース情報、払戻、開催スケジュールなど） |
+| `RaceGetter` | 7 | レース関連（レース詳細、馬毎レース情報（出走しなかった馬の行を除く）、払戻、開催スケジュールなど） |
 | `HyosuGetter` | 10 | 票数関連（単勝・複勝・枠連・馬連・ワイド・馬単・三連複・三連単） |
 | `OddsGetter` | 14 | オッズ関連（単複枠・馬連・ワイド・馬単・三連複・三連単、時系列含む） |
 | `MasterGetter` | 8 | マスタデータ（競走馬・騎手・調教師・生産者・馬主・繁殖馬・産駒・レコード） |

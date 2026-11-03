@@ -21,14 +21,17 @@ from mykeibadb.analytics._models import (
     RaceColFilter,
     SubjectFilter,
 )
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 
 _ENTRY_VALID_PARTS = [
     "u.kakutei_chakujun ~ '^[0-9]{2}$'",
     "u.kakutei_chakujun != '00'",
+    ran_entry_condition("u"),
 ]
 _HIST_VALID_PARTS = [
     "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
     "u2.kakutei_chakujun != '00'",
+    ran_entry_condition("u2"),
 ]
 _WOOD_VALID = "lw.time_gokei_6furlong NOT IN ('0000', '9999')"
 _HANRO_VALID = "lh.time_gokei_4furlong NOT IN ('0000', '9999')"
@@ -391,6 +394,7 @@ def _build_career_count_filter(
         "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
+        ran_entry_condition("u2"),
     ]
     hist_where = "\n                  AND ".join(hist_parts)
     count_expr = (
@@ -428,6 +432,7 @@ def _build_jockey_continuity_filter(
         "(r2.kaisai_nen || r2.kaisai_gappi) < (r.kaisai_nen || r.kaisai_gappi)",
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
+        ran_entry_condition("u2"),
     ]
     prev_hist_where = "\n                  AND ".join(prev_hist_parts)
     continuity_expr = (
@@ -478,6 +483,7 @@ def _build_sire_condition_finisher_filter(
     sire_cond_parts = [
         "u2.kakutei_chakujun ~ '^[0-9]{2}$'",
         "u2.kakutei_chakujun != '00'",
+        ran_entry_condition("u2"),
         "CAST(u2.kakutei_chakujun AS INTEGER) BETWEEN 1 AND %s",
     ]
     params.append(int(source.top_n) if source.top_n is not None else 1)

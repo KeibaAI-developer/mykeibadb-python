@@ -57,6 +57,13 @@ getterがフィルタへ渡すカラム（`RACE_CODE`・`KETTO_TOROKU_BANGO`・`
 
 キャッシュはテーブル名をキーとし、スキーマは含めません。本ライブラリは `search_path` を設定せず、接続プールは単一のユーザーで接続するため、解決結果はプロセス内で一定であることを前提とします。
 
+## 固定のSQL条件式の追加
+
+`get_table_data` と `get_table_data_with_composite_date_period` は、`extra_conditions` に渡した固定のSQL条件式を、フィルタ条件のあとに `AND` でつなげます。
+値を含まない固定の式だけを渡す前提で、プレースホルダやパラメータは追加されません。
+`RaceGetter.get_umagoto_race_joho` は、この引数で `ran_entry_condition` が返す条件式を渡し、出走しなかった馬の行を除いています。
+条件式が参照する `data_kubun` は固定長文字列のため、`TRIM()` で包みません。
+
 ## 行の並び
 
 いずれのクエリにも `ORDER BY` はなく、**行の並びは保証しません**。

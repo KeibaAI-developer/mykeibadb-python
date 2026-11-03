@@ -640,6 +640,53 @@ def test_composite_date_period_query_branches_by_column_type(
     assert "TRIM(race_code)" not in query
 
 
+def test_get_table_data_with_extra_conditions(
+    table_accessor: TableAccessor,
+    mock_connection_manager: MagicMock,
+) -> None:
+    """get_table_dataがフィルタのあとにextra_conditionsをANDでつなげることを確認."""
+    table_accessor.get_table_data(
+        "RACE_SHOSAI",
+        {"RACE_CODE": "202509030411"},
+        extra_conditions=["data_kubun <> '1'"],
+    )
+
+    query, params = mock_connection_manager.fetch_dataframe.call_args[0]
+    assert query.endswith("WHERE TRIM(race_code) = %s AND data_kubun <> '1'")
+    assert params == ("202509030411",)
+
+
+def test_get_table_data_with_extra_conditions_without_filters(
+    table_accessor: TableAccessor,
+    mock_connection_manager: MagicMock,
+) -> None:
+    """フィルタなしでもextra_conditionsだけでWHERE句が付くことを確認."""
+    table_accessor.get_table_data("RACE_SHOSAI", extra_conditions=["data_kubun <> '1'"])
+
+    query, params = mock_connection_manager.fetch_dataframe.call_args[0]
+    assert query == "SELECT * FROM race_shosai WHERE data_kubun <> '1'"
+    assert params == ()
+
+
+def test_get_table_data_with_composite_date_period_and_extra_conditions(
+    table_accessor: TableAccessor,
+    mock_connection_manager: MagicMock,
+) -> None:
+    """複合日付の期間フィルタとextra_conditionsを併用できることを確認."""
+    table_accessor.get_table_data_with_composite_date_period(
+        "RACE_SHOSAI",
+        start_date=date(2025, 1, 1),
+        extra_conditions=["data_kubun <> '1'"],
+    )
+
+    query, params = mock_connection_manager.fetch_dataframe.call_args[0]
+    assert query == (
+        "SELECT * FROM race_shosai "
+        "WHERE data_kubun <> '1' AND CONCAT(kaisai_nen, kaisai_gappi) >= %s"
+    )
+    assert params == ("20250101",)
+
+
 # 準正常系（列の型が取得できない場合）
 
 

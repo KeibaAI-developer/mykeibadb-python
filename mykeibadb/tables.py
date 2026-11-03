@@ -125,6 +125,7 @@ class TableAccessor:
         self,
         table_name: str,
         filters: dict[str, Any] | None = None,
+        extra_conditions: list[str] | None = None,
     ) -> pd.DataFrame:
         """テーブルデータを取得.
 
@@ -136,6 +137,8 @@ class TableAccessor:
             filters (dict[str, Any] | None): フィルタ条件
                 キーはカラム名、値はフィルタ値。
                 値がリストの場合はIN句として処理される。
+            extra_conditions (list[str] | None): フィルタ条件に AND でつなげる固定のSQL条件式。
+                値を含めず、呼び出し側が組み立てた信頼できる式だけを渡す
 
         Returns:
             pd.DataFrame: 取得したデータのDataFrame
@@ -147,7 +150,9 @@ class TableAccessor:
         self._validate_table_name(table_name)
         self._validate_filters(filters)
 
-        query, params = _build_query(table_name, filters, self._column_type_resolver)
+        query, params = _build_query(
+            table_name, filters, self._column_type_resolver, extra_conditions
+        )
         return self.connection_manager.fetch_dataframe(query, params)
 
     def get_table_data_with_period(
@@ -230,6 +235,7 @@ class TableAccessor:
         end_date: date | None = None,
         year_column: str = "KAISAI_NEN",
         date_column: str = "KAISAI_GAPPI",
+        extra_conditions: list[str] | None = None,
     ) -> pd.DataFrame:
         """年月日が分離されたカラムを持つテーブルから期間フィルタ付きでデータを取得.
 
@@ -243,6 +249,8 @@ class TableAccessor:
             end_date (date | None): 終了日
             year_column (str): 年カラム名（yyyy形式）
             date_column (str): 月日カラム名（mmdd形式）
+            extra_conditions (list[str] | None): フィルタ条件に AND でつなげる固定のSQL条件式。
+                値を含めず、呼び出し側が組み立てた信頼できる式だけを渡す
 
         Returns:
             pd.DataFrame: 取得したデータのDataFrame
@@ -264,6 +272,7 @@ class TableAccessor:
             year_column,
             date_column,
             self._column_type_resolver,
+            extra_conditions,
         )
         return self.connection_manager.fetch_dataframe(query, params)
 
@@ -437,6 +446,7 @@ def _build_query_with_composite_date_range(
     year_column: str,
     date_column: str,
     column_type_resolver: ColumnTypeResolver | None = None,
+    extra_conditions: list[str] | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """年月日分離カラムに対して期間フィルタ付きでSQLクエリを構築.
 
@@ -452,12 +462,13 @@ def _build_query_with_composite_date_range(
         column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
             固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
         date_column (str): 月日カラム名（検証済み、mmdd形式）
+        extra_conditions (list[str] | None): フィルタ条件に AND でつなげる固定のSQL条件式
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
     base_query, where_clauses, params = _build_base_query_and_params(
-        table_name, filters, column_type_resolver
+        table_name, filters, column_type_resolver, extra_conditions
     )
 
     year_column_lower = year_column.lower()
@@ -516,6 +527,7 @@ def _build_query(
     table_name: str,
     filters: dict[str, Any] | None = None,
     column_type_resolver: ColumnTypeResolver | None = None,
+    extra_conditions: list[str] | None = None,
 ) -> tuple[str, tuple[str | int, ...] | None]:
     """SQLクエリを構築.
 
@@ -527,36 +539,24 @@ def _build_query(
         filters (dict[str, Any] | None): フィルタ条件
         column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
             固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
+        extra_conditions (list[str] | None): フィルタ条件に AND でつなげる固定のSQL条件式
 
     Returns:
         tuple[str, tuple[str | int, ...] | None]: SQLクエリとパラメータのタプル
     """
     # ベースクエリ（テーブル名は_validate_table_nameで検証済み）
     # PostgreSQLではテーブル名を小文字として扱う
-    base_query = f"SELECT * FROM {table_name.lower()}"  # noqa: S608
-
-    if not filters:
-        return base_query, None
-
-    where_clauses: list[str] = []
-    params: list[str | int] = []
-
-    for column, value in filters.items():
-        # PostgreSQLではカラム名を小文字として扱う（カラム名は_validate_filtersで検証済み）
-        clause, clause_params = _build_filter_clause(
-            column.lower(), value, table_name, column_type_resolver
-        )
-        where_clauses.append(clause)
-        params.extend(clause_params)
-
-    query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
-    return query, tuple(params)
+    base_query, where_clauses, params = _build_base_query_and_params(
+        table_name, filters, column_type_resolver, extra_conditions
+    )
+    return _finalize_query(base_query, where_clauses, params)
 
 
 def _build_base_query_and_params(
     table_name: str,
     filters: dict[str, Any] | None = None,
     column_type_resolver: ColumnTypeResolver | None = None,
+    extra_conditions: list[str] | None = None,
 ) -> tuple[str, list[str], list[str | int]]:
     """ベースクエリとWHERE句のパーツを構築.
 
@@ -567,6 +567,7 @@ def _build_base_query_and_params(
         filters (dict[str, Any] | None): フィルタ条件（検証済み）
         column_type_resolver (ColumnTypeResolver | None): 列の型リゾルバ。指定した場合、
             固定長文字列の列は`TRIM()`で包まない。Noneの場合は全列を`TRIM()`で包む
+        extra_conditions (list[str] | None): フィルタ条件のあとに AND でつなげる固定のSQL条件式
 
     Returns:
         tuple[str, list[str], list[str | int]]: ベースクエリ、WHERE句リスト、パラメータリスト
@@ -583,6 +584,7 @@ def _build_base_query_and_params(
             where_clauses.append(clause)
             params.extend(clause_params)
 
+    where_clauses.extend(extra_conditions or [])
     return base_query, where_clauses, params
 
 
