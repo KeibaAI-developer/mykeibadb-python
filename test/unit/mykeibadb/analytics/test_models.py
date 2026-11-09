@@ -4,7 +4,13 @@ from typing import Any
 
 import pytest
 
-from mykeibadb.analytics import AttrSource, Subject, build_entry_filter, parse_rows_def
+from mykeibadb.analytics import (
+    AttrSource,
+    Subject,
+    TokubetsuKyosoBangoPeriod,
+    build_entry_filter,
+    parse_rows_def,
+)
 from mykeibadb.analytics._models import (
     ChokyoFilter,
     ChokyoThreshold,
@@ -26,6 +32,30 @@ def test_attrsource_from_dict_tokubetsu_kyoso_bango() -> None:
         {"type": "tokubetsu_race_finish", "tokubetsu_kyoso_bango": "0010", "year_offset": 0}
     )
     assert src.tokubetsu_kyoso_bango == "0010"
+
+
+def test_attrsource_from_dict_tokubetsu_kyoso_bango_periods() -> None:
+    """tokubetsu_kyoso_bango_periods の各要素を読み、年を int に変換する。"""
+    src = AttrSource.from_dict(
+        {
+            "type": "tokubetsu_race_finish",
+            "year_offset": 0,
+            "tokubetsu_kyoso_bango_periods": [
+                {"tokubetsu_kyoso_bango": "0074", "year_to": "2024"},
+                {"tokubetsu_kyoso_bango": "0213", "year_from": 2025},
+            ],
+        }
+    )
+    assert src.tokubetsu_kyoso_bango_periods == [
+        TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074", year_from=None, year_to=2024),
+        TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213", year_from=2025, year_to=None),
+    ]
+
+
+def test_attrsource_from_dict_tokubetsu_kyoso_bango_periods_none_by_default() -> None:
+    """tokubetsu_kyoso_bango_periods を省略した場合は None。"""
+    src = AttrSource.from_dict({"type": "tokubetsu_race_finish", "tokubetsu_kyoso_bango": "0010"})
+    assert src.tokubetsu_kyoso_bango_periods is None
 
 
 def test_attrsource_from_dict_year_offset() -> None:

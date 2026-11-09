@@ -24,6 +24,7 @@ from mykeibadb.analytics._models import (
     GroupBy,
     RaceCondition,
     RowsDef,
+    TokubetsuKyosoBangoPeriod,
 )
 from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.connection import ConnectionManager
@@ -623,24 +624,22 @@ def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> st
     """tokubetsu_race_finish 用 attr_agg CTE を返す.
 
     Args:
-        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango・year_offset 必須）
+        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango か tokubetsu_kyoso_bango_periods の
+            片方と、year_offset が必須）
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
         str: attr_agg CTE 文字列
 
     Raises:
-        ValueError: source.tokubetsu_kyoso_bango または source.year_offset が None の場合
-        ValueError: source.year_offset が負の場合
+        ValueError: source.year_offset が None または負の場合
+        ValueError: 特別競走番号の指定が正しくない場合（_tokubetsu_kyoso_bango_clause 参照）
     """
-    if source.tokubetsu_kyoso_bango is None or source.year_offset is None:
-        raise ValueError(
-            "tokubetsu_race_finish には tokubetsu_kyoso_bango と year_offset の"
-            "指定が必要です。"
-        )
+    if source.year_offset is None:
+        raise ValueError("tokubetsu_race_finish には year_offset の指定が必要です。")
     if source.year_offset < 0:
         raise ValueError(f"year_offset は0以上の整数でなければなりません: {source.year_offset!r}")
-    params.append(source.tokubetsu_kyoso_bango)
+    bango_clause = _tokubetsu_kyoso_bango_clause(source, params)
     params.append(source.year_offset)
     hist_valid = " AND ".join(_HIST_VALID_PARTS)
     return (
@@ -648,12 +647,108 @@ def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> st
         f"        SELECT ketto_toroku_bango, target_race_code,\n"
         f"               MIN(CAST(kakutei_chakujun AS INTEGER)) AS attr_val\n"
         f"        FROM horse_hist\n"
-        f"        WHERE tokubetsu_kyoso_bango = %s\n"
+        f"        WHERE {bango_clause}\n"
         f"          AND CAST(kaisai_nen AS INTEGER) = CAST(target_kaisai_nen AS INTEGER) - %s\n"
         f"          AND {hist_valid}\n"
         f"        GROUP BY ketto_toroku_bango, target_race_code\n"
         f"    )"
     )
+
+
+def _tokubetsu_kyoso_bango_clause(source: AttrSource, params: list[Any]) -> str:
+    """tokubetsu_race_finish で参照するレースを特別競走番号で絞る horse_hist の条件式を返す.
+
+    tokubetsu_kyoso_bango_periods を指定した場合は、特別競走番号が期間の番号と一致し、
+    開催年がその期間に入る出走のどれかに絞る。
+
+    Args:
+        source (AttrSource): 属性算出方法
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: 条件式
+
+    Raises:
+        ValueError: tokubetsu_kyoso_bango と tokubetsu_kyoso_bango_periods の両方を指定した場合、
+            どちらも指定していない場合、tokubetsu_kyoso_bango_periods が空の場合、
+            期間の year_from が year_to より大きい場合、または2つの期間の開催年が重なる場合
+    """
+    bango = source.tokubetsu_kyoso_bango
+    periods = source.tokubetsu_kyoso_bango_periods
+    if (bango is None) == (periods is None):
+        raise ValueError(
+            "tokubetsu_race_finish には tokubetsu_kyoso_bango と "
+            "tokubetsu_kyoso_bango_periods のどちらか片方だけを指定してください。"
+        )
+    if periods is None:
+        params.append(bango)
+        return "tokubetsu_kyoso_bango = %s"
+    _validate_tokubetsu_kyoso_bango_periods(periods)
+    clauses: list[str] = []
+    for period in periods:
+        parts = ["tokubetsu_kyoso_bango = %s"]
+        params.append(period.tokubetsu_kyoso_bango)
+        if period.year_from is not None:
+            parts.append("CAST(kaisai_nen AS INTEGER) >= %s")
+            params.append(period.year_from)
+        if period.year_to is not None:
+            parts.append("CAST(kaisai_nen AS INTEGER) <= %s")
+            params.append(period.year_to)
+        clauses.append("(" + " AND ".join(parts) + ")")
+    return "(" + " OR ".join(clauses) + ")"
+
+
+def _validate_tokubetsu_kyoso_bango_periods(periods: list[TokubetsuKyosoBangoPeriod]) -> None:
+    """開催年の期間ごとの特別競走番号の指定を検証する.
+
+    Args:
+        periods (list[TokubetsuKyosoBangoPeriod]): 期間ごとの特別競走番号
+
+    Raises:
+        ValueError: periods が空の場合、期間の year_from が year_to より大きい場合、
+            または2つの期間の開催年が重なる場合
+    """
+    if not periods:
+        raise ValueError("tokubetsu_kyoso_bango_periods に期間が1つもありません。")
+    for period in periods:
+        if (
+            period.year_from is not None
+            and period.year_to is not None
+            and period.year_from > period.year_to
+        ):
+            raise ValueError(f"期間の year_from が year_to より大きいです: {period!r}")
+    for k, first in enumerate(periods):
+        for second in periods[k + 1 :]:
+            if _periods_overlap(first, second):
+                raise ValueError(f"期間の開催年が重なっています: {first!r}, {second!r}")
+
+
+def _periods_overlap(first: TokubetsuKyosoBangoPeriod, second: TokubetsuKyosoBangoPeriod) -> bool:
+    """2つの期間の開催年が重なるかを返す.
+
+    Args:
+        first (TokubetsuKyosoBangoPeriod): 1つ目の期間
+        second (TokubetsuKyosoBangoPeriod): 2つ目の期間
+
+    Returns:
+        bool: 重なる年があれば True
+    """
+    return not (_starts_after(first, second) or _starts_after(second, first))
+
+
+def _starts_after(first: TokubetsuKyosoBangoPeriod, second: TokubetsuKyosoBangoPeriod) -> bool:
+    """1つ目の期間が2つ目の期間の最後の年より後に始まるかを返す.
+
+    Args:
+        first (TokubetsuKyosoBangoPeriod): 1つ目の期間
+        second (TokubetsuKyosoBangoPeriod): 2つ目の期間
+
+    Returns:
+        bool: 1つ目の year_from が2つ目の year_to より大きければ True。どちらかが None なら False
+    """
+    if first.year_from is None or second.year_to is None:
+        return False
+    return first.year_from > second.year_to
 
 
 def _build_hist_group_label_expr(group_by: GroupBy, params: list[Any]) -> str:
