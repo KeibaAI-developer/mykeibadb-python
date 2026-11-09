@@ -234,6 +234,44 @@ class ChokyoThreshold:
 ChokyoCondition = list[ChokyoThreshold]
 
 
+@dataclass(frozen=True)
+class TokubetsuKyosoBangoPeriod:
+    """開催年の期間と、その期間に使う特別競走番号.
+
+    期間の年は、参照するレースの開催年と比べる。
+
+    Attributes:
+        tokubetsu_kyoso_bango (str): 特別競走番号。race_shosai の tokubetsu_kyoso_bango と
+            完全一致で比較する。
+        year_from (int | None): 期間の最初の開催年（含む）。None は下限なし。
+        year_to (int | None): 期間の最後の開催年（含む）。None は上限なし。
+    """
+
+    tokubetsu_kyoso_bango: str
+    year_from: int | None = None
+    year_to: int | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> "TokubetsuKyosoBangoPeriod":
+        """辞書からTokubetsuKyosoBangoPeriodを生成する.
+
+        year_from / year_to は int に変換する。
+
+        Args:
+            d (dict[str, Any]): 期間辞書
+
+        Returns:
+            TokubetsuKyosoBangoPeriod: 生成したTokubetsuKyosoBangoPeriodインスタンス
+        """
+        raw_from = d.get("year_from")
+        raw_to = d.get("year_to")
+        return TokubetsuKyosoBangoPeriod(
+            tokubetsu_kyoso_bango=d["tokubetsu_kyoso_bango"],
+            year_from=int(raw_from) if raw_from is not None else None,
+            year_to=int(raw_to) if raw_to is not None else None,
+        )
+
+
 @dataclass
 class AttrSource:
     """出走馬属性の算出方法を定義するデータクラス.
@@ -260,6 +298,9 @@ class AttrSource:
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
         tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"tokubetsu_race_finish"用）
+        tokubetsu_kyoso_bango_periods (list[TokubetsuKyosoBangoPeriod] | None): 開催年の期間ごとの
+            対象特別競走番号（"tokubetsu_race_finish"用）。
+            tokubetsu_kyoso_bango と片方だけを指定する
         year_offset (int | None): 対象レースから遡る年数。0=同年、1=前年
             （"tokubetsu_race_finish"用）
         absent_label (str): 不出走ラベル（"tokubetsu_race_finish"用）
@@ -277,6 +318,7 @@ class AttrSource:
     condition: RaceCondition | None = None
     allowed_values: list[str] | None = None
     tokubetsu_kyoso_bango: str | None = None
+    tokubetsu_kyoso_bango_periods: list[TokubetsuKyosoBangoPeriod] | None = None
     year_offset: int | None = None
     absent_label: str = "出走無し"
     chokyo_condition: ChokyoCondition | None = None
@@ -303,6 +345,7 @@ class AttrSource:
         raw_chokyo_condition = d.get("chokyo_condition")
         raw_days_from = d.get("days_from")
         raw_days_to = d.get("days_to")
+        raw_periods = d.get("tokubetsu_kyoso_bango_periods")
         condition: RaceCondition | None = None
         if raw_condition is not None:
             condition = RaceCondition.from_dict(raw_condition)
@@ -318,6 +361,11 @@ class AttrSource:
             condition=condition,
             allowed_values=d.get("allowed_values"),
             tokubetsu_kyoso_bango=d.get("tokubetsu_kyoso_bango"),
+            tokubetsu_kyoso_bango_periods=(
+                [TokubetsuKyosoBangoPeriod.from_dict(p) for p in raw_periods]
+                if raw_periods is not None
+                else None
+            ),
             year_offset=int(raw_year_offset) if raw_year_offset is not None else None,
             absent_label=d.get("absent_label", "出走無し"),
             chokyo_condition=(

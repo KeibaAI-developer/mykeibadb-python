@@ -18,6 +18,7 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     Subject,
     SubjectFilter,
+    TokubetsuKyosoBangoPeriod,
     build_entry_filter,
     parse_rows_def,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "Subject",
     "ChokyoThreshold",
     "ChokyoCondition",
+    "TokubetsuKyosoBangoPeriod",
     "build_entry_filter",
     "parse_rows_def",
 ]

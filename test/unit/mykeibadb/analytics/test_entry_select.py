@@ -14,6 +14,7 @@ from mykeibadb.analytics._models import (
     RaceCondition,
     Subject,
     SubjectFilter,
+    TokubetsuKyosoBangoPeriod,
 )
 from mykeibadb.analytics.entry_select import select_entries
 from mykeibadb.exceptions import QueryExecutionError
@@ -909,6 +910,68 @@ def test_select_entries_tokubetsu_race_finish_uses_coalesce(
     assert "前年出走無し" in params
 
 
+def test_select_entries_tokubetsu_race_finish_periods_filter_by_year(
+    mocker: MockerFixture,
+) -> None:
+    """tokubetsu_kyoso_bango_periods では期間ごとに特別競走番号と開催年で絞る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="tokubetsu_race_finish",
+                tokubetsu_kyoso_bango_periods=[
+                    TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074", year_to=2024),
+                    TokubetsuKyosoBangoPeriod(
+                        tokubetsu_kyoso_bango="0213", year_from=2025, year_to=2030
+                    ),
+                ],
+                year_offset=0,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert (
+        "((tokubetsu_kyoso_bango = %s AND CAST(kaisai_nen AS INTEGER) <= %s)"
+        " OR (tokubetsu_kyoso_bango = %s AND CAST(kaisai_nen AS INTEGER) >= %s"
+        " AND CAST(kaisai_nen AS INTEGER) <= %s))"
+    ) in sql
+    start = params.index("0074")
+    assert list(params[start : start + 6]) == ["0074", 2024, "0213", 2025, 2030, 0]
+
+
+def test_select_entries_tokubetsu_race_finish_adjacent_periods_allowed(
+    mocker: MockerFixture,
+) -> None:
+    """最後の年の翌年から始まる期間は重ならないとみなす."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="tokubetsu_race_finish",
+                tokubetsu_kyoso_bango_periods=[
+                    TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213", year_from=2025),
+                    TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074", year_to=2024),
+                ],
+                year_offset=0,
+            ),
+        ),
+    )
+
+    manager.fetch_dataframe.assert_called_once()
+
+
 def test_select_entries_tokubetsu_race_finish_no_tokubetsu_raises(
     mocker: MockerFixture,
 ) -> None:
@@ -962,6 +1025,67 @@ def test_select_entries_tokubetsu_race_finish_negative_year_offset_raises(
                     type="tokubetsu_race_finish",
                     tokubetsu_kyoso_bango="0010",
                     year_offset=-1,
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("bango", "periods", "match"),
+    [
+        (
+            "0074",
+            [TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213")],
+            "片方だけ",
+        ),
+        (None, [], "期間が1つもありません"),
+        (
+            None,
+            [TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074", year_from=2025, year_to=2024)],
+            "year_from が year_to より大きい",
+        ),
+        (
+            None,
+            [
+                TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074", year_to=2025),
+                TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213", year_from=2025),
+            ],
+            "重なっています",
+        ),
+        (
+            None,
+            [
+                TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0074"),
+                TokubetsuKyosoBangoPeriod(
+                    tokubetsu_kyoso_bango="0213", year_from=2025, year_to=2026
+                ),
+            ],
+            "重なっています",
+        ),
+    ],
+    ids=["both", "empty", "reversed", "overlap_bounded", "overlap_unbounded"],
+)
+def test_select_entries_tokubetsu_race_finish_invalid_periods_raises(
+    mocker: MockerFixture,
+    bango: str | None,
+    periods: list[TokubetsuKyosoBangoPeriod],
+    match: str,
+) -> None:
+    """特別競走番号の指定が正しくないとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match=match):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="tokubetsu_race_finish",
+                    tokubetsu_kyoso_bango=bango,
+                    tokubetsu_kyoso_bango_periods=periods,
+                    year_offset=0,
                 ),
             ),
         )
