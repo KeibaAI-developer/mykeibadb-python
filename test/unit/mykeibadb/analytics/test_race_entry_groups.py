@@ -270,7 +270,12 @@ def test_get_race_entry_groups_virtual_race_applies_virtual_ctes(mocker: MockerF
     """virtual_race を指定すると仮の行の CTE が足され、パラメータが先頭に足される."""
     manager = mocker.MagicMock()
     manager.fetch_dataframe.return_value = _make_df([("01", "1")])
-    manager.execute_query.return_value = [("race_code",), ("ketto_toroku_bango",), ("umaban",)]
+    # 列名の問い合わせには列名を、同じレースコードの行の有無の問い合わせには無いことを返す
+    manager.execute_query.side_effect = lambda sql, params: (
+        [("race_code",), ("ketto_toroku_bango",), ("umaban",)]
+        if "information_schema" in sql
+        else [(False,)]
+    )
 
     result = get_race_entry_groups(
         manager,

@@ -16,15 +16,31 @@ def _entry(umaban: str, ketto: str = "2021105898") -> dict[str, str]:
     return {"race_code": _RACE_CODE, "ketto_toroku_bango": ketto, "umaban": umaban}
 
 
-def _manager(mocker: MockerFixture) -> MagicMock:
-    """表の列名として、テストで使う列名を返す DB接続マネージャのモックを返す."""
+_COLUMNS = ["race_code", "umaban", "ketto_toroku_bango", "ketto1_bamei"]
+
+
+def _manager(
+    mocker: MockerFixture, recorded: bool = False, columns: list[str] | None = None
+) -> MagicMock:
+    """DB接続マネージャのモックを返す.
+
+    Args:
+        mocker (MockerFixture): pytest-mock の fixture
+        recorded (bool): 仮のレースと同じレースコードの行が DB にあることにするか
+        columns (list[str] | None): 表の列名。None の場合はテストで使う列名
+
+    Returns:
+        MagicMock: 列名の問い合わせには columns を、行の有無の問い合わせには recorded を返すモック
+    """
+    names = _COLUMNS if columns is None else columns
+
+    def execute_query(sql: str, params: tuple[str, ...]) -> list[tuple[object, ...]]:
+        if "information_schema" in sql:
+            return [(name,) for name in names]
+        return [(recorded,)]
+
     manager = mocker.MagicMock()
-    manager.execute_query.return_value = [
-        ("race_code",),
-        ("umaban",),
-        ("ketto_toroku_bango",),
-        ("ketto1_bamei",),
-    ]
+    manager.execute_query.side_effect = execute_query
     return manager
 
 
@@ -49,6 +65,7 @@ def test_apply_virtual_race_prepends_with_to_plain_sql(mocker: MockerFixture) ->
     assert sql.count("NOT MATERIALIZED") == 2
     assert sql.count(" AS MATERIALIZED") == 2
     assert "kyosoba_master2" not in sql
+    assert "race_code <> %s" not in sql
     assert params[2:] == ("a",)
     assert json.loads(params[0]) == [{"race_code": _RACE_CODE}]
     assert json.loads(params[1]) == [_entry("01"), _entry("02", "2022105519")]
@@ -95,6 +112,22 @@ def test_apply_virtual_race_adds_horse_ctes_when_horses_given(mocker: MockerFixt
     assert json.loads(params[2]) == [horse]
 
 
+def test_apply_virtual_race_hides_db_rows_of_recorded_race(mocker: MockerFixture) -> None:
+    """同じレースコードの行が DB にある場合は、race_shosai・umagoto_race_joho の DB の行を除く."""
+    horse = {"ketto_toroku_bango": "000a000001", "ketto1_bamei": "テスト"}
+    sql, params = apply_virtual_race(
+        _manager(mocker, recorded=True), "SELECT 1 WHERE x = %s", ("a",), _virtual_race([horse])
+    )
+
+    assert "SELECT * FROM public.race_shosai WHERE race_code <> %s" in sql
+    assert "SELECT * FROM public.umagoto_race_joho WHERE race_code <> %s" in sql
+    assert "SELECT * FROM public.kyosoba_master2\n" in sql
+    # プレースホルダは、仮の行の JSON、レースコード、元の SQL の順に並ぶ
+    assert sql.rindex("%s::jsonb") < sql.index("race_code <> %s")
+    assert json.loads(params[2]) == [horse]
+    assert params[3:] == (_RACE_CODE, _RACE_CODE, "a")
+
+
 # 準正常系
 def test_virtual_race_without_race_code_raises() -> None:
     """race に race_code が無いと ValueError."""
@@ -139,8 +172,7 @@ def test_virtual_race_duplicate_horse_raises() -> None:
 
 def test_apply_virtual_race_unknown_column_raises(mocker: MockerFixture) -> None:
     """表に無い列名があると ValueError."""
-    manager = mocker.MagicMock()
-    manager.execute_query.return_value = [("race_code",), ("umaban",), ("ketto_toroku_bango",)]
+    manager = _manager(mocker, columns=["race_code", "umaban", "ketto_toroku_bango"])
     virtual_race = VirtualRace(
         race={"race_code": _RACE_CODE, "no_such_column": "x"}, entries=[_entry("01")]
     )

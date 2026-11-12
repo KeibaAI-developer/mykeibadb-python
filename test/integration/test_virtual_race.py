@@ -1,6 +1,7 @@
 """仮のレースの結合テスト.
 
 DB に無いレースコードの仮のレースで、get_race_entry_groups が値を返すことを確認する。
+DB にあるレースコードの仮のレースでは、DB の行が仮のレースの行で置き換わることを確認する。
 """
 
 import pytest
@@ -10,6 +11,7 @@ from mykeibadb.analytics import (
     GroupBy,
     Subject,
     VirtualRace,
+    apply_virtual_race,
     get_race_entry_groups,
 )
 from mykeibadb.connection import ConnectionManager
@@ -19,6 +21,8 @@ _RACE_CODE = "2099110105041111"
 _LEGAREIRA = "2021105898"
 _OTHER_HORSE = "2022105519"
 _VIRTUAL_HORSE = "000a000001"
+# DB にあるレース（2024年の有馬記念）のレースコード
+_RECORDED_RACE_CODE = "2024122206050811"
 
 
 def _entry(umaban: str, ketto: str, **columns: str) -> dict[str, str]:
@@ -145,6 +149,55 @@ def test_virtual_race_does_not_affect_query_without_virtual_race(
 
     with pytest.raises(MykeibaDBError):
         get_race_entry_groups(connection_manager, _RACE_CODE, group_by)
+
+
+def test_virtual_race_replaces_db_rows_of_same_race_code(
+    connection_manager: ConnectionManager,
+) -> None:
+    """DB にあるレースコードの仮のレースでは、出走の行が仮のレースの行だけになる."""
+    virtual_race = VirtualRace(
+        race={"race_code": _RECORDED_RACE_CODE, "kaisai_nen": "2024", "kaisai_gappi": "1222"},
+        entries=[
+            {
+                "race_code": _RECORDED_RACE_CODE,
+                "ketto_toroku_bango": _LEGAREIRA,
+                "umaban": "01",
+                "wakuban": "8",
+                "ijo_kubun_code": "0",
+            }
+        ],
+    )
+
+    result = get_race_entry_groups(
+        connection_manager,
+        _RECORDED_RACE_CODE,
+        GroupBy(kind="race_col", column="u.wakuban"),
+        virtual_race=virtual_race,
+    )
+
+    assert result == {1: "8"}
+
+
+def test_virtual_race_replaces_db_race_row_of_same_race_code(
+    connection_manager: ConnectionManager,
+) -> None:
+    """DB にあるレースコードの仮のレースでは、レースの行が仮のレースの1行だけになる."""
+    virtual_race = VirtualRace(
+        race={"race_code": _RECORDED_RACE_CODE, "kyori": "9999"},
+        entries=[
+            {"race_code": _RECORDED_RACE_CODE, "ketto_toroku_bango": _LEGAREIRA, "umaban": "01"}
+        ],
+    )
+    sql, params = apply_virtual_race(
+        connection_manager,
+        "SELECT kyori FROM race_shosai WHERE race_code = %s",
+        (_RECORDED_RACE_CODE,),
+        virtual_race,
+    )
+
+    races = connection_manager.fetch_dataframe(sql, params=params)
+
+    assert races["kyori"].tolist() == ["9999"]
 
 
 # 準正常系
