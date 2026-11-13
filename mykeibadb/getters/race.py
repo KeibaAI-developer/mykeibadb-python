@@ -18,6 +18,7 @@ from typing import Any
 
 import pandas as pd
 
+from mykeibadb.analytics.entry_rows import ran_entry_condition
 from mykeibadb.code_converter import (
     convert_babajotai_code,
     convert_chakusa_code,
@@ -205,6 +206,8 @@ class RaceGetter(BaseGetter):
     ) -> pd.DataFrame:
         """UMAGOTO_RACE_JOHOテーブルから馬毎レース情報を取得.
 
+        出走馬名表に載ったあと出馬表に載らなかった馬の行は返さない。
+
         Args:
             race_code (str | list[str] | None): レースコード（16桁）
             ketto_toroku_bango (str | list[str] | None): 血統登録番号
@@ -228,6 +231,7 @@ class RaceGetter(BaseGetter):
             filters or None,
             start_date,
             end_date,
+            extra_conditions=[ran_entry_condition("umagoto_race_joho")],
         )
         if df.empty or not convert_codes:
             return df
