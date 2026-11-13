@@ -17,6 +17,10 @@ SELECT column_name
 FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = %s
 """
+_RECORDED_RACE_QUERY = """
+SELECT EXISTS (SELECT 1 FROM public.race_shosai WHERE race_code = %s)
+    OR EXISTS (SELECT 1 FROM public.umagoto_race_joho WHERE race_code = %s)
+"""
 
 
 @dataclass(frozen=True)
@@ -78,7 +82,9 @@ def apply_virtual_race(
     SQL の先頭に仮の行の CTE と、race_shosai・umagoto_race_joho（horses がある場合は
     kyosoba_master2 も）を上書きする CTE を足す。SQL がすでに WITH で始まる場合は、その
     CTE の並びの先頭に足す。DB には書き込まない。仮のレースと同じレースコードの行が DB に
-    ある場合の確認はしない。
+    ある場合は、race_shosai・umagoto_race_joho の DB の行を見せず、仮のレースの行だけを見せる。
+    DB の行を除く条件は、同じレースコードの行が DB にある場合だけ足す。行が無い場合に足すと、
+    過去走を引くクエリが遅くなるため。
 
     仮のレースの列名が対応する表の列にあることを、DB の列名と照合して確かめる。
     jsonb_populate_recordset は表に無いキーを黙って無視するため。
@@ -91,37 +97,47 @@ def apply_virtual_race(
 
     Returns:
         tuple[str, tuple[Any, ...]]: 書き換えた SQL
-        tuple[str, tuple[Any, ...]]: 書き換えた SQL のパラメータ（足した CTE の分が先頭）
+        tuple[str, tuple[Any, ...]]: 書き換えた SQL のパラメータ（足した CTE の分が先頭で、
+            仮の行の JSON、DB の行を除く場合のレースコードの順）
 
     Raises:
         ValueError: 仮のレースに表に無い列名がある場合
     """
     _validate_columns(manager, virtual_race)
-    tables = [
-        ("race_shosai", [virtual_race.race]),
-        ("umagoto_race_joho", virtual_race.entries),
+    race_code = virtual_race.race["race_code"]
+    recorded = _is_recorded_race(manager, race_code)
+    # 表名、仮の行、DB の同じレースコードの行を除くか
+    tables: list[tuple[str, list[dict[str, str]], bool]] = [
+        ("race_shosai", [virtual_race.race], recorded),
+        ("umagoto_race_joho", virtual_race.entries, recorded),
     ]
     if virtual_race.horses:
-        tables.append(("kyosoba_master2", virtual_race.horses))
+        tables.append(("kyosoba_master2", virtual_race.horses, False))
 
     row_ctes: list[str] = []
     override_ctes: list[str] = []
-    cte_params: list[Any] = []
-    for table, rows in tables:
+    row_params: list[Any] = []
+    override_params: list[Any] = []
+    for table, rows, replaces_race in tables:
         row_ctes.append(
             f"virtual_{table} AS MATERIALIZED (\n"
             f"        SELECT * FROM jsonb_populate_recordset(NULL::public.{table}, %s::jsonb)\n"
             f"    )"
         )
+        db_rows = f"SELECT * FROM public.{table}"
+        if replaces_race:
+            db_rows += " WHERE race_code <> %s"
+            override_params.append(race_code)
         override_ctes.append(
             f"{table} AS NOT MATERIALIZED (\n"
-            f"        SELECT * FROM public.{table}\n"
+            f"        {db_rows}\n"
             f"        UNION ALL\n"
             f"        SELECT * FROM virtual_{table}\n"
             f"    )"
         )
-        cte_params.append(json.dumps(rows, ensure_ascii=False))
+        row_params.append(json.dumps(rows, ensure_ascii=False))
 
+    cte_params = [*row_params, *override_params]
     virtual_ctes = ", ".join(row_ctes + override_ctes)
     match = _WITH_PATTERN.match(sql)
     if match:
@@ -129,6 +145,20 @@ def apply_virtual_race(
     else:
         new_sql = f"WITH {virtual_ctes}\n{sql}"
     return new_sql, (*cte_params, *params)
+
+
+def _is_recorded_race(manager: ConnectionManager, race_code: str) -> bool:
+    """レースコードの行が、DB の race_shosai か umagoto_race_joho にあるかを返す.
+
+    Args:
+        manager (ConnectionManager): DB接続マネージャ
+        race_code (str): レースコード
+
+    Returns:
+        bool: どちらかの表に行がある場合は True
+    """
+    rows = manager.execute_query(_RECORDED_RACE_QUERY, (race_code, race_code))
+    return bool(rows[0][0])
 
 
 def _validate_columns(manager: ConnectionManager, virtual_race: VirtualRace) -> None:
