@@ -10,6 +10,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
     hinba_gentei_expr,
+    konkan_kyori_expr,
     mawari_expr,
     sedai_gentei_expr,
     shiba_da_expr,
@@ -65,6 +66,7 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "hinba_gentei": ("hinba_gentei", False),
     "sedai_gentei": ("sedai_gentei", False),
     "stand_mae_hasso": ("stand_mae_hasso", False),
+    "konkan_kyori": ("konkan_kyori", False),
     "kyakushitsu_hantei": ("kyakushitsu_hantei", False),
     "tokubetsu_kyoso_bango": ("tokubetsu_kyoso_bango", False),
 }
@@ -478,6 +480,7 @@ def _build_horse_hist_cte() -> str:
         f"            {hinba_gentei_expr('r2')} AS hinba_gentei,\n"
         f"            {sedai_gentei_expr('r2')} AS sedai_gentei,\n"
         f"            {stand_mae_hasso_expr('r2')} AS stand_mae_hasso,\n"
+        f"            {konkan_kyori_expr('r2')} AS konkan_kyori,\n"
         "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango\n"
         "        FROM target_horses th\n"
         "        JOIN umagoto_race_joho u2\n"

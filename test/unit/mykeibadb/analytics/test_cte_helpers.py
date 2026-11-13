@@ -8,6 +8,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_payout_ctes,
     build_race_condition_where,
     hinba_gentei_expr,
+    konkan_kyori_expr,
     mawari_expr,
     sedai_gentei_expr,
     shiba_da_expr,
@@ -341,3 +342,15 @@ def test_stand_mae_hasso_expr_checks_corner1_and_shukaisu_equality() -> None:
     assert "TRIM(r2.shukaisu2) = TRIM(r2.shukaisu3)" in expr
     assert "TRIM(r2.shukaisu3) = TRIM(r2.shukaisu4)" in expr
     assert "THEN 'あり' ELSE 'なし' END END) END" in expr
+
+
+# konkan_kyori_expr
+def test_konkan_kyori_expr_checks_divisibility_by_400() -> None:
+    """距離が400で割り切れるとき'あり'、割り切れないとき'なし'、0のとき NULL とする式を返す."""
+    expr = konkan_kyori_expr("r2")
+    assert "WHEN TRIM(r2.kyori)::INTEGER = 0 THEN NULL" in expr
+    assert "WHEN MOD(TRIM(r2.kyori)::INTEGER, 400) = 0 THEN 'あり' ELSE 'なし' END" in expr
+    # 地方・海外競馬も判定するため、競馬場コードでは絞らない
+    assert "keibajo_code" not in expr
+    # パラメータ付きの SQL に埋め込むため、% を含めない
+    assert "%" not in expr
