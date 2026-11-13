@@ -415,6 +415,26 @@ def stand_mae_hasso_expr(race_alias: str) -> str:
     )
 
 
+def konkan_kyori_expr(race_alias: str) -> str:
+    """距離を根幹距離かどうか（'あり' / 'なし'）に変換するSQL式を返す.
+
+    根幹距離は400mで割り切れる距離（1200m・1600m・2000m・2400mなど）で、割り切れない距離
+    （1400m・1800m・2200m・2500mなど）は非根幹距離となる。距離が0のレースは NULL になる。
+    距離だけで決まるため、地方・海外競馬と障害競走も判定する。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: CASE式による根幹距離取得式
+    """
+    kyori = f"TRIM({race_alias}.kyori)::INTEGER"
+    return (
+        f"(CASE WHEN {kyori} = 0 THEN NULL "
+        f"WHEN MOD({kyori}, 400) = 0 THEN 'あり' ELSE 'なし' END)"
+    )
+
+
 PAST_RACE_TOP_N_FILTER_OPS = frozenset({"==", "!=", ">=", "<=", ">", "<", "in", "not_in"})
 
 

@@ -578,6 +578,7 @@ def test_select_entries_history_filter_past_race_top_n_count_filters_shiba_da(
         ("hinba_gentei", "あり"),
         ("sedai_gentei", "あり"),
         ("stand_mae_hasso", "なし"),
+        ("konkan_kyori", "なし"),
     ],
 )
 def test_select_entries_group_by_fixed_past_race_top_n_count_filters_race_condition_columns(
@@ -634,6 +635,33 @@ def test_select_entries_history_filter_past_race_top_n_count_filters_stand_mae_h
     assert "TRIM(r2.corner1) = '1'" in sql
     assert "THEN 'あり' ELSE 'なし' END END) END = %s" in sql
     assert "あり" in params
+
+
+def test_select_entries_history_filter_past_race_top_n_count_filters_konkan_kyori(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(past_race_top_n_count) で filters の konkan_kyori 条件が判定式で絞り込む."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[
+            HistoryFilter(
+                source=AttrSource(
+                    type="past_race_top_n_count",
+                    top_n=3,
+                    filters=[{"column": "konkan_kyori", "op": "==", "value": "なし"}],
+                ),
+                cond=(1, 9999),
+            )
+        ],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "MOD(TRIM(r2.kyori)::INTEGER, 400) = 0 THEN 'あり' ELSE 'なし' END) = %s" in sql
+    assert "なし" in params
 
 
 def test_select_entries_group_by_fixed_past_race_top_n_count_filters_unsupported_column(

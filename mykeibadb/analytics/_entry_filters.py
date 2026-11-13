@@ -8,6 +8,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
     hinba_gentei_expr,
+    konkan_kyori_expr,
     mawari_expr,
     sedai_gentei_expr,
     shiba_da_expr,
@@ -48,6 +49,7 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "hinba_gentei": (hinba_gentei_expr("r2"), False),
     "sedai_gentei": (sedai_gentei_expr("r2"), False),
     "stand_mae_hasso": (stand_mae_hasso_expr("r2"), False),
+    "konkan_kyori": (konkan_kyori_expr("r2"), False),
     "kyakushitsu_hantei": ("u2.kyakushitsu_hantei", False),
     "tokubetsu_kyoso_bango": ("TRIM(r2.tokubetsu_kyoso_bango)", False),
 }
