@@ -8,8 +8,11 @@ from mykeibadb.analytics._cte_helpers import (
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
     hinba_gentei_expr,
+    kishu_master_name_key_expr,
     konkan_kyori_expr,
+    kyori_expr,
     mawari_expr,
+    same_jockey_expr,
     sedai_gentei_expr,
     shiba_da_expr,
     stand_mae_hasso_expr,
@@ -43,7 +46,7 @@ _HIST_FILTER_COLUMNS: dict[str, tuple[str, bool]] = {
     "kakutei_chakujun": ("CAST(u2.kakutei_chakujun AS INTEGER)", True),
     "grade_code": ("r2.grade_code", False),
     "keibajo_code": ("r2.keibajo_code", False),
-    "kyori_int": ("TRIM(r2.kyori)::INTEGER", True),
+    "kyori_int": (kyori_expr("r2"), True),
     "shiba_da": (shiba_da_expr("r2"), False),
     "mawari": (mawari_expr("r2"), False),
     "hinba_gentei": (hinba_gentei_expr("r2"), False),
@@ -437,21 +440,27 @@ def _build_jockey_continuity_filter(
         ran_entry_condition("u2"),
     ]
     prev_hist_where = "\n                  AND ".join(prev_hist_parts)
+    target_name_key = (
+        f"(SELECT {kishu_master_name_key_expr('km.kishumei')} "
+        f"FROM kishu_master km WHERE km.kishu_code = u.kishu_code)"
+    )
+    same_jockey = same_jockey_expr("u2", "u.kishu_code", target_name_key)
     continuity_expr = (
         f"CASE\n"
-        f"            WHEN u.kishu_code = (\n"
-        f"              SELECT u2.kishu_code\n"
+        f"            WHEN (\n"
+        f"              SELECT {same_jockey}\n"
         f"              FROM umagoto_race_joho u2\n"
         f"              JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
         f"              WHERE {prev_hist_where}\n"
         f"              ORDER BY r2.kaisai_nen DESC, r2.kaisai_gappi DESC\n"
         f"              LIMIT 1\n"
         f"            ) THEN '継続'\n"
-        f"            WHEN u.kishu_code IN (\n"
-        f"              SELECT u2.kishu_code\n"
+        f"            WHEN EXISTS (\n"
+        f"              SELECT 1\n"
         f"              FROM umagoto_race_joho u2\n"
         f"              JOIN race_shosai r2 ON u2.race_code = r2.race_code\n"
         f"              WHERE {prev_hist_where}\n"
+        f"                AND {same_jockey}\n"
         f"            ) THEN '乗り戻り'\n"
         f"            ELSE 'テン乗り'\n"
         f"          END"

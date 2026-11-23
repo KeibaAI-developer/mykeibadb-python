@@ -325,11 +325,46 @@ def shiba_da_expr(race_alias: str) -> str:
     )
 
 
+def overseas_condition(race_alias: str) -> str:
+    """海外のレースかどうかを判定するSQLの条件式を返す.
+
+    海外の競馬場の競馬場コードは英字で始まる（A6 イギリス、A8 フランスなど）。
+    中央・地方の競馬場の競馬場コードは数字で始まる。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: 競馬場コードが英字で始まる場合に真になる条件式
+    """
+    return f"{race_alias}.keibajo_code ~ '^[A-Z]'"
+
+
+def kyori_expr(race_alias: str) -> str:
+    """判定に使う距離（m）を返すSQL式を返す.
+
+    海外のレースの距離は実際の距離をメートルにした値（2390m・1990m など）で入っているため、
+    100m単位に四捨五入する（2390m → 2400m、2050m → 2100m）。
+    中央・地方競馬の距離はそのまま返す。
+
+    Args:
+        race_alias (str): race_shosaiテーブルのSQLエイリアス
+
+    Returns:
+        str: 距離（整数）を返すSQL式
+    """
+    kyori = f"TRIM({race_alias}.kyori)::INTEGER"
+    return (
+        f"(CASE WHEN {overseas_condition(race_alias)} "
+        f"THEN (ROUND({kyori} / 100.0) * 100)::INTEGER ELSE {kyori} END)"
+    )
+
+
 def mawari_expr(race_alias: str) -> str:
     """トラックコードを回り（'右' / '左'）に変換するSQL式を返す.
 
-    直線コース（10, 29）と障害競走は NULL になる。
-    地方・海外競馬も NULL になる。
+    中央競馬と海外のレースを判定する。
+    直線コース（10, 29）と障害競走、地方競馬は NULL になる。
 
     Args:
         race_alias (str): race_shosaiテーブルのSQLエイリアス
@@ -338,12 +373,12 @@ def mawari_expr(race_alias: str) -> str:
         str: CASE式による回り取得式
     """
     a = race_alias
-    return _jra_only_expr(
-        a,
+    return (
+        f"CASE WHEN {a}.keibajo_code BETWEEN '01' AND '10' OR {overseas_condition(a)} THEN "
         f"(CASE WHEN TRIM({a}.track_code) IN "
         f"('17', '18', '19', '20', '21', '22', '24', '26', '28') THEN '右' "
         f"WHEN TRIM({a}.track_code) IN "
-        f"('11', '12', '13', '14', '15', '16', '23', '25', '27') THEN '左' END)",
+        f"('11', '12', '13', '14', '15', '16', '23', '25', '27') THEN '左' END) END"
     )
 
 
@@ -420,6 +455,7 @@ def konkan_kyori_expr(race_alias: str) -> str:
 
     根幹距離は400mで割り切れる距離（1200m・1600m・2000m・2400mなど）で、割り切れない距離
     （1400m・1800m・2200m・2500mなど）は非根幹距離となる。距離が0のレースは NULL になる。
+    距離は kyori_expr() の値を使う。
     距離だけで決まるため、地方・海外競馬と障害競走も判定する。
 
     Args:
@@ -428,10 +464,68 @@ def konkan_kyori_expr(race_alias: str) -> str:
     Returns:
         str: CASE式による根幹距離取得式
     """
-    kyori = f"TRIM({race_alias}.kyori)::INTEGER"
+    kyori = kyori_expr(race_alias)
     return (
         f"(CASE WHEN {kyori} = 0 THEN NULL "
         f"WHEN MOD({kyori}, 400) = 0 THEN 'あり' ELSE 'なし' END)"
+    )
+
+
+def jockey_name_key_expr(ryakusho_expr: str) -> str:
+    """騎手名略称から騎手名で比べるときのキーを返すSQL式を返す.
+
+    海外のレースで騎手コードが '00000' の出走は、騎手名略称に姓のカタカナの先頭4文字が
+    入っている（ビュイック → 'ビュイッ'）。空白（全角を含む）を除いた値をキーにする。
+
+    Args:
+        ryakusho_expr (str): 騎手名略称のSQL式
+
+    Returns:
+        str: 空白を除いた騎手名略称を返すSQL式
+    """
+    return f"REGEXP_REPLACE({ryakusho_expr}, '[ 　]', '', 'g')"
+
+
+def kishu_master_name_key_expr(kishumei_expr: str) -> str:
+    """騎手マスタの騎手名から騎手名で比べるときのキーを返すSQL式を返す.
+
+    騎手名のうち最後の '．' より後ろ（'Ｗ．ビュイック' なら 'ビュイック'）から空白（全角を含む）を
+    除き、先頭4文字をキーにする。'．' が無い騎手は騎手名全体から作る（'武　豊' なら '武豊'）。
+
+    Args:
+        kishumei_expr (str): kishu_master.kishumei のSQL式
+
+    Returns:
+        str: jockey_name_key_expr() のキーと比べられる騎手名のSQL式
+    """
+    surname = f"REGEXP_REPLACE({kishumei_expr}, '^.*．', '')"
+    return f"LEFT({jockey_name_key_expr(surname)}, 4)"
+
+
+def same_jockey_expr(
+    past_alias: str,
+    target_kishu_code_expr: str,
+    target_name_key_expr: str,
+) -> str:
+    """過去走の騎手が対象の出走の騎手と同じかを判定するSQLの条件式を返す.
+
+    過去走の騎手コードが '00000' の場合は騎手名で比べ、それ以外は騎手コードで比べる。
+    騎手名で比べるため、姓の先頭4文字が同じ騎手（M.デムーロ騎手とC.デムーロ騎手など）は
+    同じ騎手とみなす。
+
+    Args:
+        past_alias (str): 過去走の umagoto_race_joho テーブルのSQLエイリアス
+        target_kishu_code_expr (str): 対象の出走の騎手コードのSQL式
+        target_name_key_expr (str): 対象の出走の騎手の kishu_master_name_key_expr() のSQL式
+
+    Returns:
+        str: 同じ騎手のとき真になる条件式
+    """
+    p = past_alias
+    return (
+        f"(CASE WHEN {p}.kishu_code = '00000' "
+        f"THEN {jockey_name_key_expr(f'{p}.kishumei_ryakusho')} = {target_name_key_expr} "
+        f"ELSE {p}.kishu_code = {target_kishu_code_expr} END)"
     )
 
 

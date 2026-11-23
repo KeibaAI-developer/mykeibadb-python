@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 from pytest_mock import MockerFixture
 
+from mykeibadb.analytics._cte_helpers import kyori_expr
 from mykeibadb.analytics._models import (
     AttrSource,
     ChokyoFilter,
@@ -196,6 +197,24 @@ def test_select_entries_history_filter_career_count(mocker: MockerFixture) -> No
     sql = manager.fetch_dataframe.call_args[0][0]
     assert "COUNT(*)" in sql
     assert "BETWEEN" in sql
+
+
+def test_select_entries_history_filter_jockey_continuity_compares_jockey_name(
+    mocker: MockerFixture,
+) -> None:
+    """HistoryFilter(jockey_continuity) で、騎手コード 00000 の過去走を騎手名で比べる SQL になる."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[HistoryFilter(source=AttrSource(type="jockey_continuity"), cond="継続")],
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    assert "FROM kishu_master km WHERE km.kishu_code = u.kishu_code" in sql
+    assert "WHEN u2.kishu_code = '00000'" in sql
+    assert "ELSE u2.kishu_code = u.kishu_code END" in sql
 
 
 def test_select_entries_history_filter_past_race_top_n_count(mocker: MockerFixture) -> None:
@@ -660,7 +679,7 @@ def test_select_entries_history_filter_past_race_top_n_count_filters_konkan_kyor
 
     sql = manager.fetch_dataframe.call_args[0][0]
     params = manager.fetch_dataframe.call_args[1]["params"]
-    assert "MOD(TRIM(r2.kyori)::INTEGER, 400) = 0 THEN 'あり' ELSE 'なし' END) = %s" in sql
+    assert f"MOD({kyori_expr('r2')}, 400) = 0 THEN 'あり' ELSE 'なし' END) = %s" in sql
     assert "なし" in params
 
 
@@ -801,6 +820,9 @@ def test_select_entries_group_by_fixed_jockey_continuity_uses_cte(
     assert "attr_agg" in sql
     assert "ARRAY_AGG" in sql
     assert "target_kishu_code IS NULL OR target_kishu_code IN ('', '00000')" in sql
+    assert "LEFT JOIN kishu_master km ON km.kishu_code = u.kishu_code" in sql
+    assert "AS same_jockey" in sql
+    assert "BOOL_OR(same_jockey)" in sql
     assert sql.index("THEN NULL") < sql.index("ELSE 'テン乗り'")
 
 
