@@ -10,8 +10,11 @@ from mykeibadb.analytics._cte_helpers import (
     build_past_race_top_n_filter_clause,
     build_race_condition_where,
     hinba_gentei_expr,
+    kishu_master_name_key_expr,
     konkan_kyori_expr,
+    kyori_expr,
     mawari_expr,
+    same_jockey_expr,
     sedai_gentei_expr,
     shiba_da_expr,
     stand_mae_hasso_expr,
@@ -443,9 +446,11 @@ def _build_target_horses_cte(where_clause: str, cw_join_sql: str) -> str:
         f"            u.race_code,\n"
         f"            r.kaisai_nen,\n"
         f"            r.kaisai_gappi,\n"
-        f"            u.kishu_code\n"
+        f"            u.kishu_code,\n"
+        f"            {kishu_master_name_key_expr('km.kishumei')} AS kishu_name_key\n"
         f"        FROM umagoto_race_joho u\n"
-        f"        JOIN race_shosai r ON u.race_code = r.race_code"
+        f"        JOIN race_shosai r ON u.race_code = r.race_code\n"
+        f"        LEFT JOIN kishu_master km ON km.kishu_code = u.kishu_code"
         f"{join_part}\n"
         f"        WHERE {where_clause}\n"
         f"    )"
@@ -460,6 +465,7 @@ def _build_horse_hist_cte() -> str:
     Returns:
         str: horse_hist CTE 文字列
     """
+    same_jockey = same_jockey_expr("u2", "th.kishu_code", "th.kishu_name_key")
     return (
         "horse_hist AS (\n"
         "        SELECT\n"
@@ -468,13 +474,14 @@ def _build_horse_hist_cte() -> str:
         "            th.kishu_code             AS target_kishu_code,\n"
         "            th.kaisai_nen             AS target_kaisai_nen,\n"
         "            u2.kishu_code,\n"
+        f"            {same_jockey} AS same_jockey,\n"
         "            r2.keibajo_code,\n"
         "            r2.kaisai_nen,\n"
         "            r2.kaisai_gappi,\n"
         "            u2.kakutei_chakujun,\n"
         "            u2.kyakushitsu_hantei,\n"
         "            r2.grade_code,\n"
-        "            TRIM(r2.kyori)::INTEGER   AS kyori_int,\n"
+        f"            {kyori_expr('r2')} AS kyori_int,\n"
         f"            {shiba_da_expr('r2')} AS shiba_da,\n"
         f"            {mawari_expr('r2')} AS mawari,\n"
         f"            {hinba_gentei_expr('r2')} AS hinba_gentei,\n"
@@ -608,11 +615,11 @@ def _attr_agg_jockey_continuity() -> str:
         f"            CASE\n"
         f"                WHEN target_kishu_code IS NULL OR target_kishu_code IN ('', '00000')\n"
         f"                THEN NULL\n"
-        f"                WHEN target_kishu_code = (\n"
-        f"                    ARRAY_AGG(kishu_code ORDER BY kaisai_nen DESC, kaisai_gappi DESC)\n"
+        f"                WHEN (\n"
+        f"                    ARRAY_AGG(same_jockey ORDER BY kaisai_nen DESC, kaisai_gappi DESC)\n"
         f"                )[1]\n"
         f"                THEN '継続'\n"
-        f"                WHEN target_kishu_code = ANY(ARRAY_AGG(kishu_code))\n"
+        f"                WHEN BOOL_OR(same_jockey)\n"
         f"                THEN '乗り戻り'\n"
         f"                ELSE 'テン乗り'\n"
         f"            END AS attr_val\n"

@@ -9,6 +9,7 @@ from mykeibadb.analytics._cte_helpers import (
     build_race_condition_where,
     hinba_gentei_expr,
     konkan_kyori_expr,
+    kyori_expr,
     mawari_expr,
     sedai_gentei_expr,
     shiba_da_expr,
@@ -299,9 +300,9 @@ def test_shiba_da_expr_maps_flat_track_codes() -> None:
 
 # mawari_expr
 def test_mawari_expr_maps_track_codes_to_direction() -> None:
-    """トラックコードを右回り・左回りに変換し、中央競馬以外はNULLにする式を返す."""
+    """トラックコードを右回り・左回りに変換し、中央競馬と海外のレース以外はNULLにする式を返す."""
     expr = mawari_expr("r2")
-    assert "r2.keibajo_code BETWEEN '01' AND '10'" in expr
+    assert "r2.keibajo_code BETWEEN '01' AND '10' OR r2.keibajo_code ~ '^[A-Z]'" in expr
     assert (
         "TRIM(r2.track_code) IN ('17', '18', '19', '20', '21', '22', '24', '26', '28') THEN '右'"
         in expr
@@ -348,9 +349,8 @@ def test_stand_mae_hasso_expr_checks_corner1_and_shukaisu_equality() -> None:
 def test_konkan_kyori_expr_checks_divisibility_by_400() -> None:
     """距離が400で割り切れるとき'あり'、割り切れないとき'なし'、0のとき NULL とする式を返す."""
     expr = konkan_kyori_expr("r2")
-    assert "WHEN TRIM(r2.kyori)::INTEGER = 0 THEN NULL" in expr
-    assert "WHEN MOD(TRIM(r2.kyori)::INTEGER, 400) = 0 THEN 'あり' ELSE 'なし' END" in expr
-    # 地方・海外競馬も判定するため、競馬場コードでは絞らない
-    assert "keibajo_code" not in expr
+    kyori = kyori_expr("r2")
+    assert f"WHEN {kyori} = 0 THEN NULL" in expr
+    assert f"WHEN MOD({kyori}, 400) = 0 THEN 'あり' ELSE 'なし' END" in expr
     # パラメータ付きの SQL に埋め込むため、% を含めない
     assert "%" not in expr
