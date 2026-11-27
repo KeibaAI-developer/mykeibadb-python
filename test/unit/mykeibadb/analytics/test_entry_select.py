@@ -1086,7 +1086,7 @@ def test_select_entries_tokubetsu_race_finish_negative_year_offset_raises(
         (
             "0074",
             [TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213")],
-            "片方だけ",
+            "どれか1つだけ",
         ),
         (None, [], "期間が1つもありません"),
         (
@@ -1135,6 +1135,102 @@ def test_select_entries_tokubetsu_race_finish_invalid_periods_raises(
                     type="tokubetsu_race_finish",
                     tokubetsu_kyoso_bango=bango,
                     tokubetsu_kyoso_bango_periods=periods,
+                    year_offset=0,
+                ),
+            ),
+        )
+
+
+def test_select_entries_tokubetsu_race_finish_race_names_filter_by_venue_and_name(
+    mocker: MockerFixture,
+) -> None:
+    """race_names では競馬場コードと競走名本題で参照するレースを絞る."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    select_entries(
+        manager,
+        filters=[],
+        group_by=GroupBy(
+            kind="history",
+            source=AttrSource(
+                type="tokubetsu_race_finish",
+                keibajo_codes=["A6"],
+                race_names=["チャンピオンステークス", "英チャンピオンステークス"],
+                year_offset=0,
+            ),
+        ),
+    )
+
+    sql = manager.fetch_dataframe.call_args[0][0]
+    params = manager.fetch_dataframe.call_args[1]["params"]
+    assert "TRIM(r2.kyosomei_hondai) AS kyosomei_hondai" in sql
+    assert "(keibajo_code = ANY(%s) AND kyosomei_hondai = ANY(%s))" in sql
+    start = params.index(["A6"])
+    assert list(params[start : start + 3]) == [
+        ["A6"],
+        ["チャンピオンステークス", "英チャンピオンステークス"],
+        0,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("bango", "periods", "race_names", "keibajo_codes", "match"),
+    [
+        ("0015", None, ["凱旋門賞"], ["A8"], "どれか1つだけ"),
+        (
+            None,
+            [TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213")],
+            ["凱旋門賞"],
+            ["A8"],
+            "どれか1つだけ",
+        ),
+        (None, None, [], ["A8"], "競走名が1つもありません"),
+        (None, None, ["凱旋門賞"], None, "keibajo_codes も指定してください"),
+        (None, None, ["凱旋門賞"], [], "keibajo_codes も指定してください"),
+        ("0015", None, None, ["05"], "keibajo_codes を指定できません"),
+        (
+            None,
+            [TokubetsuKyosoBangoPeriod(tokubetsu_kyoso_bango="0213")],
+            None,
+            ["05"],
+            "keibajo_codes を指定できません",
+        ),
+    ],
+    ids=[
+        "bango_and_names",
+        "periods_and_names",
+        "empty_names",
+        "no_keibajo",
+        "empty_keibajo",
+        "bango_with_keibajo",
+        "periods_with_keibajo",
+    ],
+)
+def test_select_entries_tokubetsu_race_finish_invalid_race_names_raises(
+    mocker: MockerFixture,
+    bango: str | None,
+    periods: list[TokubetsuKyosoBangoPeriod] | None,
+    race_names: list[str] | None,
+    keibajo_codes: list[str] | None,
+    match: str,
+) -> None:
+    """競走名本題による指定が正しくないとき ValueError が発生する."""
+    manager = mocker.MagicMock()
+    manager.fetch_dataframe.return_value = _make_entry_df()
+
+    with pytest.raises(ValueError, match=match):
+        select_entries(
+            manager,
+            filters=[],
+            group_by=GroupBy(
+                kind="history",
+                source=AttrSource(
+                    type="tokubetsu_race_finish",
+                    tokubetsu_kyoso_bango=bango,
+                    tokubetsu_kyoso_bango_periods=periods,
+                    race_names=race_names,
+                    keibajo_codes=keibajo_codes,
                     year_offset=0,
                 ),
             ),

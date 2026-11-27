@@ -58,6 +58,26 @@ def test_attrsource_from_dict_tokubetsu_kyoso_bango_periods_none_by_default() ->
     assert src.tokubetsu_kyoso_bango_periods is None
 
 
+def test_attrsource_from_dict_race_names() -> None:
+    """race_names と keibajo_codes が from_dict で読み取れる。"""
+    src = AttrSource.from_dict(
+        {
+            "type": "tokubetsu_race_finish",
+            "year_offset": 0,
+            "keibajo_codes": ["A8"],
+            "race_names": ["凱旋門賞"],
+        }
+    )
+    assert src.race_names == ["凱旋門賞"]
+    assert src.keibajo_codes == ["A8"]
+
+
+def test_attrsource_from_dict_race_names_none_by_default() -> None:
+    """race_names を省略した場合は None。"""
+    src = AttrSource.from_dict({"type": "tokubetsu_race_finish", "tokubetsu_kyoso_bango": "0010"})
+    assert src.race_names is None
+
+
 def test_attrsource_from_dict_year_offset() -> None:
     """year_offset フィールドが from_dict で int に変換される。"""
     src = AttrSource.from_dict(
