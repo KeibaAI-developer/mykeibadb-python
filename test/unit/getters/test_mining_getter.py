@@ -23,7 +23,7 @@ def test_get_data_mining_time_without_filters(
 
     result = mining_getter.get_data_mining_time(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TIME", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TIME", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -40,6 +40,7 @@ def test_get_data_mining_time_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "DATA_MINING_TIME",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -65,6 +66,7 @@ def test_get_data_mining_time_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -82,7 +84,7 @@ def test_get_data_mining_taisen_without_filters(
 
     result = mining_getter.get_data_mining_taisen(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TAISEN", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("DATA_MINING_TAISEN", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -99,6 +101,7 @@ def test_get_data_mining_taisen_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "DATA_MINING_TAISEN",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -124,5 +127,6 @@ def test_get_data_mining_taisen_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)

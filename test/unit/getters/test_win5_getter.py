@@ -23,7 +23,7 @@ def test_get_win5_without_filters(
 
     result = win5_getter.get_win5(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("WIN5", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("WIN5", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -48,6 +48,7 @@ def test_get_win5_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -65,7 +66,7 @@ def test_get_win5_haraimodoshi_without_filters(
 
     result = win5_getter.get_win5_haraimodoshi()
 
-    mock_table_accessor.get_table_data.assert_called_once_with("WIN5_HARAIMODOSHI", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("WIN5_HARAIMODOSHI", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -89,5 +90,6 @@ def test_get_win5_haraimodoshi_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)

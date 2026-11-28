@@ -23,7 +23,7 @@ def test_get_odds1_without_filters(
 
     result = odds_getter.get_odds1(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -40,6 +40,7 @@ def test_get_odds1_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -65,6 +66,7 @@ def test_get_odds1_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -82,7 +84,7 @@ def test_get_odds1_tansho_without_filters(
 
     result = odds_getter.get_odds1_tansho(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_TANSHO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_TANSHO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -99,6 +101,7 @@ def test_get_odds1_tansho_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_TANSHO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -124,6 +127,7 @@ def test_get_odds1_tansho_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -141,7 +145,7 @@ def test_get_odds1_fukusho_without_filters(
 
     result = odds_getter.get_odds1_fukusho(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_FUKUSHO", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_FUKUSHO", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -158,6 +162,7 @@ def test_get_odds1_fukusho_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_FUKUSHO",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -183,6 +188,7 @@ def test_get_odds1_fukusho_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -200,7 +206,7 @@ def test_get_odds1_wakuren_without_filters(
 
     result = odds_getter.get_odds1_wakuren(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_WAKUREN", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_WAKUREN", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -217,6 +223,7 @@ def test_get_odds1_wakuren_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_WAKUREN",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -242,6 +249,7 @@ def test_get_odds1_wakuren_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -259,7 +267,7 @@ def test_get_odds1_jikeiretsu_without_filters(
 
     result = odds_getter.get_odds1_jikeiretsu(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_JIKEIRETSU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_JIKEIRETSU", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -276,6 +284,7 @@ def test_get_odds1_jikeiretsu_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_JIKEIRETSU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -301,6 +310,7 @@ def test_get_odds1_jikeiretsu_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -318,7 +328,11 @@ def test_get_odds1_tansho_jikeiretsu_without_filters(
 
     result = odds_getter.get_odds1_tansho_jikeiretsu(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_TANSHO_JIKEIRETSU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with(
+
+        "ODDS1_TANSHO_JIKEIRETSU", None, None
+
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -335,6 +349,7 @@ def test_get_odds1_tansho_jikeiretsu_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_TANSHO_JIKEIRETSU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -360,6 +375,7 @@ def test_get_odds1_tansho_jikeiretsu_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -377,7 +393,11 @@ def test_get_odds1_fukusho_jikeiretsu_without_filters(
 
     result = odds_getter.get_odds1_fukusho_jikeiretsu(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_FUKUSHO_JIKEIRETSU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with(
+
+        "ODDS1_FUKUSHO_JIKEIRETSU", None, None
+
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -397,6 +417,7 @@ def test_get_odds1_fukusho_jikeiretsu_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_FUKUSHO_JIKEIRETSU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -422,6 +443,7 @@ def test_get_odds1_fukusho_jikeiretsu_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -439,7 +461,11 @@ def test_get_odds1_wakuren_jikeiretsu_without_filters(
 
     result = odds_getter.get_odds1_wakuren_jikeiretsu(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS1_WAKUREN_JIKEIRETSU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with(
+
+        "ODDS1_WAKUREN_JIKEIRETSU", None, None
+
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -459,6 +485,7 @@ def test_get_odds1_wakuren_jikeiretsu_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS1_WAKUREN_JIKEIRETSU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -484,6 +511,7 @@ def test_get_odds1_wakuren_jikeiretsu_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -501,7 +529,7 @@ def test_get_odds2_umaren_without_filters(
 
     result = odds_getter.get_odds2_umaren(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS2_UMAREN", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS2_UMAREN", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -518,6 +546,7 @@ def test_get_odds2_umaren_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS2_UMAREN",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -543,6 +572,7 @@ def test_get_odds2_umaren_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -560,7 +590,11 @@ def test_get_odds2_umaren_jikeiretsu_without_filters(
 
     result = odds_getter.get_odds2_umaren_jikeiretsu(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS2_UMAREN_JIKEIRETSU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with(
+
+        "ODDS2_UMAREN_JIKEIRETSU", None, None
+
+    )
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -577,6 +611,7 @@ def test_get_odds2_umaren_jikeiretsu_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS2_UMAREN_JIKEIRETSU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -602,6 +637,7 @@ def test_get_odds2_umaren_jikeiretsu_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -619,7 +655,7 @@ def test_get_odds3_wide_without_filters(
 
     result = odds_getter.get_odds3_wide(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS3_WIDE", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS3_WIDE", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -636,6 +672,7 @@ def test_get_odds3_wide_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS3_WIDE",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -661,6 +698,7 @@ def test_get_odds3_wide_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -678,7 +716,7 @@ def test_get_odds4_umatan_without_filters(
 
     result = odds_getter.get_odds4_umatan(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS4_UMATAN", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS4_UMATAN", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -695,6 +733,7 @@ def test_get_odds4_umatan_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS4_UMATAN",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -720,6 +759,7 @@ def test_get_odds4_umatan_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -737,7 +777,7 @@ def test_get_odds5_sanrenpuku_without_filters(
 
     result = odds_getter.get_odds5_sanrenpuku(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS5_SANRENPUKU", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS5_SANRENPUKU", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -754,6 +794,7 @@ def test_get_odds5_sanrenpuku_with_race_code(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS5_SANRENPUKU",
         {"RACE_CODE": VALID_RACE_CODE},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -779,6 +820,7 @@ def test_get_odds5_sanrenpuku_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -796,7 +838,7 @@ def test_get_odds6_sanrentan_without_filters(
 
     result = odds_getter.get_odds6_sanrentan(convert_codes=False)
 
-    mock_table_accessor.get_table_data.assert_called_once_with("ODDS6_SANRENTAN", None)
+    mock_table_accessor.get_table_data.assert_called_once_with("ODDS6_SANRENTAN", None, None)
     pd.testing.assert_frame_equal(result, expected_df)
 
 
@@ -813,6 +855,7 @@ def test_get_odds6_sanrentan_with_race_codes_list(
     mock_table_accessor.get_table_data.assert_called_once_with(
         "ODDS6_SANRENTAN",
         {"RACE_CODE": VALID_RACE_CODES},
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)
 
@@ -838,5 +881,6 @@ def test_get_odds6_sanrentan_with_date_range(
         VALID_END_DATE,
         "KAISAI_NEN",
         "KAISAI_GAPPI",
+        None,
     )
     pd.testing.assert_frame_equal(result, expected_df)

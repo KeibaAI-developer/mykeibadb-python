@@ -121,6 +121,7 @@ class BaseGetter:
         end_date: date | None = None,
         year_column: str = "KAISAI_NEN",
         date_column: str = "KAISAI_GAPPI",
+        extra_conditions: list[str] | None = None,
     ) -> pd.DataFrame:
         """年月日が分離されたカラムを持つテーブルから期間フィルタ付きでデータを取得.
 
@@ -134,6 +135,7 @@ class BaseGetter:
             end_date (date | None): 終了日
             year_column (str): 年カラム名（yyyy形式）
             date_column (str): 月日カラム名（mmdd形式）
+            extra_conditions (list[str] | None): フィルタ条件に AND でつなげる固定のSQL条件式
 
         Returns:
             pd.DataFrame: 取得したデータのDataFrame
@@ -145,10 +147,10 @@ class BaseGetter:
         self._logger.debug("テーブルからデータを取得: table=%s, filters=%s", table_name, filters)
         # 期間フィルタがない場合は通常の取得
         if not start_date and not end_date:
-            return self.table_accessor.get_table_data(table_name, filters)
+            return self.table_accessor.get_table_data(table_name, filters, extra_conditions)
 
         return self.table_accessor.get_table_data_with_composite_date_period(
-            table_name, filters, start_date, end_date, year_column, date_column
+            table_name, filters, start_date, end_date, year_column, date_column, extra_conditions
         )
 
     def _apply_code_conversions(
