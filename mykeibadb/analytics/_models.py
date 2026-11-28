@@ -294,13 +294,18 @@ class AttrSource:
         top_n (int | None): 何着以内を入着とみなすか（"sire_condition_finisher"用は既定1）。
             "past_race_top_n_count" で None の場合は着順で絞り込まない。
         grade_codes (list[str] | None): 対象グレードコードリスト
-        keibajo_codes (list[str] | None): 対象競馬場コードリスト（"past_race_top_n_count"用）
+        keibajo_codes (list[str] | None): 対象競馬場コードリスト（"past_race_top_n_count"用。
+            "tokubetsu_race_finish" では race_names と一緒に指定する）
         condition (RaceCondition | None): レース絞り込み条件
         allowed_values (list[str] | None): 表示を許可する属性値リスト（"debut_venue"用）
         tokubetsu_kyoso_bango (str | None): 対象特別競走番号（"tokubetsu_race_finish"用）
         tokubetsu_kyoso_bango_periods (list[TokubetsuKyosoBangoPeriod] | None): 開催年の期間ごとの
             対象特別競走番号（"tokubetsu_race_finish"用）。
             tokubetsu_kyoso_bango と片方だけを指定する
+        race_names (list[str] | None): 対象レースの競走名本題の候補（"tokubetsu_race_finish"用）。
+            前後の空白を除いた競走名本題と完全一致で比べる。特別競走番号が無い海外のレースに使い、
+            keibajo_codes と一緒に指定する。
+            tokubetsu_kyoso_bango・tokubetsu_kyoso_bango_periods とは同時に指定できない
         year_offset (int | None): 対象レースから遡る年数。0=同年、1=前年
             （"tokubetsu_race_finish"用）
         absent_label (str): 不出走ラベル（"tokubetsu_race_finish"用）
@@ -319,6 +324,7 @@ class AttrSource:
     allowed_values: list[str] | None = None
     tokubetsu_kyoso_bango: str | None = None
     tokubetsu_kyoso_bango_periods: list[TokubetsuKyosoBangoPeriod] | None = None
+    race_names: list[str] | None = None
     year_offset: int | None = None
     absent_label: str = "出走無し"
     chokyo_condition: ChokyoCondition | None = None
@@ -366,6 +372,7 @@ class AttrSource:
                 if raw_periods is not None
                 else None
             ),
+            race_names=d.get("race_names"),
             year_offset=int(raw_year_offset) if raw_year_offset is not None else None,
             absent_label=d.get("absent_label", "出走無し"),
             chokyo_condition=(

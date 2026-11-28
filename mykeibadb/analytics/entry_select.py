@@ -488,7 +488,8 @@ def _build_horse_hist_cte() -> str:
         f"            {sedai_gentei_expr('r2')} AS sedai_gentei,\n"
         f"            {stand_mae_hasso_expr('r2')} AS stand_mae_hasso,\n"
         f"            {konkan_kyori_expr('r2')} AS konkan_kyori,\n"
-        "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango\n"
+        "            TRIM(r2.tokubetsu_kyoso_bango) AS tokubetsu_kyoso_bango,\n"
+        "            TRIM(r2.kyosomei_hondai) AS kyosomei_hondai\n"
         "        FROM target_horses th\n"
         "        JOIN umagoto_race_joho u2\n"
         "            ON u2.ketto_toroku_bango = th.ketto_toroku_bango\n"
@@ -634,8 +635,8 @@ def _attr_agg_tokubetsu_race_finish(source: AttrSource, params: list[Any]) -> st
     """tokubetsu_race_finish 用 attr_agg CTE を返す.
 
     Args:
-        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango か tokubetsu_kyoso_bango_periods の
-            片方と、year_offset が必須）
+        source (AttrSource): 属性算出方法（tokubetsu_kyoso_bango・tokubetsu_kyoso_bango_periods・
+            race_names のどれか1つと、year_offset が必須）
         params (list[Any]): SQLパラメータリスト（末尾に追加される）
 
     Returns:
@@ -670,6 +671,8 @@ def _tokubetsu_kyoso_bango_clause(source: AttrSource, params: list[Any]) -> str:
 
     tokubetsu_kyoso_bango_periods を指定した場合は、特別競走番号が期間の番号と一致し、
     開催年がその期間に入る出走のどれかに絞る。
+    race_names を指定した場合は、競馬場コードが keibajo_codes のどれかで、
+    競走名本題が race_names のどれかである出走に絞る。
 
     Args:
         source (AttrSource): 属性算出方法
@@ -679,16 +682,27 @@ def _tokubetsu_kyoso_bango_clause(source: AttrSource, params: list[Any]) -> str:
         str: 条件式
 
     Raises:
-        ValueError: tokubetsu_kyoso_bango と tokubetsu_kyoso_bango_periods の両方を指定した場合、
-            どちらも指定していない場合、tokubetsu_kyoso_bango_periods が空の場合、
+        ValueError: tokubetsu_kyoso_bango・tokubetsu_kyoso_bango_periods・race_names のうち
+            2つ以上を指定した場合かどれも指定していない場合、
+            race_names が空の場合、race_names を指定して keibajo_codes が無いか空の場合、
+            特別競走番号を指定して keibajo_codes も指定した場合、
+            tokubetsu_kyoso_bango_periods が空の場合、
             期間の year_from が year_to より大きい場合、または2つの期間の開催年が重なる場合
     """
     bango = source.tokubetsu_kyoso_bango
     periods = source.tokubetsu_kyoso_bango_periods
-    if (bango is None) == (periods is None):
+    race_names = source.race_names
+    specified = [value for value in (bango, periods, race_names) if value is not None]
+    if len(specified) != 1:
         raise ValueError(
-            "tokubetsu_race_finish には tokubetsu_kyoso_bango と "
-            "tokubetsu_kyoso_bango_periods のどちらか片方だけを指定してください。"
+            "tokubetsu_race_finish には tokubetsu_kyoso_bango・tokubetsu_kyoso_bango_periods・"
+            "race_names のどれか1つだけを指定してください。"
+        )
+    if race_names is not None:
+        return _race_name_clause(race_names, source.keibajo_codes, params)
+    if source.keibajo_codes is not None:
+        raise ValueError(
+            "tokubetsu_race_finish で特別競走番号を指定した場合は keibajo_codes を指定できません。"
         )
     if periods is None:
         params.append(bango)
@@ -706,6 +720,31 @@ def _tokubetsu_kyoso_bango_clause(source: AttrSource, params: list[Any]) -> str:
             params.append(period.year_to)
         clauses.append("(" + " AND ".join(parts) + ")")
     return "(" + " OR ".join(clauses) + ")"
+
+
+def _race_name_clause(
+    race_names: list[str], keibajo_codes: list[str] | None, params: list[Any]
+) -> str:
+    """tokubetsu_race_finish で参照するレースを競馬場コードと競走名本題で絞る条件式を返す.
+
+    Args:
+        race_names (list[str]): 競走名本題の候補
+        keibajo_codes (list[str] | None): 競馬場コードの候補
+        params (list[Any]): SQLパラメータリスト（末尾に追加される）
+
+    Returns:
+        str: 条件式
+
+    Raises:
+        ValueError: race_names が空の場合、keibajo_codes が None か空の場合
+    """
+    if not race_names:
+        raise ValueError("race_names に競走名が1つもありません。")
+    if not keibajo_codes:
+        raise ValueError("race_names を指定した場合は keibajo_codes も指定してください。")
+    params.append(list(keibajo_codes))
+    params.append(list(race_names))
+    return "(keibajo_code = ANY(%s) AND kyosomei_hondai = ANY(%s))"
 
 
 def _validate_tokubetsu_kyoso_bango_periods(periods: list[TokubetsuKyosoBangoPeriod]) -> None:
